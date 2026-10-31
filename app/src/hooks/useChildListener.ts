@@ -215,6 +215,10 @@ export function useChildListener({
         const held = holds.current > 0 || now < resumeAt.current;
         // Android: 아바타가 말하는 동안에도 녹음을 유지하며 끼어들기 감지 (iOS 는 녹음 중 스피커 소리가 작아져 예전처럼 멈춤)
         if (held && holds.current > 0 && Platform.OS === 'android' && cb.current.onBargeIn) {
+          // 아이가 말하던 중에 아바타가 말을 시작함: 그 토막은 여기서 끊어 올림 (아바타 목소리가 아이 토막에 섞이지 않게)
+          if (recording.current && (speaking || forcedWin)) {
+            await endWindow((speaking && lastLoud - speechStart >= 500) || forcedWin);
+          }
           if (!recording.current) {
             try {
               await startRec();

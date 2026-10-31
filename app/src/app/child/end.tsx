@@ -102,7 +102,7 @@ export default function End() {
           label="한 번 더 볼래요"
           onPress={() => {
             stop();
-            router.replace('/child');
+            router.dismissTo('/child'); // 아래에 있던 아이 홈으로 (홈이 두 겹 쌓이지 않게)
           }}
           primary
           style={{ minWidth: 220 }}

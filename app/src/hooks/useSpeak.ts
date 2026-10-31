@@ -7,6 +7,13 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { api, reportError } from '@/lib/api';
 
+/** 기기 음성 멈춤: 이 Expo Go 에 모듈이 없거나 실패해도 흐름이 멈추지 않게 (stop 은 Promise 라 거부도 삼킴) */
+const stopSpeech = () => {
+  try {
+    void Speech.stop().catch(() => {});
+  } catch {}
+};
+
 export function useSpeak(childId: string | undefined) {
   const player = useAudioPlayer();
   const [mouth, setMouth] = useState(0);
@@ -83,7 +90,7 @@ export function useSpeak(childId: string | undefined) {
     () => () => {
       gen.current++; // 화면을 떠나면 늦게 온 TTS 를 틀거나 기기 음성으로 말하지 않게
       if (watchdog.current) clearTimeout(watchdog.current);
-      Speech.stop();
+      stopSpeech();
       stopFake();
     },
     [stopFake],
@@ -94,7 +101,7 @@ export function useSpeak(childId: string | undefined) {
     (text: string) =>
       new Promise<void>(async (resolve) => {
         const my = ++gen.current;
-        Speech.stop();
+        stopSpeech();
         try {
           player.pause(); // 앞 문장 재생이 남아 있으면 멈춤 (그 끝남 알림이 이 문장을 끝내지 않게)
         } catch {}
@@ -107,7 +114,7 @@ export function useSpeak(childId: string | undefined) {
           watchdog.current = setTimeout(() => {
             if (my !== gen.current) return;
             gen.current++;
-            Speech.stop();
+            stopSpeech();
             try {
               player.pause();
             } catch {}
@@ -137,7 +144,9 @@ export function useSpeak(childId: string | undefined) {
           env.current = v && v.length ? { v, ms: env_ms || 40 } : null;
           playingGen.current = my;
           player.replace({ uri: url });
-          player.setPlaybackRate(rate.current);
+          try {
+            player.setPlaybackRate(rate.current); // 일부 기기에서 안 되면 보통 속도로 (엄마 목소리는 그대로)
+          } catch {}
           player.play();
           if (env.current) startMouth(); // 0.04초마다 실제 재생 위치를 보고 입을 움직임 (재생 전엔 닫힘)
           guard();
@@ -147,17 +156,23 @@ export function useSpeak(childId: string | undefined) {
           reportError('speak.fallback', e); // 왜 기기 음성으로 바뀌었는지 서버 기록에 남김
           setUsingFallback(true);
           guard();
-          Speech.speak(text, {
-            language: 'ko-KR',
-            rate: 0.9 * rate.current,
-            pitch: 1.1,
-            onStart: () => {
-              if (my === gen.current) startFake(); // 기기 음성은 소리 크기를 못 받아 리듬으로
-            },
-            onDone: onEnd,
-            onStopped: onEnd,
-            onError: onEnd,
-          });
+          try {
+            Speech.speak(text, {
+              language: 'ko-KR',
+              rate: 0.9 * rate.current,
+              pitch: 1.1,
+              onStart: () => {
+                if (my === gen.current) startFake(); // 기기 음성은 소리 크기를 못 받아 리듬으로
+              },
+              onDone: onEnd,
+              onStopped: onEnd,
+              onError: onEnd,
+            });
+          } catch (err) {
+            // 기기 음성도 없으면 잠깐 뒤 끝냄 (흐름·듣기가 멈추지 않게)
+            reportError('speak.device', err);
+            setTimeout(onEnd, 800);
+          }
         }
       }),
     [childId, player, startFake, stopFake, startMouth, finish],
@@ -165,7 +180,7 @@ export function useSpeak(childId: string | undefined) {
 
   const stop = useCallback(() => {
     gen.current++;
-    Speech.stop();
+    stopSpeech();
     try {
       player.pause();
     } catch {}

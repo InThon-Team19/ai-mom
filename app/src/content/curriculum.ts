@@ -98,7 +98,7 @@ export const DAYS: Day[] = [
   },
 ];
 
-export const dayOf = (n: number) => DAYS[Math.max(0, Math.min(DAYS.length - 1, n - 1))];
+export const dayOf = (n: number) => DAYS[Math.max(0, Math.min(DAYS.length - 1, Math.floor(Number(n) || 1) - 1))]; // 이상한 값(NaN·문자)이면 1일차
 
 // 가입 1-5 목소리 등록 문장 (와이어프레임 예시)
 export const VOICE_SENTENCES = [

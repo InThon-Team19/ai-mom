@@ -26,7 +26,7 @@ export function playSfx(name: Sfx, volume = 0.6) {
   try {
     const p = (players[name] ??= createAudioPlayer(SOURCES[name]));
     p.volume = Math.max(0, Math.min(0.6, volume));
-    p.seekTo(0);
+    Promise.resolve(p.seekTo(0)).catch(() => {}); // Promise: 실패해도 경고 없이
     p.play();
   } catch {}
 }
@@ -69,7 +69,14 @@ export function haptic(kind: HapticKind) {
     else if (kind === 'strong') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(quiet);
     else if (kind === 'tap') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(quiet);
     else if (kind === 'praise') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(quiet);
-    else [0, 200, 400].forEach((ms) => setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Soft).catch(quiet), ms));
+    else
+      [0, 200, 400].forEach((ms) =>
+        setTimeout(() => {
+          try {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Soft).catch(quiet); // 타이머 안에서 던지면 바깥 try 가 못 잡음
+          } catch {}
+        }, ms),
+      );
   } catch {}
 }
 

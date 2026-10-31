@@ -45,7 +45,7 @@ export function PinPad({
     if (!onForgot) return;
     setBusy(true);
     setError('');
-    const err = await onForgot(id, pw);
+    const err = await onForgot(id, pw).catch(() => '잠시 후 다시 해 주세요.'); // 실패해도 '확인 중'에 멈추지 않게
     setBusy(false);
     if (err) return setError(err);
     setForgot(false);

@@ -9,6 +9,7 @@ import { Avatar } from '@/components/Avatar';
 import { ChevronIcon, PillButton, RoundButton, sleep, useDailyLimit, useMouthScale, who } from '@/components/child/kit';
 import { dayOf, fill } from '@/content/curriculum';
 import { useSpeak } from '@/hooks/useSpeak';
+import { api } from '@/lib/api';
 import { logEvent } from '@/lib/sense';
 import { useProfile } from '@/lib/store';
 import { C, R } from '@/theme';
@@ -24,6 +25,7 @@ export default function Story() {
   const scale = useMouthScale(profile?.childId);
   const { me, name } = who(profile);
   const story = dayOf(profile?.day ?? 1).story;
+  const childId = profile?.childId;
   const [page, setPage] = useState(0);
   const run = useRef(0);
   const introDone = useRef(false);
@@ -42,8 +44,11 @@ export default function Story() {
   // 한 장씩 읽고 → 잠깐 쉬고 → 자동으로 넘김. 마지막 장 다음은 마무리(3-8)
   useFocusEffect(
     useCallback(() => {
-      if (!story) return;
+      if (!story || !childId) return; // 프로필 전엔 childId 가 없어 기기 음성으로 읽게 됨 → 기다림
       const t = ++run.current;
+      // 다음 장 엄마 목소리를 미리 만들어 둠 (지금 장 목소리를 받은 뒤쯤 · 읽는 동안 준비 → 넘어갈 때 오래 멈추거나 기기 음성으로 바뀌지 않게)
+      const nextText = story.pages[page + 1]?.text;
+      const pre = nextText ? setTimeout(() => api.tts(childId, nextText).catch(() => {}), 3000) : null;
       (async () => {
         await sleep(500);
         if (t !== run.current) return;
@@ -63,10 +68,11 @@ export default function Story() {
         else toEnd();
       })();
       return () => {
+        if (pre) clearTimeout(pre);
         run.current++;
         stop();
       };
-    }, [story, page, speak, stop, me, name, toEnd]),
+    }, [story, page, speak, stop, me, name, toEnd, childId]),
   );
 
   if (!story) return <View style={{ flex: 1, backgroundColor: C.bg }} />;

@@ -29,7 +29,7 @@ import { useSpeak } from '@/hooks/useSpeak';
 import { agentSay, type TurnIn } from '@/lib/agent';
 import { useDevice } from '@/lib/layout';
 import { haptic, logEvent, playSfx, setVibration, startActivityLog } from '@/lib/sense';
-import { refreshProfile, useProfile } from '@/lib/store';
+import { loadProfile, refreshProfile, useProfile } from '@/lib/store';
 import type { ChildClipOut } from '@/lib/types';
 import { C, R } from '@/theme';
 
@@ -146,6 +146,8 @@ export default function Session() {
   const leaving = useRef(false);
   const counts = useRef<Partial<Record<ItemId, number>>>({});
   const moodTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const leaveGuard = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const onLeftRef = useRef<() => void>(() => {});
   const toyRef = useRef<HostInstance>(null);
   const slotRef = useRef<HostInstance>(null);
   // 얼굴 센서용 최신 상태 (0.05초마다 들어오므로 state 대신 ref)
@@ -195,9 +197,11 @@ export default function Session() {
   /** 아바타 말하기: 말하는 동안 듣기를 멈춤 (아바타 목소리가 녹음되지 않게) */
   const talk = useCallback(
     async (text: string) => {
+      const r = run.current;
       await hold();
       try {
-        await speak(text);
+        // 녹음을 멈추는 사이(최대 0.8초) 흐름이 바뀌었으면(누름·다음 등) 지난 문장은 말하지 않음 (두 문장이 겹쳐 들리던 문제)
+        if (r === run.current) await speak(text);
       } finally {
         release();
       }
@@ -231,6 +235,7 @@ export default function Session() {
     () => () => {
       moodTimers.current.forEach(clearTimeout);
       if (calmTimer.current) clearTimeout(calmTimer.current);
+      if (leaveGuard.current) clearTimeout(leaveGuard.current);
     },
     [],
   );
@@ -252,7 +257,8 @@ export default function Session() {
   // ---------- 시작: 오늘 계획 받기 + 기록 시작 ----------
   useEffect(() => {
     let alive = true;
-    refreshProfile().then((p) => {
+    // 서버가 응답 없이 멈춰도(연결 시간 제한 없음) 화면이 빈 채로 남지 않게 5초 뒤엔 기기에 저장된 프로필로 시작
+    Promise.race([refreshProfile(), sleep(5000).then(loadProfile)]).then((p) => {
       if (!alive) return;
       const d = dayOf(p.day);
       startActivityLog(p.childId);
@@ -280,6 +286,12 @@ export default function Session() {
     run.current++;
     stop();
     setRest(false);
+    // 안전망: 굴러가는 움직임의 끝 알림(onLeft)이 오지 않으면(측정 콜백 누락 등) 다음 버튼도 안 먹고 화면이 멈춤 → 2.5초 뒤 직접 넘김
+    if (leaveGuard.current) clearTimeout(leaveGuard.current);
+    leaveGuard.current = setTimeout(() => {
+      leaveGuard.current = null;
+      if (leaving.current) onLeftRef.current();
+    }, 2500);
     const fallback = { dx: -width * 0.3, dy: height * 0.35 };
     const toy = toyRef.current;
     const slot = slotRef.current;
@@ -301,6 +313,8 @@ export default function Session() {
   /** 사물이 바구니에 들어간 뒤 (ItemToy onLeft) */
   const onLeft = () => {
     if (!plan || !item) return;
+    if (leaveGuard.current) clearTimeout(leaveGuard.current);
+    leaveGuard.current = null;
     // 이 사물에서 읽은 감각 상태를 한 번 기록 (부모 리포트: 사물별 상태)
     const s = signalsNow();
     logEvent('expression', {
@@ -339,6 +353,10 @@ export default function Session() {
       router.replace({ pathname: '/child/play', params: { fav, basket: nextBasket.join(','), next: plan.story ? 'story' : 'end' } });
     }, 350);
   };
+
+  useEffect(() => {
+    onLeftRef.current = onLeft;
+  });
 
   // ---------- 따라 말하기: 듣기 결과 기다리기 ----------
   /** 말소리 토막이 서버에서 돌아올 때까지 기다림. 아이가 말하는 중이거나 올리는 중이면 최대 10초 더 */
@@ -583,7 +601,7 @@ export default function Session() {
 
   // ---------- 누르는 놀이 ----------
   const onToy = () => {
-    if (!item) return;
+    if (!item || leaving.current) return; // 바구니로 굴러가는 중엔 반응하지 않음 (다음 사물 흐름과 겹치지 않게)
     const now = Date.now();
     const n = pressCount.current;
     const reaction = now - (n === 0 ? shownAt.current : lastPress.current);

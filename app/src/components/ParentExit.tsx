@@ -20,15 +20,21 @@ const HOLD_MS = 3000;
 function adultMenu(childId?: string, onDone?: () => void) {
   // PIN 통과 → 부모 모드. 이 기기에 부모 로그인이 있으면 바로 부모 앱, 없으면(따로 쓰는 태블릿) 비밀번호 로그인
   const toParent = async () => {
-    const a = await loadAccount();
-    await setRole('parent');
-    // 로그인돼 있으면 서버 정보로 되살려 부모 앱으로 (아이 모드에서 초기화된 프로필이어도 아이 소개를 다시 하지 않게)
-    router.replace((a?.token ? await parentEntry() : '/onboarding/login') as Href);
+    try {
+      const a = await loadAccount();
+      await setRole('parent');
+      // 로그인돼 있으면 서버 정보로 되살려 부모 앱으로 (아이 모드에서 초기화된 프로필이어도 아이 소개를 다시 하지 않게)
+      router.replace((a?.token ? await parentEntry() : '/onboarding/login') as Href);
+    } catch {
+      router.replace('/onboarding/login' as Href); // 서버·저장소 실패여도 어른 메뉴가 아무 반응 없이 끝나지 않게
+    }
   };
   const unlink = async () => {
-    if (childId) await api.removeDevice(childId, await getDeviceId()).catch(() => {});
-    await AsyncStorage.removeItem(CHILD_LINKED_KEY).catch(() => {});
-    await resetLocal();
+    try {
+      if (childId) await api.removeDevice(childId, await getDeviceId()).catch(() => {});
+      await AsyncStorage.removeItem(CHILD_LINKED_KEY).catch(() => {});
+      await resetLocal();
+    } catch {}
     router.replace('/');
   };
   if (Platform.OS === 'web') {
@@ -60,6 +66,7 @@ export function ParentExit({ dark = false, home = false }: { dark?: boolean; hom
   useEffect(() => stop, []);
 
   const start = () => {
+    if (timer.current) clearInterval(timer.current); // 두 번 눌림이 와도 타이머가 겹쳐 남지 않게
     const t0 = Date.now();
     timer.current = setInterval(() => {
       const p = Math.min(1, (Date.now() - t0) / HOLD_MS);
@@ -104,7 +111,7 @@ export function ParentExit({ dark = false, home = false }: { dark?: boolean; hom
       </Pressable>
       {home && (
         <Pressable
-          onPress={() => router.replace('/child')}
+          onPress={() => router.dismissTo('/child')} // 쌓인 아이 화면을 닫고 홈으로 (replace 는 홈이 겹겹이 쌓임)
           accessibilityLabel="아이 홈으로"
           hitSlop={8}
           style={{ position: 'absolute', left: 10 + insets.left + size + 14, top: 10 + insets.top, width: 64, height: 64, borderRadius: 32, zIndex: 50, alignItems: 'center', justifyContent: 'center', backgroundColor: dark ? '#ffffff22' : C.primary }}>

@@ -142,12 +142,12 @@ export const FaceTracker = memo(function FaceTracker({ onFrame, onError, interva
   const source = useMemo(() => ({ html: html(intervalMs), baseUrl: 'https://localhost' }), [intervalMs]); // https 여야 카메라 사용 가능
 
   useEffect(() => {
-    if (perm && !perm.granted && perm.canAskAgain) requestPerm();
+    if (perm && !perm.granted && perm.canAskAgain) requestPerm().catch(() => {});
   }, [perm, requestPerm]);
 
   if (!perm?.granted) {
     return (
-      <Pressable onPress={requestPerm} style={[{ justifyContent: 'center', backgroundColor: '#ddd' }, style]}>
+      <Pressable onPress={() => requestPerm().catch(() => {})} style={[{ justifyContent: 'center', backgroundColor: '#ddd' }, style]}>
         <Text style={{ textAlign: 'center' }}>카메라 허용</Text>
       </Pressable>
     );

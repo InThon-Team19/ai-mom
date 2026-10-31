@@ -18,7 +18,7 @@ import { dayOf, fill, ITEMS, type ItemId } from '@/content/curriculum';
 import { useSpeak } from '@/hooks/useSpeak';
 import { useDevice } from '@/lib/layout';
 import { setVibration, startActivityLog } from '@/lib/sense';
-import { refreshProfile, useProfile } from '@/lib/store';
+import { loadProfile, refreshProfile, useProfile } from '@/lib/store';
 import { C, R } from '@/theme';
 
 const IDLE_MS = 8000; // 이만큼 가만히 있으면 다시 권함, 한 번 더 가만히 있으면 다음 판
@@ -77,7 +77,8 @@ export default function Play() {
   // ---------- 시작: 프로필 새로 받기 + 기록·진동 설정 (홈에서 바로 왔을 때도) ----------
   useEffect(() => {
     let alive = true;
-    refreshProfile()
+    // 서버가 응답 없이 멈춰도 빈 화면으로 남지 않게 5초 뒤엔 기기에 저장된 프로필로 시작
+    Promise.race([refreshProfile(), sleep(5000).then(loadProfile)])
       .then((p) => {
         if (!alive) return;
         startActivityLog(p.childId);

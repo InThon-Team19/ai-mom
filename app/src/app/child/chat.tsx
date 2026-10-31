@@ -19,7 +19,7 @@ import { useSpeak } from '@/hooks/useSpeak';
 import { agentSay, type TurnIn } from '@/lib/agent';
 import { useDevice } from '@/lib/layout';
 import { logEvent, setVibration, startActivityLog } from '@/lib/sense';
-import { refreshProfile, useProfile } from '@/lib/store';
+import { loadProfile, refreshProfile, useProfile } from '@/lib/store';
 import { C, R } from '@/theme';
 
 type Turn = NonNullable<TurnIn['history']>[number];
@@ -80,7 +80,8 @@ export default function Chat() {
   // ---------- 시작: 프로필 새로 받기 + 기록 다시 시작 (마무리 화면이 기록을 멈췄으므로) ----------
   useEffect(() => {
     let alive = true;
-    refreshProfile()
+    // 서버가 응답 없이 멈춰도 빈 화면으로 남지 않게 5초 뒤엔 기기에 저장된 프로필로 시작
+    Promise.race([refreshProfile(), sleep(5000).then(loadProfile)])
       .then((pr) => {
         if (!alive) return;
         startActivityLog(pr.childId);
@@ -158,7 +159,8 @@ export default function Chat() {
     setNod((n) => n + 1);
     void t;
     // 다른 흐름이 끼어들어도, 인사 목소리가 늦어도 반드시 마무리 화면으로 (그만할래가 안 먹던 문제)
-    await Promise.race([talk(fill(ENDING, { name, me })), sleep(5000)]);
+    // 인사 문장(약 6초)이 5초에서 잘리던 문제: 목소리 만들기 시간까지 넉넉히 기다리되 최대 15초
+    await Promise.race([talk(fill(ENDING, { name, me })), sleep(15000)]);
     stop();
     await sleep(300);
     const params = { ...(fav ? { fav } : {}), ...(basket ? { basket } : {}) };

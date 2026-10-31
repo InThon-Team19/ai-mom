@@ -59,7 +59,7 @@ export default function ChildStart() {
       }
       // 연결됨 표시는 기기 토큰으로 등록에 성공했을 때만 (부모 토큰으로 도는 아이 모드에서 다음 진입 때 프로필이 지워지던 문제)
       if (await registerThisDevice(p.childId, 'child')) await AsyncStorage.setItem(LINKED_KEY, p.childId).catch(() => {});
-    })();
+    })().catch(() => {}); // 기기 등록·저장소 실패는 다음에 다시 (빨간 경고 없이 홈은 그대로)
   }, [linked]);
 
   if (!profile) return null;
