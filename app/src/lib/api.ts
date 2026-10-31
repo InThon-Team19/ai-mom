@@ -8,6 +8,8 @@ import { getToken } from './session';
 import type {
   ActivityEvent,
   AnalysisOut,
+  ChildClip,
+  ChildClipOut,
   BackendChild,
   BackendContext,
   BackendDevice,
@@ -120,6 +122,19 @@ export const api = {
   // STT (아이 따라 말하기). expected 는 '사과|apple' 처럼 여러 답 가능
   stt: (uri: string, expected = '', who: 'child' | 'parent' = 'child') =>
     uploadB64<SttOut>('/voice/stt-b64', uri, { expected, who }),
+
+  // 아이 말소리 클립: 소음 감지로 녹음한 토막 → 말소리면 저장·받아쓰기 / 부모가 목록·재생
+  childClip: async (childId: string, uri: string, info: { item?: string; phase?: string; expected?: string }) => {
+    const audio_b64 = await readBase64(uri);
+    const ext = (uri.split('?')[0].split('.').pop() || 'm4a').toLowerCase();
+    return req<ChildClipOut>('/voice/child-clip-b64', json('POST', { child_id: childId, audio_b64, ext, ...info }));
+  },
+  childClips: (childId: string, day?: string) => req<ChildClip[]>(`/voice/child-clips/${childId}${day ? `?day=${day}` : ''}`),
+  /** 재생용 주소 + 인증 헤더 (expo-audio 의 { uri, headers }) */
+  childClipSource: async (childId: string, clipId: string) => {
+    const t = await getToken();
+    return { uri: `${getApiUrl()}/voice/child-clip/${childId}/${clipId}`, headers: t ? { Authorization: `Bearer ${t}` } : undefined };
+  },
 
   // TTS (민주) — 부모 목소리
   registerVoice: (childId: string) =>

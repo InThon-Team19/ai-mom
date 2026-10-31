@@ -11,8 +11,10 @@ import { loadApiUrl, saveApiUrl } from '@/lib/config';
 import { loadAccount } from '@/lib/account';
 import { getRole, loadProfile, setRole, type Role } from '@/lib/store';
 import { C, T } from '@/theme';
+import { useDevice } from '@/lib/layout';
 
 export default function Entry() {
+  const { gutter } = useDevice();
   const [ready, setReady] = useState(false);
   const [dest, setDest] = useState<string | null>(null);
   const [server, setServer] = useState('확인 중...');
@@ -49,7 +51,7 @@ export default function Entry() {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, padding: 24, gap: 16, backgroundColor: C.bg }}>
+    <SafeAreaView style={{ flex: 1, paddingVertical: 24, paddingHorizontal: gutter, gap: 16, backgroundColor: C.bg }}>
       <View style={{ flex: 1, justifyContent: 'center', gap: 12 }}>
         <Text style={{ fontSize: 34, fontWeight: '900', color: C.link }}>아이맘</Text>
         <Text style={T.sub}>이 기기를 어떻게 쓸까요?</Text>

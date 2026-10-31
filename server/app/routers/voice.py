@@ -339,7 +339,7 @@ class TtsOut(BaseModel):
     url: str
 
 
-def _reference_samples(child_id: str, n: int = 4) -> list[dict]:
+def _reference_samples(child_id: str, n: int = 6) -> list[dict]:  # Fish 권장 10~30초 → 6문장(약 10초+)
     """즉석 복제용 참고 음성: 품질 좋은 녹음 중 말한 시간이 긴 것 (가입 녹음 우선, 밤 낭독 포함)."""
     ss = [s for s in samples(child_id) if s["quality"]["ok"] and s.get("text")]
     ss.sort(key=lambda s: (s["kind"] != "signup", -s["features"]["speech_s"]))
@@ -376,3 +376,99 @@ def tts(body: TtsIn):
             out.unlink(missing_ok=True)
             raise HTTPException(502, "Fish Audio에 연결할 수 없어요. 잠시 후 다시 시도해 주세요")
     return TtsOut(url=public_url(out))
+
+
+# ---------- 아이 말소리 클립 (소음 감지로 자동 녹음 → 부모가 나중에 들음) — 담당: 태희 ----------
+# 비공개 server/data/children/<id>/child/clips 에 저장, 로그인 토큰으로만 재생 (공개 /static 아님)
+import time as _time  # noqa: E402
+
+from fastapi.responses import FileResponse  # noqa: E402
+
+MIN_CLIP_SPEECH_S = 0.25
+
+
+class ChildClipIn(BaseModel):
+    child_id: str
+    audio_b64: str
+    ext: str = "m4a"
+    item: str = ""        # 그때 보던 사물 (사과 등)
+    phase: str = ""       # object | repeat | free
+    expected: str = ""    # 따라 말하기 목표 ('사과|apple')
+
+
+class ChildClipOut(BaseModel):
+    saved: bool
+    id: str | None = None
+    text: str = ""
+    matched: bool | None = None
+    alert: bool = False
+    features: SpeechFeatures | None = None
+
+
+def _clip_dir(child_id: str) -> Path:
+    return child_dir(child_id, "child", "clips")
+
+
+@router.post("/child-clip-b64", response_model=ChildClipOut)
+def child_clip(body: ChildClipIn):
+    """아이 말소리 한 토막 → 말소리가 있으면 저장 + 받아쓰기. 조용하면 저장 안 함."""
+    try:
+        d = _clip_dir(body.child_id)
+    except ValueError:
+        raise HTTPException(400, "child_id 형식 오류")
+    src = _b64_to_tmp(body.audio_b64, body.ext)
+    clip_id = f"{int(_time.time() * 1000)}"
+    wav = d / f"{clip_id}.wav"
+    try:
+        to_wav(src, wav)
+    except Exception:
+        raise HTTPException(400, "오디오를 처리할 수 없음")
+    finally:
+        src.unlink(missing_ok=True)
+    pcm, sr = read_wav(wav)
+    feats = speech_features(pcm, sr)
+    if feats["speech_s"] < MIN_CLIP_SPEECH_S:
+        wav.unlink(missing_ok=True)
+        return ChildClipOut(saved=False, features=SpeechFeatures(**feats))
+    text = ""
+    try:
+        text = transcribe(wav, prompt=body.expected.replace("|", ", "))
+    except Exception:
+        pass  # STT 키가 없거나 실패해도 소리는 저장 (부모가 들을 수 있게)
+    feats = speech_features(pcm, sr, text)
+    matched = match_expected(text, body.expected) if body.expected and text else None
+    alert = any(w in text for w in ALERT_WORDS)
+    meta = {"id": clip_id, "at": _time.time(), "item": body.item, "phase": body.phase, "text": text,
+            "matched": matched, "alert": alert, "features": feats}
+    wav.with_suffix(".json").write_text(json.dumps(meta, ensure_ascii=False), encoding="utf-8")
+    return ChildClipOut(saved=True, id=clip_id, text=text, matched=matched, alert=alert, features=SpeechFeatures(**feats))
+
+
+@router.get("/child-clips/{child_id}")
+def child_clips(child_id: str, day: str | None = None) -> list[dict]:
+    """부모 리포트: 아이 말소리 클립 목록 (최신순, day=YYYY-MM-DD 로 그날만)."""
+    try:
+        d = _clip_dir(child_id)
+    except ValueError:
+        raise HTTPException(400, "child_id 형식 오류")
+    out = []
+    for f in sorted(d.glob("*.json"), reverse=True)[:200]:
+        m = json.loads(f.read_text(encoding="utf-8"))
+        if day and _time.strftime("%Y-%m-%d", _time.localtime(m["at"])) != day:
+            continue
+        out.append({k: m.get(k) for k in ("id", "at", "item", "phase", "text", "matched", "alert")} | {"duration_s": m["features"]["duration_s"]})
+    return out
+
+
+@router.get("/child-clip/{child_id}/{clip_id}")
+def child_clip_audio(child_id: str, clip_id: str):
+    """클립 재생 (로그인 토큰 필요)."""
+    if not clip_id.isdigit():
+        raise HTTPException(400, "clip_id 형식 오류")
+    try:
+        f = _clip_dir(child_id) / f"{clip_id}.wav"
+    except ValueError:
+        raise HTTPException(400, "child_id 형식 오류")
+    if not f.exists():
+        raise HTTPException(404, "클립이 없어요")
+    return FileResponse(f, media_type="audio/wav")

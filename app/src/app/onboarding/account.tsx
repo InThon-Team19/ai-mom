@@ -9,10 +9,12 @@ import { Button, H1, Sub } from '@/components/ui';
 import { signup } from '@/lib/account';
 import { loadProfile } from '@/lib/store';
 import { C, R, T } from '@/theme';
+import { useDevice } from '@/lib/layout';
 
 const input = { fontSize: 17, borderWidth: 1, borderColor: C.border, borderRadius: R.sm, paddingHorizontal: 14, paddingVertical: 14, color: C.text } as const;
 
 export default function Account() {
+  const { gutter } = useDevice();
   const [id, setId] = useState('');
   const [pw, setPw] = useState('');
   const [pw2, setPw2] = useState('');
@@ -32,7 +34,7 @@ export default function Account() {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: C.bg, padding: 24, gap: 16 }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: C.bg, paddingVertical: 24, paddingHorizontal: gutter, gap: 16 }}>
       <Pressable onPress={() => router.back()} hitSlop={12} accessibilityLabel="뒤로">
         <Text style={{ fontSize: 28, color: C.text }}>‹</Text>
       </Pressable>

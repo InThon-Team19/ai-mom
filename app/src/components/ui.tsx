@@ -5,6 +5,7 @@ import { Pressable, ScrollView, Text, View, type StyleProp, type TextStyle, type
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { C, R, T } from '@/theme';
+import { useDevice } from '@/lib/layout';
 
 type BtnProps = {
   label: string;
@@ -101,6 +102,7 @@ export function OnboardingScaffold({
   footer?: ReactNode;
   scroll?: boolean;
 }) {
+  const { frame } = useDevice();
   const head = (
     <View style={{ gap: 6 }}>
       <H1>{title}</H1>
@@ -109,7 +111,7 @@ export function OnboardingScaffold({
   );
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }}>
-      <View style={{ paddingHorizontal: 24, paddingTop: 8, gap: 10 }}>
+      <View style={[{ paddingHorizontal: 24, paddingTop: 8, gap: 10 }, frame]}>
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', height: 40 }}>
           <Pressable onPress={() => router.back()} hitSlop={12} accessibilityLabel="뒤로">
             <Text style={{ fontSize: 28, color: C.text }}>‹</Text>
@@ -123,17 +125,17 @@ export function OnboardingScaffold({
         </View>
       </View>
       {scroll ? (
-        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 24, gap: 16 }}>
+        <ScrollView style={{ flex: 1 }} contentContainerStyle={[{ padding: 24, gap: 16 }, frame]}>
           {head}
           {children}
         </ScrollView>
       ) : (
-        <View style={{ flex: 1, padding: 24, gap: 16 }}>
+        <View style={[{ flex: 1, padding: 24, gap: 16 }, frame]}>
           {head}
           {children}
         </View>
       )}
-      {!!footer && <View style={{ padding: 24, paddingTop: 8 }}>{footer}</View>}
+      {!!footer && <View style={[{ padding: 24, paddingTop: 8 }, frame]}>{footer}</View>}
     </SafeAreaView>
   );
 }

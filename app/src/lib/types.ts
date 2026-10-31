@@ -105,7 +105,7 @@ export type AnalysisOut = { summary: Record<string, number>; traits: string[]; t
 
 export type SttOut = { text: string; features: SpeechFeatures; matched: boolean | null; alert: boolean };
 
-export type ActivityType = 'touch' | 'gaze' | 'smile' | 'imitate' | 'repeat' | 'voice' | 'listen' | 'out_of_scope' | 'blocked' | 'alert' | 'session';
+export type ActivityType = 'touch' | 'gaze' | 'smile' | 'expression' | 'imitate' | 'repeat' | 'voice' | 'listen' | 'out_of_scope' | 'blocked' | 'alert' | 'session';
 
 export type ActivityEvent = { type: ActivityType; t?: number; data?: Record<string, unknown> };
 
@@ -123,7 +123,14 @@ export type Summary = {
   balance: { visual: number; audio: number; touch: number };
   out_of_scope: string[];
   alerts: string[];
+  expressions?: Record<string, number>; // 표정 변화 {smile, surprise, frown}
+  voices?: number; // 소리 반응·자동 녹음된 말소리 수
+  listen_s?: number; // 부모 목소리 들은 시간
 };
+
+// 아이 말소리 클립 (소음 감지 자동 녹음 → 부모가 나중에 들음)
+export type ChildClipOut = { saved: boolean; id: string | null; text: string; matched: boolean | null; alert: boolean };
+export type ChildClip = { id: string; at: number; item: string; phase: string; text: string; matched: boolean | null; alert: boolean; duration_s: number };
 
 export type ChildFrameOut = {
   face: boolean;

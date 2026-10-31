@@ -8,6 +8,7 @@ import { Button, Card, Chip, H1, Sub } from '@/components/ui';
 import { DAYS, ITEMS, dayOf } from '@/content/curriculum';
 import { updateProfile, useProfile } from '@/lib/store';
 import { C, R, T } from '@/theme';
+import { useDevice } from '@/lib/layout';
 
 const ISSUES = ['말이 빨라요', '질문이 어려워요', '진동이 세요', '목소리가 어색해요'];
 
@@ -21,6 +22,7 @@ const Label = ({ title, optional }: { title: string; optional?: boolean }) => (
 const input = { borderWidth: 1, borderColor: C.sub, borderRadius: R.sm, padding: 12, fontSize: 16, color: C.text } as const;
 
 export default function Feedback() {
+  const { frame } = useDevice();
   const profile = useProfile();
   const [issues, setIssues] = useState<string[]>([]);
   const [note, setNote] = useState('');
@@ -55,7 +57,7 @@ export default function Feedback() {
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: C.bg }}>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <ScrollView contentContainerStyle={{ padding: 20, gap: 14 }} keyboardShouldPersistTaps="handled">
+        <ScrollView contentContainerStyle={[{ padding: 20, gap: 14 }, frame]} keyboardShouldPersistTaps="handled">
           <View style={{ gap: 6 }}>
             <H1>피드백</H1>
             <Sub>남긴 내용은 내일 아바타의 대화에 반영돼요.</Sub>

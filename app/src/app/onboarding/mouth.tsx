@@ -15,6 +15,7 @@ import { useReadAloud } from '@/hooks/useReadAloud';
 import { updateProfile, useProfile } from '@/lib/store';
 import { goNext } from '@/lib/nav';
 import { C, R } from '@/theme';
+import { useDevice } from '@/lib/layout';
 
 export default function MouthSignup() {
   const edit = useLocalSearchParams<{ edit?: string }>().edit === '1';
@@ -22,6 +23,7 @@ export default function MouthSignup() {
   const name = p?.child.nickname || p?.child.name;
   const me = p?.parent.title;
   const sentences = useMemo(() => MOUTH_SENTENCES.map((s) => fill(s, { name, me })), [name, me]);
+  const device = useDevice(); // 폰: 화면 폭 / 태블릿: 가운데 최대 520, 높이는 화면의 일부
   const ra = useReadAloud({ childId: p?.childId, sentences, kind: 'signup', camera: true });
   const [camError, setCamError] = useState('');
   const [expressionLater, setExpressionLater] = useState(false);
@@ -109,7 +111,7 @@ export default function MouthSignup() {
         onError={setCamError}
         recording={ra.recording}
         doneCount={doneSignal(ra.statuses, ra.allDone)}
-        style={{ width: '100%', aspectRatio: 16 / 10, borderRadius: R.md, borderWidth: 1, borderColor: C.border }}
+        style={{ ...device.camera, borderRadius: R.md, borderWidth: 1, borderColor: C.border }}
       />
       {!!camError && <Text style={{ fontSize: 13, color: C.warn }}>카메라 인식 오류: {camError.slice(0, 80)}</Text>}
 

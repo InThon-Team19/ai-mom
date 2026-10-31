@@ -10,8 +10,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Avatar, DEFAULT_AVATAR } from '@/components/Avatar';
 import { Button, H1, Sub } from '@/components/ui';
 import { C, R } from '@/theme';
+import { useDevice } from '@/lib/layout';
 
 export default function Start() {
+  const { gutter } = useDevice();
   // 가입은 아이디 만들기부터 (서버가 모든 저장에 로그인을 요구). 이미 로그인했으면 아이 정보로
   const start = async () => {
     const a = await loadAccount();
@@ -24,7 +26,7 @@ export default function Start() {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: C.bg, padding: 24 }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: C.bg, paddingVertical: 24, paddingHorizontal: gutter }}>
       <View style={{ flex: 1, gap: 20, paddingTop: 40 }}>
         <View
           style={{

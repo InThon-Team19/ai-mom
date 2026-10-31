@@ -16,6 +16,7 @@ import { dayAdvancePatch } from '@/lib/progress';
 import { refreshProfile, resetLocal, setRole, updateProfile, useProfile, type Profile } from '@/lib/store';
 import type { Gauge, History } from '@/lib/types';
 import { C, R, T } from '@/theme';
+import { useDevice } from '@/lib/layout';
 
 const fmt = (sec: number) => {
   const d = new Date(sec * 1000);
@@ -62,6 +63,7 @@ const Link = ({ label, href }: { label: string; href: string }) => (
 );
 
 export default function Settings() {
+  const { frame } = useDevice();
   const p = useProfile();
   const [me, setMe] = useState('');
   const [voice, setVoice] = useState<Gauge | null>(null);
@@ -159,7 +161,7 @@ export default function Settings() {
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: C.bg }}>
-      <ScrollView contentContainerStyle={{ padding: 20, gap: 16, paddingBottom: 40 }}>
+      <ScrollView contentContainerStyle={[{ padding: 20, gap: 16, paddingBottom: 40 }, frame]}>
         <Text style={T.h1}>설정</Text>
 
         {/* 기획 2-5: 설정 탭 맨 위 정보는 '아이 모드로 바꾸기' */}

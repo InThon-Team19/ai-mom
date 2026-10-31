@@ -10,6 +10,7 @@ import { authMessage, login } from '@/lib/account';
 import { registerThisDevice } from '@/lib/device';
 import { loadProfile, setRole } from '@/lib/store';
 import { C, R, T } from '@/theme';
+import { useDevice } from '@/lib/layout';
 
 const input = {
   fontSize: 17,
@@ -22,6 +23,7 @@ const input = {
 } as const;
 
 export default function Login() {
+  const { gutter } = useDevice();
   const [id, setId] = useState('');
   const [pw, setPw] = useState('');
   const [busy, setBusy] = useState(false);
@@ -44,7 +46,7 @@ export default function Login() {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: C.bg, padding: 24, gap: 16 }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: C.bg, paddingVertical: 24, paddingHorizontal: gutter, gap: 16 }}>
       <Pressable onPress={() => router.back()} hitSlop={12} accessibilityLabel="뒤로">
         <Text style={{ fontSize: 28, color: C.text }}>‹</Text>
       </Pressable>

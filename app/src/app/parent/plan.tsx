@@ -16,6 +16,7 @@ import { prefetchDay } from '@/lib/prefetch';
 import { readingDonePatch } from '@/lib/progress';
 import { updateProfile, useProfile, type Profile } from '@/lib/store';
 import { C, R, T } from '@/theme';
+import { useDevice } from '@/lib/layout';
 
 const DEFAULT_TIP = '카메라에 얼굴이 잘 보이게 하고, 입모양을 크게 보이며 천천히 읽어주세요.';
 
@@ -34,6 +35,7 @@ function PlanReader({ profile, plan }: { profile: Profile; plan: Day }) {
     () => plan.planSentences.map((t) => fill(t, { name, me: profile.parent.title })),
     [plan, name, profile.parent.title],
   );
+  const device = useDevice();
   const ra = useReadAloud({ childId: profile.childId, sentences, kind: 'plan', camera: true });
   const [coaching, setCoaching] = useState<string[]>([]);
   const [camError, setCamError] = useState('');
@@ -84,7 +86,7 @@ function PlanReader({ profile, plan }: { profile: Profile; plan: Day }) {
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: C.bg }}>
-      <ScrollView contentContainerStyle={{ padding: 20, gap: 14 }}>
+      <ScrollView contentContainerStyle={[{ padding: 20, gap: 14 }, device.frame]}>
         <View style={{ gap: 6 }}>
           <H1>내일 {plan.day}일차 계획</H1>
           <Sub>쭉 읽어주세요. 입모양을 보이며 읽을수록 학습률이 올라가요.</Sub>
@@ -105,10 +107,10 @@ function PlanReader({ profile, plan }: { profile: Profile; plan: Day }) {
             onError={setCamError}
             recording={ra.recording}
             doneCount={doneSignal(ra.statuses, ra.allDone)}
-            style={{ height: 160, borderRadius: R.sm, borderWidth: 1, borderColor: C.border }}
+            style={{ ...device.camera, borderRadius: R.sm, borderWidth: 1, borderColor: C.border }}
           />
         ) : (
-          <View style={{ height: 160, borderRadius: R.sm, backgroundColor: C.card }} />
+          <View style={{ ...device.camera, borderRadius: R.sm, backgroundColor: C.card }} />
         )}
         {!!camError && <Text style={[T.small, { color: C.warn }]}>카메라 오류: {camError.slice(0, 60)}</Text>}
 

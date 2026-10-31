@@ -16,9 +16,10 @@ SENSE = {
     "touch": "touch",          # 화면 터치 {target, reaction_ms}
     "gaze": "visual",          # 화면 응시 {seconds}
     "smile": "visual",         # 웃는 표정
+    "expression": "visual",    # 표정 변화 {kind: smile|surprise|frown|neutral, item} — 아이 표정 기억
     "imitate": "visual",       # 입모양 따라 하기 {word}
     "repeat": "audio",         # 따라 말하기 {word, matched, text}
-    "voice": "audio",          # 웃음·옹알이 등 소리 반응 {kind}
+    "voice": "audio",          # 웃음·옹알이 등 소리 반응 {kind}, 자동 녹음된 말소리 {clip_id, text}
     "listen": "audio",         # 부모 목소리 들음 {seconds} (청각 집중 모드 포함)
     "out_of_scope": None,      # 범위 밖 질문 {text} → 부모 확인 필요
     "blocked": None,           # 에이전트가 출력 전 검사에서 막은 문장 {text} → 부모 확인 필요 (기획 v2: 리포트에 반드시 포함)
@@ -76,6 +77,9 @@ class Summary(BaseModel):
     balance: dict[str, float]   # {"visual": 0.4, "audio": 0.35, "touch": 0.25}
     out_of_scope: list[str]     # 확인 필요 (범위 밖 질문)
     alerts: list[str]
+    expressions: dict[str, int] = {}  # 표정 변화 횟수 {smile, surprise, frown, ...}
+    voices: int = 0                    # 소리 반응·자동 녹음된 말소리 수
+    listen_s: float = 0.0              # 부모 목소리 들은 시간
 
 
 def summarize(events: list[dict], day: str) -> Summary:
@@ -88,7 +92,8 @@ def summarize(events: list[dict], day: str) -> Summary:
     smiles = len(by("smile"))
     rt = [e["data"]["reaction_ms"] for e in touches if e["data"].get("reaction_ms")]
     # 감각 활동량: 시각 = 응시 10초당 1 + 웃음 + 입모양 따라 하기, 청각 = 따라 말하기 + 소리 반응 + 듣기 10초당 1, 촉각 = 터치
-    vis = gaze_s / 10 + smiles + len(by("imitate"))
+    exprs = Counter(e["data"].get("kind", "") for e in by("expression"))
+    vis = gaze_s / 10 + smiles + len(by("imitate")) + sum(exprs.values())
     aud = len(repeats) + len(by("voice")) + listen_s / 10
     tch = len(touches)
     total = vis + aud + tch
@@ -110,6 +115,9 @@ def summarize(events: list[dict], day: str) -> Summary:
         out_of_scope=[e["data"].get("text", "") for e in by("out_of_scope")]
         + [f"차단된 문장: {e['data'].get('text', '')}" for e in by("blocked")],
         alerts=[e["data"].get("text", "") for e in by("alert")],
+        expressions={k: v for k, v in exprs.items() if k},
+        voices=len(by("voice")),
+        listen_s=round(listen_s, 1),
     )
 
 

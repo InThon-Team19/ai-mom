@@ -9,6 +9,16 @@ export type TurnIn = {
   item: string; // 'apple' | 'banana' | 'snack'
   moment: 'invite' | 'reply'; // invite: 사물 권하기, reply: 아이 말에 대답
   child_text?: string; // reply 일 때 STT 결과
+  /** 지금 이 사물에서 아이 감각 반응 (기획 1-1: 반응을 읽어 다음 활동을 바꿈) — 에이전트가 말·속도·활동을 고르는 근거 */
+  signals?: {
+    touches: number; // 누른 횟수
+    reaction_ms?: number; // 처음 누르기까지 걸린 시간
+    gaze_ratio?: number; // 화면을 본 비율 0~1
+    smiles: number;
+    voices: number; // 말소리·소리 반응 수
+    repeated?: boolean; // 따라 말하기 성공
+    mood?: 'engaged' | 'calm' | 'overloaded' | 'distracted'; // 앱이 추정한 상태
+  };
 };
 
 export type TurnOut = {
