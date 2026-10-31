@@ -14,6 +14,7 @@ export default function Start() {
       <View style={{ flex: 1, gap: 20, paddingTop: 40 }}>
         <View
           style={{
+            width: '100%',
             aspectRatio: 4 / 3,
             borderRadius: R.md,
             backgroundColor: C.primarySoft,
