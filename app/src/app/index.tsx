@@ -47,7 +47,7 @@ export default function Entry() {
   return (
     <SafeAreaView style={{ flex: 1, padding: 24, gap: 16, backgroundColor: C.bg }}>
       <View style={{ flex: 1, justifyContent: 'center', gap: 12 }}>
-        <Text style={{ fontSize: 34, fontWeight: '900', color: C.primary }}>아이봄</Text>
+        <Text style={{ fontSize: 34, fontWeight: '900', color: C.primary }}>아이맘</Text>
         <Text style={T.sub}>이 기기를 어떻게 쓸까요?</Text>
         <Button label="부모 폰으로 쓰기" onPress={() => choose('parent')} />
         <Button label="아이 태블릿으로 쓰기" variant="outline" onPress={() => choose('child')} />

@@ -2,13 +2,16 @@
 // 페르소나 확정 카드(기획 2-1-1 ⑦) + 데이터 동의 2개(필수), 대화 시간대, 하루 사용 상한, 진동 사용, 태블릿 연결 코드(= profile.childId)
 import { router } from 'expo-router';
 import { useState, type ReactNode } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, Text, TextInput, View } from 'react-native';
 
 import { PersonaCard } from '@/components/PersonaCard';
 import { Button, OnboardingScaffold } from '@/components/ui';
+import { signup } from '@/lib/account';
 import { registerThisDevice } from '@/lib/device';
 import { updateProfile, useProfile, type Profile } from '@/lib/store';
 import { C, R, T } from '@/theme';
+
+const inputStyle = { fontSize: 16, borderWidth: 1, borderColor: C.border, borderRadius: R.sm, paddingHorizontal: 12, paddingVertical: 12, color: C.text } as const;
 
 const hours = (from: number, to: number) => Array.from({ length: to - from + 1 }, (_, i) => `${String(from + i).padStart(2, '0')}:00`);
 const START_TIMES = hours(6, 14);
@@ -42,12 +45,25 @@ function Form({ initial, code, profile }: { initial: Profile['settings']; code: 
   const [open, setOpen] = useState<'start' | 'end' | 'limit' | null>(null);
   const [saving, setSaving] = useState(false);
 
+  const [loginId, setLoginId] = useState('');
+  const [pw, setPw] = useState('');
+  const [pw2, setPw2] = useState('');
+  const [accountError, setAccountError] = useState('');
+
   const timeOk = start < end; // "HH:00" 문자열 비교로 충분
-  const ready = consentBio && consentChild && timeOk && !saving;
+  const accountOk = /^[a-zA-Z0-9_.@-]{3,40}$/.test(loginId.trim()) && pw.length >= 4 && pw === pw2;
+  const ready = consentBio && consentChild && timeOk && accountOk && !saving;
 
   const finish = async () => {
     if (!ready) return;
     setSaving(true);
+    setAccountError('');
+    const acc = await signup(loginId, pw, code);
+    if (!acc.ok) {
+      setAccountError(acc.message);
+      setSaving(false);
+      return;
+    }
     const p = await updateProfile({ settings: { consentBio, consentChild, start, end, dailyLimitMin: limit, vibration }, onboarded: true });
     setTimeout(() => registerThisDevice(p.childId, 'parent'), 800); // 프로필 저장(PUT)이 먼저 끝나게
     router.replace('/parent');
@@ -58,6 +74,15 @@ function Form({ initial, code, profile }: { initial: Profile['settings']; code: 
   return (
     <OnboardingScaffold step={7} title="마지막으로 정해주세요" footer={<Button label="시작하기" disabled={!ready} onPress={finish} />}>
       <PersonaCard profile={profile} />
+
+      <Section label="부모 계정 만들기">
+        <Text style={T.small}>다른 폰에서 로그인하거나 앱을 다시 설치해도 우리 아이 정보를 그대로 불러와요.</Text>
+        <TextInput value={loginId} onChangeText={setLoginId} autoCapitalize="none" autoCorrect={false} placeholder="아이디 (영문·숫자 3자 이상)" placeholderTextColor={C.muted} style={inputStyle} />
+        <TextInput value={pw} onChangeText={setPw} secureTextEntry placeholder="비밀번호 (4자 이상)" placeholderTextColor={C.muted} style={inputStyle} />
+        <TextInput value={pw2} onChangeText={setPw2} secureTextEntry placeholder="비밀번호 확인" placeholderTextColor={C.muted} style={inputStyle} />
+        {pw2.length > 0 && pw !== pw2 && <Text style={{ color: C.warn }}>비밀번호가 서로 달라요.</Text>}
+        {!!accountError && <Text style={{ color: C.warn }}>{accountError}</Text>}
+      </Section>
       <Section label="데이터 동의">
         <Check checked={consentBio} onPress={() => setConsentBio((v) => !v)} label="내 목소리와 얼굴 영상으로 아바타를 만드는 데 동의합니다" />
         <Check checked={consentChild} onPress={() => setConsentChild((v) => !v)} label="아이의 음성·영상·터치 반응 수집에 보호자로서 동의합니다" />
@@ -113,7 +138,7 @@ function Form({ initial, code, profile }: { initial: Profile['settings']; code: 
 
       <View style={{ borderWidth: 1, borderColor: C.border, borderRadius: R.md, padding: 16, gap: 8 }}>
         <Text style={{ fontSize: 16, fontWeight: '800', color: C.text }}>아이 태블릿 연결</Text>
-        <Text style={T.small}>아이 태블릿에서 아이봄을 열고 이 코드를 입력하세요.</Text>
+        <Text style={T.small}>아이 태블릿에서 아이맘을 열고 이 코드를 입력하세요.</Text>
         <View style={{ backgroundColor: C.card, borderRadius: R.sm, paddingVertical: 14, alignItems: 'center' }}>
           <Text selectable style={{ fontSize: 30, fontWeight: '800', letterSpacing: 6, color: C.text }}>
             {code.slice(0, 3)} {code.slice(3)}

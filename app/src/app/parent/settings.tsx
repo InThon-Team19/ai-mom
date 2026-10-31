@@ -1,10 +1,11 @@
 // 부모 앱 설정 탭 — 담당: 태희
-// 계정 정보 · 아바타 · 태블릿 연결 키(조회·재발급) · 등록된 기기 · 학습 이력 · 대화 설정 · 이 기기 모드 전환
+// 로그인 · 계정 정보 · 아바타 · 태블릿 연결 키(조회·재발급) · 등록된 기기 · 학습 이력 · 대화 설정 · 이 기기 모드 전환
 import { router, useFocusEffect, type Href } from 'expo-router';
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { Alert, Platform, Pressable, ScrollView, Switch, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { AccountSection } from '@/components/AccountSection';
 import { Avatar } from '@/components/Avatar';
 import { RingGauge } from '@/components/RingGauge';
 import { Button, Chip } from '@/components/ui';
@@ -128,6 +129,10 @@ export default function Settings() {
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: C.bg }}>
       <ScrollView contentContainerStyle={{ padding: 20, gap: 16, paddingBottom: 40 }}>
         <Text style={T.h1}>설정</Text>
+
+        <Section title="로그인">
+          <AccountSection childId={p.childId} />
+        </Section>
 
         <Section title="계정 정보" right={<Link label="아이 정보 수정" href="/onboarding/child?edit=1" />}>
           <Row label="아이" value={`${p.child.nickname || p.child.name || '-'} · ${p.child.birth || '-'} · ${p.child.level}`} />

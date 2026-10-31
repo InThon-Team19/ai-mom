@@ -118,6 +118,18 @@
 - 저장: 부모 음성 `server/data/children/<id>/parent/voice/<kind>/sample_NNN.{wav,json}`, 입모양 `…/parent/mouth/<kind>/profile_NNN.json`, 아이 반응 `…/activity/<날짜>.jsonl` (모두 비공개)
 - **민주**: 목소리 등록 원본은 `routers/voice.py`의 `samples(child_id)` (wav + 대본 text + 품질)
 
+## 로그인 (서버 구현: 민주) ← 앱은 이미 이 계약으로 호출 중 (`app/src/lib/account.ts`)
+| 메서드 | 경로 | 요청 (JSON) | 응답 (JSON) | 화면 |
+|---|---|---|---|---|
+| POST | `/auth/signup` | `{login_id, password, child_id}` | `{login_id, child_id, token}` / 409 이미 있는 아이디 / 400 형식 오류 | 가입 1-7, 설정 탭 |
+| POST | `/auth/login` | `{login_id, password}` | `{login_id, child_id, token, profile}` / 401 틀림 | 1-1 로그인 |
+| POST | `/auth/password` | `{login_id, password, new_password}` | `{token}` / 401 | 설정 탭 |
+
+- `login_id`는 앱이 소문자로 보냄 (영문·숫자·`_.@-` 3~40자), 비밀번호 4자 이상
+- `profile`은 `GET /profile/{child_id}`와 같은 모양 → 앱이 이 기기에 저장하고 부모 앱으로 들어감
+- 서버가 404/연결 실패면 앱은 가입을 막지 않고 아이디만 기기에 저장 → 설정 탭 "다시 등록"
+- 비밀번호는 해시로 저장 (예: PBKDF2/bcrypt). 토큰 검사는 다른 API에 나중에 붙여도 됨
+
 ## 에이전트 대화 (충항) — `routers/conversation.py` ← 앱은 이미 이 계약으로 호출 중 (`app/src/lib/agent.ts`)
 | 메서드 | 경로 | 요청 (JSON) | 응답 (JSON) |
 |---|---|---|---|

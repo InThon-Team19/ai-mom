@@ -123,5 +123,13 @@ export const api = {
   removeDevice: (childId: string, deviceId: string) =>
     req<{ devices: DeviceInfo[] }>(`/profile/${childId}/devices/${encodeURIComponent(deviceId)}`, { method: 'DELETE' }),
   history: (childId: string) => req<History>(`/profile/${childId}/history`),
+
+  // 로그인 (서버 구현: 민주 — 계약은 docs/api.md "로그인")
+  signup: (b: { login_id: string; password: string; child_id: string }) =>
+    req<{ login_id: string; child_id: string; token: string }>('/auth/signup', json('POST', b)),
+  login: (b: { login_id: string; password: string }) =>
+    req<{ login_id: string; child_id: string; token: string; profile: Record<string, unknown> }>('/auth/login', json('POST', b)),
+  changePassword: (b: { login_id: string; password: string; new_password: string }) =>
+    req<{ token: string }>('/auth/password', json('POST', b)),
   putProfile: (childId: string, body: unknown) => req<Record<string, unknown>>(`/profile/${childId}`, json('PUT', body)),
 };

@@ -75,6 +75,16 @@ export async function linkTablet(code: string) {
   return current;
 }
 
+/** 로그인: 서버에서 받은 가족 프로필을 이 기기에 저장 */
+export async function setProfileFromServer(p: Partial<Profile>) {
+  current = { ...newProfile(), ...p } as Profile;
+  listeners.forEach((l) => l(current!));
+  try {
+    await AsyncStorage.setItem(KEY, JSON.stringify(current));
+  } catch {}
+  return current;
+}
+
 /** 서버의 최신 프로필로 갱신 (태블릿이 다음날 일차 받기 등) */
 export async function refreshProfile() {
   const p = await loadProfile();
