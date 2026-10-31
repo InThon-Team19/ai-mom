@@ -33,3 +33,5 @@ services:
         sync: false
       - key: ALLOW_LEGACY_API
         value: "true"
+      - key: CORS_ORIGINS  # 웹 데모(EAS Hosting) 주소에서 오는 요청 허용 — 없으면 웹에서 가입·로그인이 막힘
+        value: "https://ai-mom.expo.app,http://localhost:8081"

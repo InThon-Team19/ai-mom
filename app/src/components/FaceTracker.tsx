@@ -6,8 +6,8 @@
 // 좌표는 화면에 보이는 미리보기 기준 0~1 (거울 반전·object-fit:cover 잘림까지 반영) → RN 에서 크기만 곱하면 됨.
 // 표정(expr): blendshape 로 웃음·놀람·찡그림을 나눔 (기획 1-1 시각 반응 "표정 변화"). 앱에서만 쓰는 값 (서버 landmarks.py 엔 없음)
 import { useCameraPermissions } from 'expo-camera';
-import { memo, useEffect, useMemo, useRef } from 'react';
-import { Pressable, View, type ViewStyle } from 'react-native';
+import { createElement, memo, useEffect, useMemo, useRef, useState } from 'react';
+import { Platform, Pressable, View, type ViewStyle } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { Text } from '@/components/AppText';
 
@@ -154,6 +154,22 @@ export const FaceTracker = memo(function FaceTracker({ onFrame, onError, interva
     );
   }
 
+  const guideView = guide && (
+    <View pointerEvents="none" style={{ position: 'absolute', inset: 0, alignItems: 'center', justifyContent: 'center' }}>
+      <View style={{ width: '45%', height: '85%', borderRadius: 999, borderWidth: 2, borderStyle: 'dashed', borderColor: '#F2B705' }} />
+    </View>
+  );
+
+  // 웹(데모 링크): WebView 가 없어서 같은 페이지를 iframe 으로 띄움. ReactNativeWebView.postMessage → parent.postMessage 로 이어 줌
+  if (Platform.OS === 'web') {
+    return (
+      <View style={[{ overflow: 'hidden', backgroundColor: '#000' }, style]}>
+        <WebFrame html={source.html} onMessage={(data) => handleMessage(data, cb.current)} />
+        {guideView}
+      </View>
+    );
+  }
+
   return (
     <View style={[{ overflow: 'hidden', backgroundColor: '#000' }, style]}>
       <WebView
@@ -165,22 +181,45 @@ export const FaceTracker = memo(function FaceTracker({ onFrame, onError, interva
         mediaCapturePermissionGrantType="grant"
         scrollEnabled={false}
         style={{ flex: 1, backgroundColor: '#000' }}
-        onMessage={(e) => {
-          let msg: { type?: string; message?: string };
-          try {
-            msg = JSON.parse(e.nativeEvent.data);
-          } catch {
-            return;
-          }
-          if (msg.type === 'frame') cb.current.onFrame(msg as unknown as FaceFrame);
-          else if (msg.type === 'error') cb.current.onError?.(String(msg.message));
-        }}
+        onMessage={(e) => handleMessage(e.nativeEvent.data, cb.current)}
       />
-      {guide && (
-        <View pointerEvents="none" style={{ position: 'absolute', inset: 0, alignItems: 'center', justifyContent: 'center' }}>
-          <View style={{ width: '45%', height: '85%', borderRadius: 999, borderWidth: 2, borderStyle: 'dashed', borderColor: '#F2B705' }} />
-        </View>
-      )}
+      {guideView}
     </View>
   );
 });
+
+function handleMessage(data: unknown, cb: Pick<FaceTrackerProps, 'onFrame' | 'onError'>) {
+  let msg: { type?: string; message?: string };
+  try {
+    msg = JSON.parse(String(data));
+  } catch {
+    return;
+  }
+  if (msg.type === 'frame') cb.onFrame(msg as unknown as FaceFrame);
+  else if (msg.type === 'error') cb.onError?.(String(msg.message));
+}
+
+/** 웹 전용: 카메라·MediaPipe 페이지를 iframe 으로 (allow=camera) */
+function WebFrame({ html: page, onMessage }: { html: string; onMessage: (data: unknown) => void }) {
+  const [frame, setFrame] = useState<{ contentWindow?: unknown } | null>(null);
+  const handler = useRef(onMessage);
+  useEffect(() => {
+    handler.current = onMessage;
+  }, [onMessage]);
+  useEffect(() => {
+    if (!frame) return;
+    const listen = (e: { source?: unknown; data?: unknown }) => {
+      if (e.source === frame.contentWindow) handler.current(e.data);
+    };
+    const w = globalThis as unknown as { addEventListener: (t: string, f: typeof listen) => void; removeEventListener: (t: string, f: typeof listen) => void };
+    w.addEventListener('message', listen);
+    return () => w.removeEventListener('message', listen);
+  }, [frame]);
+  const shim = '<script>window.ReactNativeWebView={postMessage:function(m){parent.postMessage(m,"*")}}</script>';
+  return createElement('iframe', {
+    ref: setFrame,
+    srcDoc: page.replace('<body>', '<body>' + shim),
+    allow: 'camera; microphone; autoplay',
+    style: { border: 0, width: '100%', height: '100%', background: '#000' },
+  });
+}
