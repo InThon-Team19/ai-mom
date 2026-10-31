@@ -117,13 +117,26 @@ def _ask_llm_messages(system: str, messages: list[dict], budget: float = LLM_TIM
         logger.warning("agent LLM unavailable: %s", type(e).__name__)
         return None
     m = re.search(r"\{.*\}", raw, re.S)
-    if not m:
+    data = None
+    if m:
+        try:
+            data = json.loads(m.group(0))
+        except ValueError:
+            data = None
+    if not isinstance(data, dict) or not isinstance(data.get("text"), str):
+        # JSON 이 잘렸거나 앞뒤에 말이 붙어도 "text" 값만 건짐 (예전엔 여기서 버려서 정해진 문장만 나갔음)
+        t = re.search(r'"text"\s*:\s*"([^"\n]{2,})', raw)
+        if t:
+            sens = re.search(r'"(?:sensitive|in_scope)"\s*:\s*(true|false)', raw)
+            key = "in_scope" if sens and "in_scope" in sens.group(0) else "sensitive"
+            return {"text": t.group(1), key: (sens.group(1) == "true") if sens else (key == "in_scope")}
+        # JSON 형식 없이 문장만 왔으면 그 문장을 씀
+        plain = raw.strip().strip("`").strip()
+        if plain and "{" not in plain and len(plain) <= 80:
+            return {"text": plain, "in_scope": True, "sensitive": False}
+        logger.warning("agent LLM unreadable output: %r", raw[:160])
         return None
-    try:
-        data = json.loads(m.group(0))
-    except ValueError:
-        return None
-    return data if isinstance(data.get("text"), str) else None
+    return data
 
 
 def _mentions_today(text: str, day: int) -> bool:

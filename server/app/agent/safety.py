@@ -40,4 +40,6 @@ def check_output(text: str, max_len: int = MAX_LEN) -> str | None:
         return "금지된 표현"
     if not re.search(r"[가-힣]", text):
         return "한국어 아님"
+    if re.search(r"[぀-ヿ一-鿿]", text):
+        return "한자·일본어 섞임"  # 연결된 모델(DeepSeek)이 가끔 중국어를 섞음 (예: "참好听")
     return None
