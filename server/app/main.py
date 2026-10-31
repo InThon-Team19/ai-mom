@@ -35,3 +35,11 @@ for r in (children, voice, vision, conversation, evening, activity, profile):
 @app.get("/health")
 def health():
     return {"ok": True}
+
+
+@app.post("/debug/log")
+async def debug_log(request: Request):
+    """(태희) 앱 오류를 서버 터미널에 출력 — 폰 로그를 못 볼 때 원인 확인용"""
+    body = (await request.body()).decode("utf-8", "replace")[:2000]
+    print(f"[APP] {body}", flush=True)
+    return {"ok": True}

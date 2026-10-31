@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import type { FaceFrame } from '@/components/FaceTracker';
 import { useVoiceRecorder } from '@/hooks/useVoiceRecorder';
-import { api } from '@/lib/api';
+import { api, reportError } from '@/lib/api';
 import type { Gauge, TrackPoint } from '@/lib/types';
 
 export type SentenceStatus = 'done' | 'now' | 'todo' | 'retry';
@@ -62,7 +62,11 @@ export function useReadAloud({
         return;
       }
       const uri = await rec.stop();
-      if (!uri) return;
+      if (!uri) {
+        reportError('readAloud', '녹음 파일 uri 없음');
+        setMessage('녹음이 저장되지 않았어요. 다시 눌러 주세요.');
+        return;
+      }
       setBusy(true);
       const text = sentences[index] ?? '';
       const [vr, mr] = await Promise.allSettled([
@@ -85,6 +89,7 @@ export function useReadAloud({
       setDone((d) => ({ ...d, [index]: ok ? 'done' : 'retry' }));
       if (ok) setIndex((i) => Math.min(i + 1, sentences.length - 1));
     } catch (e) {
+      reportError('readAloud', e);
       setMessage(`전송 실패: ${String(e).slice(0, 80)}`);
     } finally {
       setBusy(false);

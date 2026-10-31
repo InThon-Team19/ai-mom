@@ -1,4 +1,6 @@
 # 부모 목소리 샘플·학습률·특성 분석·코칭, STT — 담당: 태희 / TTS 부분: 민주 (Fish Audio 초안 태희)
+import base64
+import binascii
 import hashlib
 import json
 import math
@@ -93,10 +95,7 @@ class ParentSampleOut(BaseModel):
     gained: float  # 이번 문장으로 오른 학습률 (+18% 표시용)
 
 
-@router.post("/parent-sample", response_model=ParentSampleOut)
-def parent_sample(child_id: str = Form(...), text: str = Form(""), kind: str = Form("signup"),
-                  file: UploadFile = File(...)):
-    """문장 하나 읽은 녹음 → 품질 판정 + 학습률. text: 화면에 띄운 문장 (TTS 등록 때 대본으로 사용)."""
+def _save_parent_sample(child_id: str, text: str, kind: str, src: Path) -> ParentSampleOut:
     if kind not in KINDS:
         raise HTTPException(400, "kind 는 signup | plan")
     try:
@@ -104,9 +103,6 @@ def parent_sample(child_id: str = Form(...), text: str = Form(""), kind: str = F
     except ValueError:
         raise HTTPException(400, "child_id 형식 오류")
     before = voice_gauge(child_id).progress
-    src = tmp_path(Path(file.filename or "a.m4a").suffix or ".m4a")
-    with src.open("wb") as f:
-        shutil.copyfileobj(file.file, f)
     n = len(list(out.glob("sample_*.json")))
     wav = out / f"sample_{n:03d}.wav"
     try:
@@ -123,6 +119,44 @@ def parent_sample(child_id: str = Form(...), text: str = Form(""), kind: str = F
     g = voice_gauge(child_id)
     return ParentSampleOut(features=SpeechFeatures(**feats), quality=Quality(**q), gauge=g,
                            gained=round(g.progress - before, 3))
+
+
+def _b64_to_tmp(audio_b64: str, ext: str) -> Path:
+    """앱이 JSON 으로 보낸 base64 오디오 → 임시 파일"""
+    ext = "." + "".join(c for c in ext.lstrip(".") if c.isalnum())[:5] if ext else ".m4a"
+    try:
+        data = base64.b64decode(audio_b64, validate=False)
+    except (binascii.Error, ValueError):
+        raise HTTPException(400, "base64 오디오 형식 오류")
+    if not data:
+        raise HTTPException(400, "빈 오디오")
+    src = tmp_path(ext)
+    src.write_bytes(data)
+    return src
+
+
+@router.post("/parent-sample", response_model=ParentSampleOut)
+def parent_sample(child_id: str = Form(...), text: str = Form(""), kind: str = Form("signup"),
+                  file: UploadFile = File(...)):
+    """문장 하나 읽은 녹음 → 품질 판정 + 학습률. text: 화면에 띄운 문장 (TTS 등록 때 대본으로 사용)."""
+    src = tmp_path(Path(file.filename or "a.m4a").suffix or ".m4a")
+    with src.open("wb") as f:
+        shutil.copyfileobj(file.file, f)
+    return _save_parent_sample(child_id, text, kind, src)
+
+
+class ParentSampleB64In(BaseModel):
+    child_id: str
+    text: str = ""
+    kind: str = "signup"
+    audio_b64: str
+    ext: str = "m4a"
+
+
+@router.post("/parent-sample-b64", response_model=ParentSampleOut)
+def parent_sample_b64(body: ParentSampleB64In):
+    """앱용: 녹음을 base64 JSON 으로 받음 (Expo 58 fetch 의 파일 첨부 문제 우회). 결과는 /parent-sample 과 같음."""
+    return _save_parent_sample(body.child_id, body.text, body.kind, _b64_to_tmp(body.audio_b64, body.ext))
 
 
 @router.get("/gauge/{child_id}", response_model=Gauge)
@@ -213,13 +247,8 @@ def match_expected(text: str, expected: str) -> bool:
     return False
 
 
-@router.post("/stt", response_model=SttOut)
-def stt(file: UploadFile = File(...), expected: str = Form(""), who: str = Form("child")):
-    """음성 파일(m4a/wav/webm, 영상도 가능) → 텍스트 + 말하기 특성. expected: 따라 말하기 목표."""
-    src = tmp_path(Path(file.filename or "a.m4a").suffix or ".m4a")
+def _stt_from_path(src: Path, expected: str) -> SttOut:
     wav = tmp_path(".wav")
-    with src.open("wb") as f:
-        shutil.copyfileobj(file.file, f)
     try:
         try:
             to_wav(src, wav)
@@ -244,6 +273,28 @@ def stt(file: UploadFile = File(...), expected: str = Form(""), who: str = Form(
         matched=match_expected(text, expected) if expected else None,
         alert=any(w in text for w in ALERT_WORDS),
     )
+
+
+@router.post("/stt", response_model=SttOut)
+def stt(file: UploadFile = File(...), expected: str = Form(""), who: str = Form("child")):
+    """음성 파일(m4a/wav/webm, 영상도 가능) → 텍스트 + 말하기 특성. expected: 따라 말하기 목표."""
+    src = tmp_path(Path(file.filename or "a.m4a").suffix or ".m4a")
+    with src.open("wb") as f:
+        shutil.copyfileobj(file.file, f)
+    return _stt_from_path(src, expected)
+
+
+class SttB64In(BaseModel):
+    audio_b64: str
+    ext: str = "m4a"
+    expected: str = ""
+    who: str = "child"
+
+
+@router.post("/stt-b64", response_model=SttOut)
+def stt_b64(body: SttB64In):
+    """앱용: base64 JSON 으로 받는 STT (결과는 /stt 와 같음)."""
+    return _stt_from_path(_b64_to_tmp(body.audio_b64, body.ext), body.expected)
 
 
 # ---------- TTS: 부모 목소리 복제·합성 (민주, Fish Audio 초안 태희) ----------

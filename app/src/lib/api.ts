@@ -1,6 +1,6 @@
 // 담당: 민주 — 서버 API 호출은 전부 여기에 모으기 (화면에서 fetch 직접 쓰지 않기)
 // ↓ 입력 파이프라인·아이 반응·프로필(임시) 부분: 태희
-import { File, UploadType } from 'expo-file-system';
+import { File } from 'expo-file-system';
 
 import { getApiUrl } from './config';
 import type {
@@ -27,22 +27,22 @@ const json = (method: string, body: unknown): RequestInit => ({
   body: JSON.stringify(body),
 });
 
-/** 로컬 파일(uri) + 폼 필드 → multipart 업로드.
- * Expo 58 기본 fetch(expo/fetch)는 RN 식 {uri} 첨부·네이티브 File 을 FormData 로 못 보냄
- * → expo-file-system 네이티브 업로드 사용 (fetch·FormData 를 거치지 않음) */
-async function upload<T>(path: string, uri: string, type: string, fields: Record<string, string> = {}) {
+/** 앱 오류를 서버 터미널로 보냄 (폰 로그를 못 볼 때 원인 확인용) */
+export function reportError(where: string, e: unknown) {
+  const msg = `${where}: ${e instanceof Error ? `${e.name} ${e.message}` : String(e)}`;
+  console.warn(msg);
+  fetch(`${getApiUrl()}/debug/log`, { method: 'POST', body: msg }).catch(() => {});
+}
+
+/** 로컬 녹음 파일(uri) → base64 JSON 업로드.
+ * Expo 58 기본 fetch(expo/fetch)로는 multipart 파일 첨부가 폰에서 실패해서, 이미 잘 되는 JSON 경로로 보냄 */
+async function uploadB64<T>(path: string, uri: string, fields: Record<string, string>) {
   try {
-    const res = await new File(uri).upload(`${getApiUrl()}${path}`, {
-      httpMethod: 'POST',
-      uploadType: UploadType.MULTIPART,
-      fieldName: 'file',
-      mimeType: type,
-      parameters: fields,
-    });
-    if (res.status >= 400) throw new Error(`${res.status} ${path}: ${res.body}`);
-    return JSON.parse(res.body) as T;
+    const audio_b64 = await new File(uri).base64();
+    const ext = (uri.split('?')[0].split('.').pop() || 'm4a').toLowerCase();
+    return await req<T>(path, json('POST', { ...fields, audio_b64, ext }));
   } catch (e) {
-    console.warn(`[upload] ${path} 실패:`, e); // 개발 서버 터미널에 표시
+    reportError(`upload ${path} (${uri})`, e);
     throw e;
   }
 }
@@ -58,7 +58,7 @@ export const api = {
 
   // 부모 음성 (가입 1-5, 밤 2-4)
   parentVoiceSample: (childId: string, uri: string, text: string, kind: 'signup' | 'plan' = 'signup') =>
-    upload<ParentSampleOut>('/voice/parent-sample', uri, 'audio/m4a', { child_id: childId, text, kind }),
+    uploadB64<ParentSampleOut>('/voice/parent-sample-b64', uri, { child_id: childId, text, kind }),
   voiceGauge: (childId: string) => req<Gauge>(`/voice/gauge/${childId}`),
   voiceAnalysis: (childId: string) => req<AnalysisOut>(`/voice/analysis/${childId}`),
   coaching: (childId: string) => req<{ messages: string[] }>(`/voice/coaching/${childId}`),
@@ -71,7 +71,7 @@ export const api = {
 
   // STT (아이 따라 말하기). expected 는 '사과|apple' 처럼 여러 답 가능
   stt: (uri: string, expected = '', who: 'child' | 'parent' = 'child') =>
-    upload<SttOut>('/voice/stt', uri, 'audio/m4a', { expected, who }),
+    uploadB64<SttOut>('/voice/stt-b64', uri, { expected, who }),
 
   // TTS (민주) — 부모 목소리
   registerVoice: (childId: string) =>

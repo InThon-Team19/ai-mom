@@ -182,3 +182,14 @@ def test_bad_child_id_rejected():
 def test_tts_requires_registration():
     r = client.post("/voice/tts", json={"child_id": "nobody", "text": "안녕"})
     assert r.status_code == 400
+
+
+def test_b64_endpoints():
+    import base64
+    b64 = base64.b64encode(_wav_bytes(3.0, amp=0.3)).decode()
+    r = client.post("/voice/parent-sample-b64", json={"child_id": "pyb64", "text": "안녕", "audio_b64": b64, "ext": "wav"})
+    assert r.status_code == 200, r.text and r.json()["gauge"]["sentences"] == 1
+    r = client.post("/voice/stt-b64", json={"audio_b64": base64.b64encode(_wav_bytes()).decode(), "ext": "wav", "expected": "사과"})
+    assert r.status_code == 200 and r.json()["text"] == ""
+    assert client.post("/voice/parent-sample-b64", json={"child_id": "pyb64", "audio_b64": ""}).status_code == 400
+    assert client.post("/debug/log", content=b"hello").json()["ok"]
