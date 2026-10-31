@@ -6,9 +6,11 @@ import { logEvent } from '@/lib/sense';
 export type TurnIn = {
   child_id: string;
   day: number;
-  item: string; // 'apple' | 'banana' | 'snack'
-  moment: 'invite' | 'reply'; // invite: 사물 권하기, reply: 아이 말에 대답
-  child_text?: string; // reply 일 때 STT 결과
+  item: string; // 'apple' | 'banana' | 'snack' (chat 은 '' 도 됨)
+  moment: 'invite' | 'reply' | 'chat'; // invite: 사물 권하기, reply: 아이 말에 대답, chat: 학습 뒤 자유 이야기 (child_text 없으면 여는 말)
+  child_text?: string; // reply·chat 일 때 STT 결과
+  /** chat: 최근 대화 (최대 6턴) — 앞뒤 맥락을 이어서 대답하게 */
+  history?: { role: 'child' | 'avatar'; text: string }[];
   /** 지금 이 사물에서 아이 감각 반응 (기획 1-1: 반응을 읽어 다음 활동을 바꿈) — 에이전트가 말·속도·활동을 고르는 근거 */
   signals?: {
     touches: number; // 누른 횟수

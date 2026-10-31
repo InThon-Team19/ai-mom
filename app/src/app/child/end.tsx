@@ -87,15 +87,27 @@ export default function End() {
       <Animated.Text entering={FadeIn.delay(300).duration(600)} style={{ fontSize: 22, color: C.sub }}>
         {fill('이따 {me} 오면 {fav} 이야기 해 줄래?', { name, me, fav })}
       </Animated.Text>
-      <PillButton
-        label="한 번 더 볼래요"
-        onPress={() => {
-          stop();
-          router.replace('/child');
-        }}
-        primary
-        style={{ marginTop: 4, minWidth: 220 }}
-      />
+      {/* 학습 뒤 자유 대화: 엄마 아바타와 일상 이야기 (받은 fav·basket 그대로 넘김). 폰 가로 화면에선 줄을 바꿔 넘치지 않게 */}
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 14, marginTop: 4, maxWidth: '100%' }}>
+        <PillButton
+          label={`💬 ${me}랑 더 이야기하기`}
+          onPress={() => {
+            stop();
+            const params = { ...(favParam ? { fav: favParam } : {}), ...(basketParam ? { basket: basketParam } : {}) };
+            router.replace({ pathname: '/child/chat', params });
+          }}
+          style={{ minWidth: 280 }}
+        />
+        <PillButton
+          label="한 번 더 볼래요"
+          onPress={() => {
+            stop();
+            router.replace('/child');
+          }}
+          primary
+          style={{ minWidth: 220 }}
+        />
+      </View>
     </View>
   );
 }

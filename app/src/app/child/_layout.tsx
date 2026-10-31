@@ -20,6 +20,7 @@ export default function ChildLayout() {
       <Stack.Screen name="play" />
       <Stack.Screen name="story" />
       <Stack.Screen name="audio" options={{ contentStyle: { backgroundColor: '#21242B' } }} />
+      <Stack.Screen name="chat" />
       <Stack.Screen name="end" />
     </Stack>
   );
