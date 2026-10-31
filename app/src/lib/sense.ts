@@ -90,7 +90,7 @@ export function haptic(kind: HapticKind) {
       Vibration.vibrate(ANDROID_MS[kind]);
       return void hapticTrace(kind, `${kind} android Vibration ${JSON.stringify(ANDROID_MS[kind])}ms`);
     }
-    hapticTrace(kind, `${kind} ios Haptics`);
+    hapticTrace(kind, `${kind} ${Platform.OS} Haptics`); // 웹: expo-haptics 웹 구현이 navigator.vibrate(안드로이드 크롬) 사용, 아이폰 사파리는 최신 iOS 에서만 약한 탭, 데스크톱은 없음(화면 흔들기만)
     const quiet = () => {};
     if (kind === 'tick') Haptics.selectionAsync().catch(quiet);
     else if (kind === 'strong') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(quiet);

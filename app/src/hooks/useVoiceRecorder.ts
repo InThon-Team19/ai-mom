@@ -7,6 +7,7 @@ import {
   useAudioRecorderState,
 } from 'expo-audio';
 import { useCallback } from 'react';
+import { Platform } from 'react-native';
 
 export function useVoiceRecorder() {
   const recorder = useAudioRecorder({ ...RecordingPresets.HIGH_QUALITY, isMeteringEnabled: true });
@@ -14,7 +15,12 @@ export function useVoiceRecorder() {
 
   const start = useCallback(async () => {
     const perm = await requestRecordingPermissionsAsync();
-    if (!perm.granted) throw new Error('마이크를 쓸 수 있게 허용해 주세요. 휴대폰 설정에서 이 앱의 마이크 권한을 켜면 돼요.');
+    if (!perm.granted)
+      throw new Error(
+        Platform.OS === 'web'
+          ? '마이크를 쓸 수 있게 허용해 주세요. 주소창 왼쪽 자물쇠 아이콘에서 이 사이트의 마이크 권한을 켜면 돼요.'
+          : '마이크를 쓸 수 있게 허용해 주세요. 휴대폰 설정에서 이 앱의 마이크 권한을 켜면 돼요.',
+      );
     await setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true });
     await recorder.prepareToRecordAsync();
     recorder.record();

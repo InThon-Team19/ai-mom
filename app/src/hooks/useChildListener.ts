@@ -62,6 +62,7 @@ const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 const removeFile = (uri: string | null) => {
   if (!uri) return;
   try {
+    if (Platform.OS === 'web') return URL.revokeObjectURL(uri); // 웹 녹음은 blob: 주소 (파일 없음)
     new File(uri).delete();
   } catch {}
 };

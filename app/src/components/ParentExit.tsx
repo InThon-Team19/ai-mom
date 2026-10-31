@@ -89,6 +89,9 @@ export function ParentExit({ dark = false, label = '부모' }: { dark?: boolean;
       <Pressable
         onPressIn={start}
         onPressOut={stop}
+        // 웹(폰 브라우저): 길게 누르면 뜨는 메뉴(contextmenu)가 누르기를 끊지 않게 — RN Web 은 onLongPress 가 있으면 막아 줌
+        onLongPress={Platform.OS === 'web' ? () => {} : undefined}
+        delayLongPress={HOLD_MS + 1000}
         accessibilityRole="button"
         accessibilityLabel="부모 모드 (3초 길게 누르기)"
         hitSlop={8}
@@ -109,7 +112,7 @@ export function ParentExit({ dark = false, label = '부모' }: { dark?: boolean;
           <Rect x="1" y="7" width="12" height="8" rx="2" fill={progress > 0 ? '#3A364E' : ink} />
           <Path d="M4 7V5a3 3 0 0 1 6 0v2" stroke={progress > 0 ? '#3A364E' : ink} strokeWidth={2} fill="none" />
         </Svg>
-        <Text style={{ fontSize: f(17, 13), fontWeight: '800', color: progress > 0 ? '#3A364E' : ink }}>{label}</Text>
+        <Text selectable={false} style={{ fontSize: f(17, 13), fontWeight: '800', color: progress > 0 ? '#3A364E' : ink }}>{label}</Text>
       </Pressable>
       <PinPad
         visible={pinOpen}

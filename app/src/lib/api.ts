@@ -2,6 +2,7 @@
 // ↓ 입력 파이프라인·아이 반응·프로필(임시) 부분: 태희
 import { File } from 'expo-file-system';
 import { readAsStringAsync } from 'expo-file-system/legacy';
+import { Platform } from 'react-native';
 
 import { getApiUrl } from './config';
 import { getOverride, getParentToken, getToken, isParentDevice, notifyAuthLost, setOverride, setToken } from './session';
@@ -169,6 +170,8 @@ function form<T>(path: string, fields: Record<string, string>) {
   return req<T>(path, { method: 'POST', body: f });
 }
 
+let lastClipUrl: string | null = null; // 웹: 재생 중인 클립의 blob 주소
+
 export const api = {
   health: () => req<{ ok: boolean }>('/health'),
 
@@ -199,7 +202,16 @@ export const api = {
   /** 재생용 주소 + 인증 헤더 (expo-audio 의 { uri, headers }) */
   childClipSource: async (childId: string, clipId: string) => {
     const t = await getToken();
-    return { uri: `${getApiUrl()}/voice/child-clip/${childId}/${clipId}`, headers: t ? { Authorization: `Bearer ${t}` } : undefined };
+    const uri = `${getApiUrl()}/voice/child-clip/${childId}/${clipId}`;
+    if (Platform.OS === 'web') {
+      // 웹 <audio> 는 Authorization 헤더를 못 붙임 → 인증해서 받아 blob 주소로 재생 (앞 클립 주소는 정리)
+      const res = await fetch(uri, { headers: t ? { Authorization: `Bearer ${t}` } : undefined });
+      if (!res.ok) throw new Error(`${res.status} child-clip`);
+      if (lastClipUrl) URL.revokeObjectURL(lastClipUrl);
+      lastClipUrl = URL.createObjectURL(await res.blob());
+      return { uri: lastClipUrl };
+    }
+    return { uri, headers: t ? { Authorization: `Bearer ${t}` } : undefined };
   },
 
   // TTS (민주) — 부모 목소리

@@ -8,6 +8,10 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { api, reportError } from '@/lib/api';
 import { createLipTimeline, cueAt, type LipCue } from '@/lib/lipsync';
 import { createParentFrameDriver } from '@/lib/parentFrames';
+import { onNextGesture } from '@/lib/webAudio';
+
+/** 웹 브라우저가 자동 재생을 막았을 때의 오류 문구 (Chrome: "user didn't interact", Safari: "not allowed by the user agent") */
+const AUTOPLAY_BLOCKED = /NotAllowed|not allowed|interact|gesture|user agent/i;
 
 export type SpeakClip = { source: AudioSource; cues?: LipCue[]; env?: number[]; env_ms?: number };
 
@@ -34,6 +38,7 @@ export function useSpeak(childId: string | undefined, legacyMeter = false) {
   const rate = useRef(1);
   const gen = useRef(0); // 말하기 차례 번호: stop·새 speak 뒤에 늦게 도착한 TTS·끝남 알림은 버림
   const watchdog = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const guardRef = useRef<(() => void) | null>(null); // 지금 문장의 끝남 대기 시간 다시 걸기 (웹 자동 재생 막힘 후 재시도용)
   // Envelope is audio energy, NOT phoneme alignment.
   const env = useRef<{ v: number[]; ms: number } | null>(null);
   const playingGen = useRef(-1); // 지금 재생 중인 mp3 가 몇 번째 말하기인지 (앞 문장 끝남 알림 무시용)
@@ -121,6 +126,17 @@ export function useSpeak(childId: string | undefined, legacyMeter = false) {
     const sub = player.addListener('playbackStatusUpdate', (st) => {
       if (st.playing && st.currentTime > 0 && done.current) startMouth(); // 소리가 실제로 나기 시작함
       if (st.didJustFinish && playingGen.current === gen.current) finish(); // 앞 문장이 늦게 끝난 알림은 무시
+      // 웹: 사용자가 아직 화면을 안 눌러 브라우저가 재생을 막음 → 다음 터치 때 그 문장을 다시 틂 (기다리는 동안 흐름도 멈춰 둠)
+      if (Platform.OS === 'web' && st.error && AUTOPLAY_BLOCKED.test(st.error) && done.current && playingGen.current === gen.current) {
+        const my = gen.current;
+        if (watchdog.current) clearTimeout(watchdog.current);
+        watchdog.current = null;
+        onNextGesture(() => {
+          if (my !== gen.current || !done.current) return;
+          player.play();
+          guardRef.current?.();
+        });
+      }
     });
     return () => sub.remove();
   }, [player, finish, startMouth]);
@@ -163,6 +179,10 @@ export function useSpeak(childId: string | undefined, legacyMeter = false) {
             } catch {}
             finish();
           }, clip ? 60000 : 5000 + (text.length * 300) / rate.current);
+        };
+        guardRef.current = () => {
+          if (watchdog.current) clearTimeout(watchdog.current);
+          guard();
         };
         const onEnd = () => {
           if (my === gen.current) finish();

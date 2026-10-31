@@ -5,6 +5,9 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { FONT_FILES } from '@/components/AppText';
+import { installWebAudioUnlock } from '@/lib/webAudio';
+
+installWebAudioUnlock(); // 웹만: 첫 터치에서 기기 음성 깨우기 (폰 앱은 아무것도 안 함)
 
 export default function RootLayout() {
   // UI 글꼴을 다 불러온 뒤 화면을 그림 (못 불러오면 기본 글꼴로 그냥 진행)

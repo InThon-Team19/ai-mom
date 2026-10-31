@@ -45,6 +45,13 @@ function confirm(title: string, msg: string, ok: string, onOk: () => void) {
   ]);
 }
 
+/** 알림 창 (RN Web 의 Alert.alert 는 아무것도 안 띄워서 웹은 window.alert) */
+function notify(title: string, msg: string) {
+  if (Platform.OS === 'web') globalThis.alert?.(`${title}
+${msg}`);
+  else Alert.alert(title, msg);
+}
+
 /** 디자인 카드: 흰 바탕 · 1px 연한 테두리 · 모서리 14 · 굵은 제목 */
 function Section({ title, children }: { title?: string; children: ReactNode }) {
   return (
@@ -114,7 +121,7 @@ export default function Settings() {
       setIssued(r.linkCode);
       load();
     } catch (e) {
-      Alert.alert('연결 코드를 받지 못했어요', friendlyError(e));
+      notify('연결 코드를 받지 못했어요', friendlyError(e));
     } finally {
       setBusy(false);
     }
@@ -130,7 +137,7 @@ export default function Settings() {
             setIssued(r.linkCode);
             load();
           } catch (e) {
-            Alert.alert('새 연결 코드를 받지 못했어요', friendlyError(e));
+            notify('새 연결 코드를 받지 못했어요', friendlyError(e));
           } finally {
             setBusy(false);
           }
