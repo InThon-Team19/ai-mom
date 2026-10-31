@@ -3,11 +3,21 @@
 // 부모가 1-4에서 고른 얼굴형·머리·눈·옷·색으로 그리고, 입은 mouth(0~1)로 움직임.
 // mouth 크기는 부모 입모양 기준값(open_p90)에 맞춰 scale 로 조절 → "부모 입모양이 반영된 아바타"
 // 표정 5종(expression): 기본·웃음·놀람·기다림·칭찬. look='right' 면 오른쪽 사물을 바라봄
-import type { ReactNode } from 'react';
+// 자연스럽게: pose(입모양 아·이·오·우·닫힘, lib/parentFrames 신호)대로 입 모양이 바뀌고, 몇 초마다 눈을 깜빡임
+import { useEffect, useState, type ReactNode } from 'react';
 import Svg, { Circle, Ellipse, G, Path, Rect } from 'react-native-svg';
+
+import type { ParentFrame } from '@/lib/parentFrames';
 
 export type AvatarConfig = { face: number; hair: number; eyes: number; outfit: number; color: number };
 export const DEFAULT_AVATAR: AvatarConfig = { face: 0, hair: 0, eyes: 0, outfit: 0, color: 0 };
+export const DAD_AVATAR: AvatarConfig = { ...DEFAULT_AVATAR, hair: 4, outfit: 1 }; // 짧은 머리 · 셔츠
+
+/** 보여 줄 아바타: 꾸민 적 없으면 호칭에 맞는 기본 (아빠 → 짧은 머리) */
+export function avatarFor(config: AvatarConfig | undefined, title?: string): AvatarConfig {
+  const untouched = !config || JSON.stringify(config) === JSON.stringify(DEFAULT_AVATAR);
+  return untouched ? (title === '아빠' ? DAD_AVATAR : DEFAULT_AVATAR) : config;
+}
 
 // 1-4 카테고리별 선택지 (8개씩 — 와이어프레임 4x2 그리드). 어떤 선택을 해도 둥근 얼굴·큰 눈·또렷한 입은 유지
 export const AVATAR_OPTIONS = {
@@ -53,8 +63,12 @@ export function Avatar({
   close = false,
   expression = 'neutral',
   look = 'center',
+  pose,
+  blink = true,
 }: {
   config?: AvatarConfig;
+  pose?: ParentFrame; // 말할 때 입모양 (neutral 이면 표정 입). 있으면 mouth 보다 우선
+  blink?: boolean; // 몇 초마다 눈 깜빡임 (작은 선택지 미리보기에서는 끔)
   mouth?: number; // 0 닫힘 ~ 1 크게 벌림 (TTS 음량 등)
   scale?: number; // 부모 입모양 크기 반영 (기본 1)
   size?: number;
@@ -70,9 +84,14 @@ export function Avatar({
   const vb = close ? '56 117 88 66' : '0 0 200 220';
   const hairI = config.hair % 8;
   const cheekOp = { neutral: 0.4, smile: 0.6, surprise: 0.35, wait: 0.4, praise: 0.75 }[expression];
+  const closedEyes = useBlink(blink);
+  const s = Math.max(0.7, Math.min(1.4, scale));
 
   return (
     <Svg width={size} height={close ? size * 0.75 : size * 1.1} viewBox={vb}>
+      {/* 목 + 턱 그림자 — 옷 뒤에 (얼굴이 몸 위에 둥둥 떠 보이지 않게) */}
+      <Rect x={CX - 15} y={CY + ry - 14} width="30" height="26" rx="10" fill={skin} />
+      <Rect x={CX - 15} y={CY + ry - 14} width="30" height="26" rx="10" fill="#000" opacity={0.08} />
       {/* 몸·옷 (작고 둥글게) */}
       <Outfit i={config.outfit % 8} c={outfitC} />
       {/* 뒷머리 */}
@@ -86,22 +105,78 @@ export function Avatar({
       ) : (
         <Rect x={CX - rx} y={CY - ry} width={rx * 2} height={ry * 2} rx={corner} ry={corner} fill={skin} />
       )}
-      {/* 앞머리 */}
+      {/* 앞머리 + 머리 윤기 */}
       <HairFront i={hairI} rx={rx} ry={ry} c={hairC} />
+      {hairI !== 7 && <Path d={`M${CX - rx * 0.55} ${CY - ry * 0.72} Q${CX - rx * 0.2} ${CY - ry * 0.98} ${CX + rx * 0.2} ${CY - ry * 0.9}`} stroke="#FFFFFF" strokeWidth="4" opacity={0.16} fill="none" strokeLinecap="round" />}
       {/* 볼 */}
       <Ellipse cx={CX - 38} cy={CY + 24} rx="11" ry="8" fill={CHEEK} opacity={cheekOp} />
       <Ellipse cx={CX + 38} cy={CY + 24} rx="11" ry="8" fill={CHEEK} opacity={cheekOp} />
       {/* 눈썹 */}
       <Brows expression={expression} c={hairI === 7 ? INK : hairC} />
       {/* 눈 */}
-      <Eyes i={config.eyes % 8} expression={expression} look={look} skin={skin} />
-      {/* 입 */}
-      <Mouth m={m} expression={expression} />
+      <Eyes i={config.eyes % 8} expression={expression} look={look} skin={skin} closed={closedEyes} />
+      {/* 코 (작고 부드럽게) */}
+      <Path d={`M${CX - 4} ${CY + 18} Q${CX} ${CY + 22} ${CX + 4} ${CY + 18}`} stroke="#000" strokeWidth="2.5" opacity={0.18} fill="none" strokeLinecap="round" />
+      {/* 입: 말할 때는 입모양(pose), 없으면 음량(mouth) */}
+      {pose && pose !== 'neutral' ? <PoseMouth pose={pose} s={s} /> : <Mouth m={m} expression={expression} />}
     </Svg>
   );
 }
 
+/** 2.5~5초마다 0.13초 눈을 감음 (깜빡임 효과가 아니라 사람처럼 눈을 감았다 뜸) */
+function useBlink(on: boolean) {
+  const [closed, setClosed] = useState(false);
+  useEffect(() => {
+    if (!on) return;
+    let t: ReturnType<typeof setTimeout>;
+    const loop = () => {
+      t = setTimeout(() => {
+        setClosed(true);
+        t = setTimeout(() => {
+          setClosed(false);
+          loop();
+        }, 130);
+      }, 2500 + Math.random() * 2500);
+    };
+    loop();
+    return () => clearTimeout(t);
+  }, [on]);
+  return on && closed;
+}
+
 // ---------- 입 ----------
+/** 말하는 입모양: closed 닫힘(ㅁㅂㅍ) · open 아/어 · wide 이/에/으 · round 오 · narrow 우. s = 부모 입모양 크기 */
+function PoseMouth({ pose, s }: { pose: ParentFrame; s: number }) {
+  const y = CY + 34;
+  switch (pose) {
+    case 'closed':
+      return <Path d={`M${CX - 11} ${y} Q${CX} ${y + 3} ${CX + 11} ${y}`} stroke={MOUTH} strokeWidth="4.5" fill="none" strokeLinecap="round" />;
+    case 'wide':
+      return (
+        <G>
+          <Ellipse cx={CX} cy={y + 1} rx={15 * s} ry={5.5 * s} fill={MOUTH} />
+          <Rect x={CX - 10 * s} y={y - 4 * s} width={20 * s} height={3.5 * s} rx={1.5} fill="#FFFFFF" opacity={0.9} />
+        </G>
+      );
+    case 'round':
+      return (
+        <G>
+          <Ellipse cx={CX} cy={y + 2} rx={8.5 * s} ry={10 * s} fill={MOUTH} />
+          <Ellipse cx={CX} cy={y + 2 + 5 * s} rx={4.5 * s} ry={3 * s} fill={TONGUE} />
+        </G>
+      );
+    case 'narrow':
+      return <Ellipse cx={CX} cy={y + 1} rx={5 * s} ry={5.5 * s} fill={MOUTH} />;
+    default: // open
+      return (
+        <G>
+          <Ellipse cx={CX} cy={y + 3} rx={12 * s} ry={11 * s} fill={MOUTH} />
+          <Ellipse cx={CX} cy={y + 3 + 6 * s} rx={7 * s} ry={4 * s} fill={TONGUE} />
+        </G>
+      );
+  }
+}
+
 function Mouth({ m, expression }: { m: number; expression: AvatarExpression }) {
   const y = CY + 32;
   // 말하는 중: 음량만큼 크게 벌어짐 (또렷하게 보이도록 크게)
@@ -179,7 +254,7 @@ function RoundEye({ x, r = 13, pupil = 9, dx = 0, lashes = false }: { x: number;
   );
 }
 
-function Eyes({ i, expression, look, skin }: { i: number; expression: AvatarExpression; look: AvatarLook; skin: string }) {
+function Eyes({ i, expression, look, skin, closed }: { i: number; expression: AvatarExpression; look: AvatarLook; skin: string; closed?: boolean }) {
   const dx = look === 'right' ? 3.5 : 0;
   const L = CX - EYE_DX;
   const Rr = CX + EYE_DX;
@@ -197,6 +272,15 @@ function Eyes({ i, expression, look, skin }: { i: number; expression: AvatarExpr
     </G>
   );
 
+  // 눈 감음(깜빡): 웃는 눈·반달처럼 원래 감은 듯한 눈은 그대로
+  if (closed && i !== 1 && i !== 3 && expression !== 'praise') {
+    return (
+      <G>
+        {pair((x) => <Path key={x} d={`M${x - 11} ${EYE_Y + 1} Q${x} ${EYE_Y + 7} ${x + 11} ${EYE_Y + 1}`} stroke={INK} strokeWidth="4" fill="none" strokeLinecap="round" />)}
+        {glasses}
+      </G>
+    );
+  }
   // 칭찬: 어떤 눈을 골라도 활짝 웃는 ^^
   if (expression === 'praise') {
     return (

@@ -1,27 +1,34 @@
-// 부모 앱 아바타 탭 "내 아바타" (민철 디자인 AvatarLearn / AvatarEdit): 학습하기 | 아바타 보기 — 담당: 태희
+// 부모 앱 아바타 탭 "내 아바타" (민철 디자인 AvatarLearn / AvatarEdit): 학습하기 | 꾸미기 — 담당: 태희
 // 학습하기: 음성·입모양 학습률 카드 + 인식 카메라(FaceGuide) + 문장 읽기(useReadAloud). 영상은 저장하지 않고 입 벌림 수치만 서버로
-// 아바타 보기: 승인된 부모 일러스트와 말투·호칭 설정 표시
+// 꾸미기: 실제 얼굴이 아닌 캐릭터 고르기 (온보딩 1-4 와 같은 선택지) → updateProfile 로 저장
 import { router, useFocusEffect, useIsFocused, type Href } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 
-import { FamilyAvatar } from '@/components/FamilyAvatar';
+import { Avatar, AVATAR_OPTIONS, avatarFor, type AvatarCategory, type AvatarConfig } from '@/components/Avatar';
 import { FaceGuide, ReadingText, doneSignal, useReadingWord } from '@/components/FaceGuide';
 import type { FaceFrame } from '@/components/FaceTracker';
 import { RingGauge } from '@/components/RingGauge';
-import { BigButton, MicButton, Panel } from '@/components/ui';
+import { BigButton, MicButton, Panel, PillChip } from '@/components/ui';
 import { MOUTH_SENTENCES, VOICE_SENTENCES, fill } from '@/content/curriculum';
 import { useReadAloud } from '@/hooks/useReadAloud';
 import { useDevice } from '@/lib/layout';
-import { useProfile, type Profile } from '@/lib/store';
+import { updateProfile, useProfile, type Profile } from '@/lib/store';
 import type { Gauge } from '@/lib/types';
 import { C, R } from '@/theme';
 import { Text } from '@/components/AppText';
 
 type Mode = 'learn' | 'edit';
 
+const CATEGORIES: { key: AvatarCategory; label: string }[] = [
+  { key: 'face', label: '얼굴형' },
+  { key: 'hair', label: '머리' },
+  { key: 'eyes', label: '눈' },
+  { key: 'outfit', label: '옷' },
+  { key: 'color', label: '색' },
+];
 
 /** 카메라 아이콘 (촬영 시작 카드) */
 const CameraIcon = ({ color = C.text, size = 44 }: { color?: string; size?: number }) => (
@@ -45,16 +52,16 @@ export default function AvatarTab() {
         <View style={{ gap: 2 }}>
           <Text style={{ fontSize: 22, fontWeight: '900', color: C.text }}>내 아바타</Text>
           <Text style={{ fontSize: 13, color: C.sub }}>
-            {mode === 'learn' ? '읽어 줄수록 부모님 목소리·입모양을 닮아 가요.' : '아이와 함께할 부모 아바타예요.'}
+            {mode === 'learn' ? '읽어 줄수록 부모님 목소리·입모양을 닮아 가요.' : '실제 얼굴이 아닌 캐릭터예요. 언제든 바꿀 수 있어요.'}
           </Text>
         </View>
 
-        {/* 학습하기 | 아바타 보기 */}
+        {/* 학습하기 | 꾸미기 */}
         <View accessibilityRole="tablist" style={{ flexDirection: 'row', gap: 4, padding: 4, borderRadius: 14, backgroundColor: C.track }}>
           {(
             [
               ['learn', '학습하기'],
-              ['edit', '아바타 보기'],
+              ['edit', '꾸미기'],
             ] as const
           ).map(([k, label]) => {
             const on = mode === k;
@@ -249,15 +256,92 @@ function Learn({ profile, onLock }: { profile: Profile; onLock: (v: boolean) => 
 }
 
 function Edit({ profile }: { profile: Profile }) {
+  const [config, setConfig] = useState<AvatarConfig>(avatarFor(profile.avatar, profile.parent.title));
+  const [cat, setCat] = useState<AvatarCategory>('face');
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg] = useState('');
+  const options: readonly string[] = AVATAR_OPTIONS[cat];
+  const changed = JSON.stringify(config) !== JSON.stringify(profile.avatar);
+
+  const save = async () => {
+    if (saving) return;
+    setSaving(true);
+    try {
+      await updateProfile({ avatar: config });
+      setMsg('저장했어요. 아이 화면에도 바로 반영돼요.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <>
-      <View style={{ height: 240, borderRadius: 18, backgroundColor: C.primarySoft, alignItems: 'center', justifyContent: 'center' }} accessibilityLabel="부모 아바타 미리보기">
-        <FamilyAvatar role="parent" size={210} />
+      <View style={{ height: 200, borderRadius: 18, backgroundColor: C.primarySoft, alignItems: 'center', justifyContent: 'flex-end', overflow: 'hidden' }} accessibilityLabel="아바타 미리보기">
+        <Avatar config={config} size={160} expression="smile" />
       </View>
-      <Text style={{ fontSize: 14, color: C.sub, textAlign: 'center' }}>아이에게 말을 건네는 부모 아바타예요. 목소리와 말투는 부모님이 정해 주세요.</Text>
-      <Pressable onPress={() => router.push('/onboarding/parent?edit=1' as Href)} accessibilityRole="button" style={{ minHeight: 48, justifyContent: 'center' }}>
-        <Text style={{ fontSize: 14, color: C.text }}>말투·호칭 바꾸기 ({profile.parent.title} · {profile.parent.tone}) ›</Text>
+
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+        {CATEGORIES.map((c) => (
+          <PillChip key={c.key} label={c.label} selected={cat === c.key} onPress={() => setCat(c.key)} />
+        ))}
+      </View>
+
+      <View style={{ gap: 8 }}>
+        {[0, 1].map((row) => (
+          <View key={row} style={{ flexDirection: 'row', gap: 8 }}>
+            {options.slice(row * 4, row * 4 + 4).map((label, j) => {
+              const i = row * 4 + j;
+              const selected = config[cat] === i;
+              return (
+                <Pressable
+                  key={`${cat}-${i}`}
+                  accessibilityRole="button"
+                  accessibilityLabel={cat === 'color' ? `피부색 ${i + 1}` : label}
+                  accessibilityState={{ selected }}
+                  onPress={() => {
+                    setMsg('');
+                    setConfig((c) => ({ ...c, [cat]: i }));
+                  }}
+                  style={{
+                    flex: 1,
+                    minHeight: 68,
+                    paddingVertical: 4,
+                    borderRadius: 14,
+                    borderWidth: 2,
+                    borderBottomWidth: 4,
+                    borderColor: selected ? C.primaryStrong : C.border,
+                    backgroundColor: selected ? C.primarySoft : C.white,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    overflow: 'hidden',
+                  }}>
+                  {cat === 'color' ? (
+                    <Avatar config={{ ...config, [cat]: i }} size={44} blink={false} />
+                  ) : (
+                    <Text numberOfLines={1} style={{ fontSize: 13, fontWeight: selected ? '700' : '400', color: C.text }}>
+                      {label}
+                    </Text>
+                  )}
+                </Pressable>
+              );
+            })}
+          </View>
+        ))}
+      </View>
+
+      <Pressable
+        onPress={() => router.push('/onboarding/parent?edit=1' as Href)}
+        accessibilityRole="button"
+        style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 10 }}>
+        <Text style={{ flex: 1, fontSize: 14, color: C.text }}>
+          말투·호칭 바꾸기 <Text style={{ color: C.sub }}>({profile.parent.title} · {profile.parent.tone})</Text>
+        </Text>
+        <Text style={{ fontSize: 20, color: C.sub }}>›</Text>
       </Pressable>
+
+      <View style={{ flex: 1, minHeight: 4 }} />
+      {!!msg && <Text style={{ fontSize: 14, fontWeight: '700', color: C.ok, textAlign: 'center' }}>{msg}</Text>}
+      <BigButton label={saving ? '저장 중...' : '저장하기'} disabled={saving || !changed} onPress={save} />
     </>
   );
 }

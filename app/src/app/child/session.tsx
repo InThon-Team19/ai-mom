@@ -708,10 +708,9 @@ export default function Session() {
     const raw = res?.text?.trim() ?? '';
     const text = /[가-힣a-zA-Z]/.test(raw) ? raw : ''; // "." 처럼 기호만 인식되면 빈칸
     logEvent('repeat', { word: item.ko, matched: res ? res.matched : null, text, clip_id: res?.id ?? null });
-    // 따라 말하기에서 소리를 냈으면 무조건 반응: 맞으면 크게 칭찬, 다르면 "좋아! 잘했어"로 칭찬하고 넘어감
-    // (예전엔 엉뚱한 말로 보고 처음으로 되돌려서 "따라 해 볼까?"만 반복됐음)
-    // 서버가 안 되면(음량으로 말소리는 확인) 시도한 것으로 봄
-    const praised = !res || res.matched === true;
+    // 진짜 그 단어로 인식됐을 때만 칭찬하고 넘어감 (사용자 요청: 말하지 않았는데·잡음에 넘어가지 않게).
+    // 아니면 틀렸다는 표시 없이 다시 권하고 계속 기다림. 넘어가고 싶으면 다음 버튼
+    const praised = res?.matched === true;
     if (praised) {
       // 성공: 사물이 크게 튀고 별이 퍼지며 아바타가 활짝 웃음 + "잘했어!" + 짧은 진동
       sig.current.repeated = true;
@@ -741,11 +740,22 @@ export default function Session() {
       if (t !== run.current) return;
       await sleep(300);
     } else {
-      // 다르게 말함·옹알이: 실패음·틀림 표시 없이 아바타가 한 번 더 말하고 넘어감
+      // 다르게 말함·옹알이·잡음: 실패음·틀림 표시 없이 웃으며 다시 권하고, 맞게 말할 때까지 기다림
       react([['smile', 1800]]);
-      await talk(`좋아! 잘했어. ${say(item)}`);
+      await talk(text ? `좋아! 한 번 더 해 볼까? ${item.ko}!` : `잘 안 들렸어. 다시 말해 줄래? ${item.ko}!`);
       if (t !== run.current) return;
-      await sleep(600);
+      const nudges = ['천천히 해도 괜찮아.', `${item.ko}!`, `준비되면 말해 줘. ${item.ko}!`];
+      let next: ClipResult | null = null;
+      for (let i = 0; !next; i++) {
+        next = await waitUtterance(t, 12000);
+        if (t !== run.current) return;
+        if (next) break;
+        react([['smile', 1600]]);
+        await talk(nudges[i % nudges.length]);
+        if (t !== run.current) return;
+      }
+      await respond(t, next);
+      return;
     }
     if (sig.current.voices >= ENGAGED_VOICES && !sig.current.voiceModeled) {
       await modelWord(t);
