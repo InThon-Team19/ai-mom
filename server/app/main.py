@@ -1,7 +1,7 @@
 # 담당: 민주
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Request
+from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse
@@ -12,7 +12,8 @@ from app.db import init_db
 from app.routers import activity, children, conversation, evening, profile, vision, voice
 from app.storage import STATIC_DIR, request_base_url
 from app.config import ALLOW_LEGACY_API, CORS_ORIGINS
-from app.routers import backend
+from app.routers import backend, accounts
+from app.legacy_access import legacy_scope
 
 
 @asynccontextmanager
@@ -26,7 +27,7 @@ async def lifespan(_: FastAPI):
 
 
 app = FastAPI(title="Aibom API", lifespan=lifespan)
-app.add_middleware(CORSMiddleware, allow_origins=CORS_ORIGINS, allow_methods=["*"], allow_headers=["*"])
+app.add_middleware(CORSMiddleware, allow_origins=CORS_ORIGINS, allow_methods=["*"], allow_headers=["*"], allow_credentials=True)
 STATIC_DIR.mkdir(exist_ok=True)
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
@@ -38,9 +39,11 @@ async def remember_base_url(request: Request, call_next):
     return await call_next(request)
 
 app.include_router(backend.router)
+app.include_router(accounts.router)
+app.include_router(profile.router)
 if ALLOW_LEGACY_API:
-    for r in (children, voice, vision, conversation, evening, activity, profile):
-        app.include_router(r.router)
+    for r in (children, voice, vision, conversation, evening, activity):
+        app.include_router(r.router, dependencies=[Depends(legacy_scope)])
 
 
 @app.exception_handler(IntegrityError)
@@ -52,7 +55,7 @@ async def integrity_error(request: Request, exc: IntegrityError):
 async def database_error(request: Request, exc: OperationalError):
     if "locked" in str(exc).lower():
         return JSONResponse(status_code=503, content={"detail": "처리 중이에요. 잠시 후 다시 시도해 주세요"}, headers={"Retry-After": "1"})
-    raise exc
+    return JSONResponse(status_code=503, content={"detail": "데이터베이스에 연결할 수 없어요. 잠시 후 다시 시도해 주세요"})
 
 
 @app.get("/health")

@@ -2,8 +2,9 @@
 from datetime import datetime, timezone
 from uuid import uuid4
 
-from sqlalchemy import Column, JSON, UniqueConstraint, Index, text
+from sqlalchemy import Column, DDL, JSON, UniqueConstraint, Index, event, text
 from sqlmodel import Field, SQLModel
+from app.db_types import UTCDateTime
 
 
 def now() -> datetime:
@@ -12,13 +13,35 @@ def now() -> datetime:
 
 class Record(SQLModel):
     id: str = Field(default_factory=lambda: str(uuid4()), primary_key=True)
-    created_at: datetime = Field(default_factory=now)
+    created_at: datetime = Field(default_factory=now, sa_type=UTCDateTime())
 
 
 class Parent(Record, table=True):
     email: str = Field(unique=True, index=True)
     display_name: str
     password_hash: str
+
+
+class LoginAccount(Record, table=True):
+    login_id: str = Field(unique=True, index=True)
+    password_hash: str
+    child_id: str = Field(unique=True)
+    profile: dict = Field(default_factory=dict, sa_column=Column(JSON, nullable=False))
+
+
+class LoginSession(Record, table=True):
+    account_id: str = Field(foreign_key="loginaccount.id", index=True)
+    token_hash: str = Field(unique=True, index=True)
+    expires_at: datetime = Field(sa_type=UTCDateTime())
+
+
+# 브라우저의 Supabase anon/authenticated 역할에는 계정/세션을 공개하지 않는다.
+# 백엔드 DB 소유자 연결만 사용한다.
+for _model in (LoginAccount, LoginSession):
+    event.listen(_model.__table__, "after_create", DDL(
+        f'ALTER TABLE "{_model.__tablename__}" ENABLE ROW LEVEL SECURITY'
+    ).execute_if(dialect="postgresql"))
+
 
 
 class Child(Record, table=True):
@@ -31,6 +54,17 @@ class Child(Record, table=True):
     daily_limit_minutes: int = 30
     window_start: str = "09:00"
     window_end: str = "18:00"
+
+
+class FamilyProfile(SQLModel, table=True):
+    child_id: str = Field(foreign_key="child.id", primary_key=True)
+    payload: dict = Field(default_factory=dict, sa_column=Column(JSON, nullable=False))
+    link_hash: str | None = Field(default=None, unique=True)
+    link_expires_at: datetime | None = Field(default=None, sa_type=UTCDateTime())
+
+
+class SchemaVersion(SQLModel, table=True):
+    version: int = Field(primary_key=True)
 
 
 class Persona(Record, table=True):
@@ -106,23 +140,34 @@ class Device(Record, table=True):
     child_id: str = Field(foreign_key="child.id", index=True)
     persona_id: str = Field(foreign_key="persona.id")
     label: str
-    revoked_at: datetime | None = None
+    revoked_at: datetime | None = Field(default=None, sa_type=UTCDateTime())
+
+
+class RegisteredClient(SQLModel, table=True):
+    child_id: str = Field(foreign_key="child.id", primary_key=True)
+    device_id: str = Field(primary_key=True, max_length=128)
+    role: str
+    name: str
+    auth_device_id: str | None = Field(default=None, foreign_key="device.id")
+    access_token_id: str | None = Field(default=None, foreign_key="accesstoken.id")
+    linked_at: datetime = Field(default_factory=now, sa_type=UTCDateTime())
+    last_seen: datetime = Field(default_factory=now, sa_type=UTCDateTime())
 
 
 class AccessToken(Record, table=True):
     token_hash: str = Field(unique=True, index=True)
     parent_id: str = Field(foreign_key="parent.id")
     device_id: str | None = Field(default=None, foreign_key="device.id")
-    expires_at: datetime
-    revoked_at: datetime | None = None
+    expires_at: datetime = Field(sa_type=UTCDateTime())
+    revoked_at: datetime | None = Field(default=None, sa_type=UTCDateTime())
 
 
 class PairingCode(Record, table=True):
     code_hash: str = Field(unique=True, index=True)
     child_id: str = Field(foreign_key="child.id")
     persona_id: str = Field(foreign_key="persona.id")
-    expires_at: datetime
-    used_at: datetime | None = None
+    expires_at: datetime = Field(sa_type=UTCDateTime())
+    used_at: datetime | None = Field(default=None, sa_type=UTCDateTime())
 
 
 class RateAttempt(Record, table=True):
@@ -139,7 +184,7 @@ class ConversationSession(Record, table=True):
     mode: str = "multisensory"
     status: str = "active"
     pacing: str = "normal"
-    ended_at: datetime | None = None
+    ended_at: datetime | None = Field(default=None, sa_type=UTCDateTime())
 
 
 class Message(Record, table=True):

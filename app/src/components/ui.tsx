@@ -36,7 +36,7 @@ export function Button({ label, onPress, variant = 'primary', disabled, style, t
         },
         style,
       ]}>
-      <Text style={[{ fontSize: 17, fontWeight: '700', color: primary ? C.white : variant === 'ghost' ? C.primary : C.text }, textStyle]}>
+      <Text style={[{ fontSize: 17, fontWeight: '700', color: primary ? C.onPrimary : variant === 'ghost' ? C.link : C.text }, textStyle]}>
         {label}
       </Text>
     </Pressable>
@@ -54,7 +54,7 @@ export function Chip({ label, selected, onPress }: { label: string; selected?: b
         justifyContent: 'center',
         borderRadius: R.pill,
         borderWidth: selected ? 2 : 1,
-        borderColor: selected ? C.primary : C.border,
+        borderColor: selected ? C.primaryStrong : C.border,
         backgroundColor: selected ? C.primarySoft : C.white,
       }}>
       <Text style={{ fontSize: 15, fontWeight: selected ? '700' : '500', color: C.text }}>{label}</Text>
@@ -72,7 +72,7 @@ export function Card({ children, style, soft, dashed }: { children: ReactNode; s
           backgroundColor: soft ? C.primarySoft : dashed ? C.white : C.card,
           borderWidth: soft ? 2 : dashed ? 1.5 : 0,
           borderStyle: dashed ? 'dashed' : 'solid',
-          borderColor: soft ? C.primary : C.text,
+          borderColor: soft ? C.primaryStrong : C.text,
           gap: 8,
         },
         style,
@@ -152,7 +152,7 @@ export function MicButton({ recording, onPress, size = 76 }: { recording?: boole
         alignItems: 'center',
         justifyContent: 'center',
       }}>
-      <Text style={{ fontSize: size * 0.4, color: C.white }}>{recording ? '■' : '🎤'}</Text>
+      <Text style={{ fontSize: size * 0.4, color: C.onPrimary }}>{recording ? '■' : '🎤'}</Text>
     </Pressable>
   );
 }

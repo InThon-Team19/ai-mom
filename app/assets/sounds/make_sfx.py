@@ -1,4 +1,4 @@
-"""아이봄 효과음 합성 (자체 제작 → 라이선스 문제 없음). 영유아용으로 작은 음량(최대 0.35)."""
+"""아이맘 효과음 합성 (자체 제작 → 라이선스 문제 없음). 영유아용으로 작은 음량(최대 0.35)."""
 import sys, wave
 import numpy as np
 out = sys.argv[1]; sr = 22050; rng = np.random.default_rng(7)

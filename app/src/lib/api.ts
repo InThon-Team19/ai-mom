@@ -20,6 +20,8 @@ import type {
   BackendSample,
   BackendSession,
   BackendToken,
+  DeviceInfo,
+  History,
   Gauge,
   MouthProfile,
   MouthTrackOut,
@@ -126,6 +128,22 @@ export const api = {
 
   // (임시) 프로필·태블릿 연결 — 민주 children API 생기면 교체
   getProfile: (childId: string) => req<Record<string, unknown>>(`/profile/${childId}`),
+  /** 태블릿: 연결 코드로 프로필 받기 (재발급된 이전 코드는 404) */
+  link: (code: string) => req<Record<string, unknown>>(`/link/${encodeURIComponent(code)}`),
+  reissueLinkCode: (childId: string) => req<{ linkCode: string }>(`/profile/${childId}/link-code`, { method: 'POST' }),
+  registerDevice: (childId: string, d: { device_id: string; role: 'parent' | 'child'; name: string }) =>
+    req<{ devices: DeviceInfo[] }>(`/profile/${childId}/devices`, json('POST', d)),
+  removeDevice: (childId: string, deviceId: string) =>
+    req<{ devices: DeviceInfo[] }>(`/profile/${childId}/devices/${encodeURIComponent(deviceId)}`, { method: 'DELETE' }),
+  history: (childId: string) => req<History>(`/profile/${childId}/history`),
+
+  // 로그인 (서버 구현: 민주 — 계약은 docs/api.md "로그인")
+  signup: (b: { login_id: string; password: string; child_id: string; profile?: unknown }) =>
+    req<{ login_id: string; child_id: string; token: string }>('/auth/signup', json('POST', b)),
+  login: (b: { login_id: string; password: string }) =>
+    req<{ login_id: string; child_id: string; token: string; profile: Record<string, unknown> }>('/auth/login', json('POST', b)),
+  changePassword: (b: { login_id: string; password: string; new_password: string }) =>
+    req<{ token: string }>('/auth/password', json('POST', b)),
   putProfile: (childId: string, body: unknown) => req<Record<string, unknown>>(`/profile/${childId}`, json('PUT', body)),
 };
 

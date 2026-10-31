@@ -1,5 +1,75 @@
 # 아이봄 FastAPI 백엔드
 
+## Supabase 계정 저장
+
+`server/.env`에 `SUPABASE_DB_URL`을 설정하면 SQLModel 데이터가 Supabase PostgreSQL에 저장됩니다.
+Supabase Dashboard → Connect → Session pooler URI를 복사하고 비밀번호를 URL 인코딩하세요.
+연결 문자열 끝에 `?sslmode=require`를 지정합니다. `DB_URL`이 있으면 우선 적용됩니다.
+설정이 없으면 기존 SQLite를 사용합니다. `pip install -r requirements.txt` 후 서버를 시작하면 신규 테이블이 생성됩니다.
+DB 연결 문자열은 서버에만 보관하고 앱 환경변수에 넣지 마세요.
+
+현재 앱은 Supabase Auth 대신 자체 아이디/비밀번호 인증을 사용하며, Supabase는 DB로 사용합니다.
+`loginaccount`에는 아이디, scrypt 비밀번호 해시, child_id를 저장합니다.
+`parent`와 같은 ID를 사용하고 `/auth`와 `/api` 모두 `accesstoken`으로 인증합니다.
+가족 프로필은 `familyprofile` 한 곳에서 저장·조회하며 JSON 파일에 이중 저장하지 않습니다.
+기존 `loginaccount.profile`, `loginsession`은 시작 시 버전별 마이그레이션으로 이전합니다.
+신규/기존 애플리케이션 테이블 전체에 PostgreSQL RLS를 적용하고 anon/authenticated 직접 접근 권한을 회수합니다.
+시작 시 마이그레이션을 수행하므로 DB 소유자 권한이 필요합니다. Supabase Auth 자체 스키마는 변경하지 않습니다.
+PostgreSQL의 시간 열은 UTC `TIMESTAMPTZ`로 이전합니다. 기존 timezone 없는 값은 UTC로 해석합니다.
+
+앱 API: `POST /auth/signup` (`login_id`, `password`, `child_id`, `profile`),
+`POST /auth/login` (`login_id`, `password`), `POST /auth/password` (`login_id`, `password`, `new_password`).
+로그인 응답은 `login_id`, `child_id`, `token`, `profile`입니다.
+`PUT /auth/profile`은 `Authorization: Bearer <token>` 또는 HttpOnly 세션 쿠키로 인증합니다.
+부모 토큰은 7일, 태블릿 토큰은 30일 유효합니다. 비밀번호 변경은 부모·태블릿 세션을 모두 폐기합니다.
+`POST /auth/logout`은 만료/폐기된 토큰에도 성공하며 쿠키를 삭제합니다.
+새 비밀번호는 기본 8자 이상이며 `PASSWORD_MIN_LENGTH`로 설정합니다. 기존 짧은 비밀번호 로그인은 유지합니다.
+`/profile/*`은 항상 활성화하고 인증·가족 소유권·부모/태블릿 역할을 검사합니다.
+`ALLOW_LEGACY_API=true`는 기존 미디어 경로만 활성화하며 인증을 우회하지 않습니다.
+연결 코드는 10분 유효하고 한 번만 교환할 수 있습니다. 새 코드 발급 시 기존 태블릿을 해제합니다.
+가입 시 앱의 기존 6자리 child_id를 초기 코드로 사용하고 이후에는 서버 난수 코드를 사용합니다.
+가입 후 10분이 지났으면 설정 화면에서 코드를 재발급하세요.
+
+### 프론트엔드를 수정하지 않은 범위의 한계
+
+이번 변경은 `server/`와 API 문서만 수정합니다. 새 화면/복구/탈퇴 API는 추가하지 않습니다.
+현재 화면의 API 주소와 주요 응답 키를 유지합니다. 서버는 Bearer 및 HttpOnly 쿠키를 지원하지만,
+실제 앱이 토큰/쿠키를 보내는지는 별도입니다. 현재 미디어 요청에는 Bearer 헤더가 없고,
+교차 출처 웹 fetch에는 credentials 옵션이 없으므로 쿠키가 전달되지 않는 환경에서는 401로 차단됩니다.
+가입 전 미디어 업로드 역시 인증이 필요합니다. 이를 안전하게 완전히 연결하려면 추후 프론트엔드 작업이 필요합니다.
+서버가 무인증 접근을 허용하거나 IP만으로 가족을 추정하지는 않습니다.
+HTTPS에서는 Secure 쿠키가 기본이며, 로컬 HTTP 개발에서만 `SESSION_COOKIE_SECURE=false`로 설정하세요.
+앱의 AsyncStorage 토큰 보관, 시작 화면의 세션 검사, 네트워크 단절 시 로컬 로그아웃,
+동기화 실패 표시/재시도는 프론트엔드에 있어 변경하지 않았습니다.
+가입에서 받은 프로필은 계정과 같은 트랜잭션으로 저장합니다. 현재 화면이 이후 요청으로 보내는 PIN/동의는
+서버에서 임시 상태로 유지하며, 모든 필수 정보가 유효할 때만 가입 완료 상태를 허용합니다.
+
+### 기존 DB/파일 데이터 이전
+
+운영 서버를 중지하고 SQLite 및 data 폴더를 먼저 백업하세요. 새 DB는 빈 대상 DB를 사용하세요.
+
+```bash
+# server/에서 실행. 기본은 건수 확인이며 쓰지 않습니다.
+python scripts/migrate_data.py --source sqlite:////absolute/path/backup.db
+python scripts/migrate_data.py --source sqlite:////absolute/path/backup.db --apply
+# 이미 소유권이 확정된 Child에만 이전하며 기존 프로필은 덮어쓰지 않습니다.
+python scripts/migrate_data.py --profiles /absolute/path/old-data --apply
+```
+
+인증 계정/자녀 소유권이 없는 JSON 프로필은 자동으로 계정에 연결하지 않고 이전을 거부합니다.
+음성·영상·활동 원본 파일은 별도로 보관 위치를 이전해야 합니다. 이 스크립트는 파일을 삭제하지 않습니다.
+마이그레이션은 중복 기본키가 있으면 데이터 복사를 전체 롤백합니다. 소스 DB를 변경하지 않습니다.
+
+### PostgreSQL 검증
+
+```bash
+python -m pytest -q
+# 전용 테스트 DB에서만 지정. 임의의 테스트 스키마를 생성한 뒤 제거합니다.
+TEST_POSTGRES_URL='postgresql+psycopg://...' python -m pytest tests/test_postgres.py -q
+```
+
+연결 문자열이 없으면 실제 PostgreSQL 검증은 skip됩니다. DDL 타입 검사는 연결 없이 실행합니다.
+
 2026-10-31. 실제 구현은 이 폴더의 Python/FastAPI + SQLModel/SQLite다. 별도 Fastify 시제품을 설명한 `docs/backend-status-and-erd.md`와 구분한다.
 
 ## 실행

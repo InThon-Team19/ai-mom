@@ -95,9 +95,10 @@ def get_child(child_id: str, token: ParentAuth, db: DB):
 @router.put("/children/{child_id}/settings")
 def settings(child_id: str, body: S.SettingsIn, token: ParentAuth, db: DB):
     child = owned(db, Child, child_id, token.parent_id)
-    for key, value in body.model_dump().items():
-        setattr(child, key, value)
-    db.add(child)
+    from app.family import merge_profile
+    db.exec(select(Child).where(Child.id == child.id).with_for_update()).one()
+    merge_profile(db, child, {"settings": {"vibration": body.haptics_enabled,
+        "dailyLimitMin": body.daily_limit_minutes, "start": body.window_start, "end": body.window_end}})
     db.commit()
     db.refresh(child)
     return child
@@ -303,11 +304,11 @@ def devices(token: ParentAuth, db: DB):
 @router.delete("/devices/{device_id}")
 def revoke_device(device_id: str, token: ParentAuth, db: DB):
     device = owned(db, Device, device_id, token.parent_id)
-    device.revoked_at = now()
-    db.add(device)
-    for session in db.exec(select(ConversationSession).where(ConversationSession.device_id == device.id, ConversationSession.status == "active")).all():
-        session.status, session.ended_at = "ended", now()
-        db.add(session)
+    from app.routers.profile import revoke
+    from app.models import RegisteredClient
+    from sqlalchemy import delete
+    revoke(db, [device])
+    db.exec(delete(RegisteredClient).where(RegisteredClient.auth_device_id == device.id))
     db.commit()
     return {"ok": True}
 

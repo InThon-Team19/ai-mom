@@ -39,13 +39,15 @@ export default function Entry() {
 
   const choose = async (r: Role) => {
     await setRole(r);
-    router.replace(r === 'parent' ? '/onboarding/start' : '/child');
+    const p = await loadProfile();
+    // 이미 가입한 기기를 부모 모드로 되돌리면 가입을 다시 하지 않음
+    router.replace(r === 'parent' ? (p.onboarded ? '/parent' : '/onboarding/start') : '/child');
   };
 
   return (
     <SafeAreaView style={{ flex: 1, padding: 24, gap: 16, backgroundColor: C.bg }}>
       <View style={{ flex: 1, justifyContent: 'center', gap: 12 }}>
-        <Text style={{ fontSize: 34, fontWeight: '900', color: C.primary }}>아이봄</Text>
+        <Text style={{ fontSize: 34, fontWeight: '900', color: C.link }}>아이맘</Text>
         <Text style={T.sub}>이 기기를 어떻게 쓸까요?</Text>
         <Button label="부모 폰으로 쓰기" onPress={() => choose('parent')} />
         <Button label="아이 태블릿으로 쓰기" variant="outline" onPress={() => choose('child')} />

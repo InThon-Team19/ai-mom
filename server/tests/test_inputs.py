@@ -3,6 +3,7 @@ import io
 import os
 import tempfile
 import wave
+import pytest
 
 os.environ["DATA_DIR"] = tempfile.mkdtemp(prefix="aibom-test-")  # 실제 데이터와 분리
 
@@ -19,6 +20,27 @@ from app.voice.analysis import coaching, traits_and_tips  # noqa: E402
 from app.voice.audio import quality, speech_features  # noqa: E402
 
 client = TestClient(app)
+
+
+@pytest.fixture(scope="module", autouse=True)
+def authenticate_input_pipeline():
+    """Pipeline regression tests use a real parent token and owned children."""
+    from app.auth import issue_token, password_hash
+    from app.db import engine, init_db
+    from app.models import Child, Parent
+    from sqlmodel import Session
+    init_db()
+    with Session(engine) as db:
+        parent = Parent(email="pipeline@example.com", display_name="부모", password_hash=password_hash("pipeline-password"))
+        db.add(parent)
+        db.flush()
+        for child_id in ("pytest", "pyb64", "LINKME"):
+            db.add(Child(id=child_id, parent_id=parent.id, nickname="아이", birth_month="2023-01", speech_level="single_words"))
+        token = issue_token(db, parent.id)["access_token"]
+        db.commit()
+    client.headers["Authorization"] = "Bearer " + token
+    yield
+    client.headers.pop("Authorization", None)
 
 
 def fake_face(open_gap=0.0, nose_x=0.5, iris_shift=0.0) -> np.ndarray:
@@ -164,7 +186,36 @@ def test_activity_and_profile_api():
     assert client.get("/activity/pytest/summary").json()["touches"] == 1
     assert client.get("/profile/nobody").status_code == 404
     client.put("/profile/pytest", json={"child": {"name": "지호"}, "day": 1})
-    assert client.put("/profile/pytest", json={"day": 2}).json() == {"child": {"name": "지호"}, "day": 2}
+    p = client.put("/profile/pytest", json={"day": 2}).json()
+    assert p["child"] == {"name": "지호"} and p["day"] == 2 and "linkCode" not in p
+
+
+def test_link_code_devices_history():
+    client.put("/profile/LINKME", json={"child": {"name": "지호", "birth": "2023-01"},
+        "settings": {"consentBio": True, "consentChild": True}, "pinHash": "a" * 64, "onboarded": True})
+    code = client.post("/profile/LINKME/link-code").json()["linkCode"]
+    pair = client.get("/link/" + code)
+    assert pair.json()["child"]["name"] == "지호"
+    tablet_headers = {"Authorization": "Bearer " + pair.json()["token"]}
+    client.post("/profile/LINKME/devices", headers=tablet_headers, json={"device_id": "tab1", "role": "child", "name": "태블릿"})
+    client.post("/profile/LINKME/devices", json={"device_id": "ph1", "role": "parent", "name": "폰"})
+    new = client.post("/profile/LINKME/link-code").json()["linkCode"]
+    assert len(new) == 6 and client.get("/link/LINKME").status_code == 404  # 이전 코드 무효
+    assert client.get(f"/link/{new}").status_code == 200
+    p = client.get("/profile/LINKME").json()
+    assert [d["device_id"] for d in p["devices"]] == ["ph1"]  # 아이 기기 연결 해제
+    h = client.get("/profile/pytest/history").json()
+    assert h["voice"] and h["mouth"] and isinstance(h["days"], list)
+    assert client.delete("/profile/LINKME/devices/ph1").json()["devices"] == []
+    # Deleting the current parent device now revokes its token too.
+    from app.auth import issue_token
+    from app.db import engine
+    from app.models import Child
+    from sqlmodel import Session
+    with Session(engine) as db:
+        fresh = issue_token(db, db.get(Child, "pytest").parent_id)["access_token"]
+        db.commit()
+    client.headers["Authorization"] = "Bearer " + fresh
 
 
 def test_child_frame_no_face():
@@ -181,7 +232,7 @@ def test_bad_child_id_rejected():
 
 
 def test_tts_requires_registration():
-    r = client.post("/voice/tts", json={"child_id": "nobody", "text": "안녕"})
+    r = client.post("/voice/tts", json={"child_id": "pytest", "text": "안녕"})
     assert r.status_code == 400
 
 

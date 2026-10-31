@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-아이봄 (Ai-Bom) / 마마보이스 — InThon 2026 Team 19. 마감 **11/1 12:00** (기능 동결 03:00).
+아이맘 (ai-mom) — InThon 2026 Team 19. 마감 **11/1 12:00** (기능 동결 03:00).
 **기획서 최종본 `docs/기획서.md`(v2), 와이어프레임 `docs/wireframe.md` + `docs/wireframe/*.png`가 기준이다.** 기능·문구·흐름이 애매하면 이 둘을 먼저 본다.
 
 ## 제품 한 줄

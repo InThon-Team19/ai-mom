@@ -106,7 +106,13 @@
 | POST | `/voice/stt` | `file`, `expected`('사과\|apple'), `who` | `text, features, matched, alert` | 3-4 따라 말하기 |
 | POST | `/activity/{child_id}` | JSON `{events:[{type, t, data}]}` type: touch·gaze·smile·imitate·repeat·voice·listen·out_of_scope·alert·session | `ok` | 아이 태블릿 (3초마다 묶어서) |
 | GET | `/activity/{child_id}/summary?day=` | | `sessions, touches, reaction_ms, gaze_s, smiles, repeats, repeat_ok, words, favorites, balance{visual,audio,touch}, out_of_scope, alerts` | 2-1 홈, 2-2 리포트 |
-| GET/PUT | `/profile/{child_id}` | (임시) 가입 정보·설정·일차·피드백 JSON | 프로필 | 태블릿 연결(코드 = child_id) |
+| GET/PUT | `/profile/{child_id}` | (임시) 가입 정보·설정·일차·피드백 JSON (`linkCode`·`devices`는 아래 전용 API로만 바뀜) | 프로필 | 부모 앱 |
+| GET | `/link/{code}` | 태블릿 연결 키 | 프로필 (재발급된 이전 키는 404) | 아이 태블릿 연결 |
+| POST | `/profile/{child_id}/link-code` | | `{linkCode}` 새 키, 이전 키 무효 + 아이 기기 연결 해제 | 설정 탭 |
+| POST | `/profile/{child_id}/devices` | `{device_id, role(parent\|child), name}` | `{devices}` | 기기 등록 (부모 앱 열 때·태블릿 연결 때) |
+| DELETE | `/profile/{child_id}/devices/{device_id}` | | `{devices}` | 설정 탭 연결 해제, 태블릿 어른 메뉴 |
+| GET | `/profile/{child_id}/history` | | `{voice[], mouth[], days[]}` 최근 낭독·아이 하루 요약 | 설정 탭 학습 이력 |
+| POST | `/debug/log` | 텍스트 | `{ok}` | 앱 오류를 서버 터미널에 출력 (원인 추적용) |
 
 ## TTS (민주, Fish Audio 초안 태희) — `routers/voice.py`, `tts/fish.py`
 | POST | `/voice/register` | `child_id` | `model_id, state, sample_count` | 품질 좋은 최근 20문장 + 대본으로 목소리 등록/갱신 |
@@ -115,6 +121,18 @@
 
 - 저장: 부모 음성 `server/data/children/<id>/parent/voice/<kind>/sample_NNN.{wav,json}`, 입모양 `…/parent/mouth/<kind>/profile_NNN.json`, 아이 반응 `…/activity/<날짜>.jsonl` (모두 비공개)
 - **민주**: 목소리 등록 원본은 `routers/voice.py`의 `samples(child_id)` (wav + 대본 text + 품질)
+
+## 로그인 (서버 구현: 민주) ← 앱은 이미 이 계약으로 호출 중 (`app/src/lib/account.ts`)
+| 메서드 | 경로 | 요청 (JSON) | 응답 (JSON) | 화면 |
+|---|---|---|---|---|
+| POST | `/auth/signup` | `{login_id, password, child_id}` | `{login_id, child_id, token}` / 409 이미 있는 아이디 / 400 형식 오류 | 가입 1-7, 설정 탭 |
+| POST | `/auth/login` | `{login_id, password}` | `{login_id, child_id, token, profile}` / 401 틀림 | 1-1 로그인 |
+| POST | `/auth/password` | `{login_id, password, new_password}` | `{token}` / 401 | 설정 탭 |
+
+- `login_id`는 앱이 소문자로 보냄 (영문·숫자·`_.@-` 3~40자), 비밀번호 4자 이상
+- `profile`은 `GET /profile/{child_id}`와 같은 모양 → 앱이 이 기기에 저장하고 부모 앱으로 들어감
+- 서버가 404/연결 실패면 앱은 가입을 막지 않고 아이디만 기기에 저장 → 설정 탭 "다시 등록"
+- 비밀번호는 해시로 저장 (예: PBKDF2/bcrypt). 토큰 검사는 다른 API에 나중에 붙여도 됨
 
 ## 에이전트 대화 (충항) — `routers/conversation.py` ← 앱은 이미 이 계약으로 호출 중 (`app/src/lib/agent.ts`)
 | 메서드 | 경로 | 요청 (JSON) | 응답 (JSON) |
@@ -130,3 +148,19 @@
 
 ## LLM (에이전트용, 충항)
 - `server/app/llm.py`의 `chat(system, messages)` 사용. Lablup Token Factory(Anthropic 호환) 경유, 모델 `ANTHROPIC_MODEL`
+
+### 앱 아이디 로그인 (Supabase PostgreSQL 저장)
+
+`SUPABASE_DB_URL` 설정 시 계정·세션·가족 프로필은 Supabase DB에 저장된다. Supabase Auth가 아닌 자체 아이디 인증이다.
+
+- `POST /auth/signup`: `{login_id, password, child_id, profile?}` → 201 `{login_id, child_id, token}`. 중복 아이디/child_id는 409.
+- `POST /auth/login`: `{login_id, password}` → `{login_id, child_id, token, profile}`. 잘못된 자격 증명은 401.
+- `POST /auth/password`: `{login_id, password, new_password}` → `{token}`. 기존 모든 세션을 폐기한다.
+- `PUT /auth/profile`: Bearer 또는 HttpOnly 쿠키 인증, 프로필 일부 객체 → 병합된 프로필. childId는 계정에 연결된 값으로 고정한다.
+- `POST /auth/logout`: `{ok: true}`. 현재 세션을 폐기하고 쿠키를 삭제한다. 만료/기폐기 상태도 성공한다.
+
+아이디는 소문자로 정규화하며 공백 없는 3~60자이다. 새 비밀번호는 기본 8~128자(`PASSWORD_MIN_LENGTH` 설정 가능), 기존 비밀번호 로그인은 유지한다. 비밀번호 원문과 토큰 원문은 DB에 저장하지 않는다. 부모 토큰은 7일 유효하고 기존 `/api`와 같은 `AccessToken`을 사용한다.
+
+`/profile/{child_id}` GET/PUT, 기기 등록/삭제, 연결 코드 재발급, 이력 조회는 인증과 가족 소유권 검사가 적용된다. 프로필 쓰기/이력/기기 삭제/코드 발급은 부모 전용이다. `familyprofile`에 저장하며 기존 JSON 파일에는 쓰지 않는다.
+`GET /link/{code}`는 10분짜리 일회용 코드를 교환해 태블릿 프로필, `token`, `expires_at`을 반환하고 HttpOnly 쿠키를 설정한다. 신규 코드 발급은 기존 태블릿 세션을 폐기한다. 초기 코드는 앱의 6자리 child_id를 사용하며 이후에는 서버 난수 코드다.
+현재 화면이 Bearer/쿠키를 전송하지 않는 환경에서는 401이 발생한다. 프론트엔드 수정 없이 무인증 접근을 허용하지 않는다. 상세 설정·이전·검증·화면 제약은 `server/README.md`를 참고한다.

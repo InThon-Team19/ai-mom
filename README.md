@@ -1,4 +1,4 @@
-# 아이봄 (Ai-Bom) — InThon 2026 Team 19
+# 아이맘 (ai-mom) — InThon 2026 Team 19
 
 > 낮에는 부모 아바타가 아이와 청각·시각·촉각 대화를 하고, 밤에는 부모가 피드백과 입모양 낭독으로 다음날을 갱신합니다.
 
@@ -7,7 +7,7 @@
 ## 구조
 기준 문서: **`docs/기획서.md`(최종 v2)**, **`docs/wireframe.md` + `docs/wireframe/*.png`**
 ```
-aibom/
+ai-mom/
 ├─ app/                          # Expo SDK 58 — 부모 폰 + 아이 태블릿 (시작 화면에서 기기 용도 선택)
 │  └─ src/
 │     ├─ app/onboarding/         # 가입 1-1~1-7 (아이 정보·부모 성향·아바타·목소리·입모양·설정/연결 코드)

@@ -1,19 +1,23 @@
 // 온보딩 1-6 입모양 등록 — 담당: 태희 (민철 와이어프레임 기준)
 // 문장을 읽으며 정면 촬영. 영상은 저장·전송하지 않고 기기 안에서 0.05초마다 잰 입모양 수치만 서버로 → 학습률 상승.
 // 실제 부모 얼굴은 이 화면의 실시간 카메라 미리보기에만 보임. 표정 샘플은 "나중에"
-import { router } from 'expo-router';
-import { useMemo, useState } from 'react';
+// 카메라 위 인식 표시(얼굴 틀·입 윤곽·체크)와 상태 문구는 기획 2-4 → components/FaceGuide
+import { useLocalSearchParams } from 'expo-router';
+import { useCallback, useMemo, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
-import { FaceTracker } from '@/components/FaceTracker';
+import { FaceGuide, ReadingText, doneSignal, useReadingWord } from '@/components/FaceGuide';
+import type { FaceFrame } from '@/components/FaceTracker';
 import { RingGauge } from '@/components/RingGauge';
 import { Button, Card, OnboardingScaffold } from '@/components/ui';
 import { MOUTH_SENTENCES, fill } from '@/content/curriculum';
 import { useReadAloud } from '@/hooks/useReadAloud';
 import { updateProfile, useProfile } from '@/lib/store';
+import { goNext } from '@/lib/nav';
 import { C, R } from '@/theme';
 
 export default function MouthSignup() {
+  const edit = useLocalSearchParams<{ edit?: string }>().edit === '1';
   const p = useProfile();
   const name = p?.child.nickname || p?.child.name;
   const me = p?.parent.title;
@@ -25,16 +29,23 @@ export default function MouthSignup() {
 
   const g = ra.mouth;
   const gainPct = Math.round(ra.gain.mouth * 100);
-  const face = ra.face;
-  const faceOk = !!face?.face;
-  const mouthActive = ra.recording && faceOk && (!!face?.mouthOpen || (face?.open ?? 0) > 0.02);
+  const reading = useReadingWord(sentences[ra.index] ?? '', ra.recording);
+  const { onFrame: raFrame } = ra;
+  const { feed } = reading;
+  const onFrame = useCallback(
+    (f: FaceFrame) => {
+      raFrame(f);
+      feed(f);
+    },
+    [raFrame, feed],
+  );
 
   const prev = ra.index > 0 ? { text: sentences[ra.index - 1], status: ra.statuses[ra.index - 1] } : null;
   const next = ra.index < sentences.length - 1 ? sentences[ra.index + 1] : null;
 
   const leave = async () => {
     await updateProfile({}); // 진행 상태 동기화 (입모양 수치는 이미 서버에 저장됨)
-    router.push('/onboarding/setup');
+    goNext(edit, '/onboarding/setup');
   };
   const onNext = () => {
     if (ra.recording || ra.busy) return;
@@ -86,24 +97,20 @@ export default function MouthSignup() {
         <RingGauge progress={g.progress} baseline={g.baseline} size={104} />
         <View style={{ flex: 1, gap: 4 }}>
           <Text style={{ fontSize: 15, fontWeight: '800', color: C.text }}>입모양 학습률</Text>
-          <Text style={{ fontSize: 15, fontWeight: '700', color: C.primary }}>+{gainPct}%</Text>
+          <Text style={{ fontSize: 15, fontWeight: '700', color: C.link }}>+{gainPct}%</Text>
           <Text style={{ fontSize: 14, color: C.sub }}>
             {g.usable ? '이제 아바타 입모양으로 쓸 수 있어요' : `문장 ${g.remaining_sentences}개 더 읽어주세요`}
           </Text>
         </View>
       </View>
 
-      <FaceTracker
-        guide
-        onFrame={ra.onFrame}
+      <FaceGuide
+        onFrame={onFrame}
         onError={setCamError}
+        recording={ra.recording}
+        doneCount={doneSignal(ra.statuses, ra.allDone)}
         style={{ width: '100%', aspectRatio: 16 / 10, borderRadius: R.md, borderWidth: 1, borderColor: C.border }}
       />
-
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-        <StatusChip label={faceOk ? '얼굴 인식됨' : '얼굴을 찾고 있어요'} on={faceOk} />
-        {mouthActive && <StatusChip label="입모양 인식 중" on />}
-      </View>
       {!!camError && <Text style={{ fontSize: 13, color: C.warn }}>카메라 인식 오류: {camError.slice(0, 80)}</Text>}
 
       <Card style={{ gap: 6 }}>
@@ -113,7 +120,8 @@ export default function MouthSignup() {
           </Text>
         )}
         <Text style={{ fontSize: 18, fontWeight: '800', color: C.text }}>
-          {ra.statuses[ra.index] === 'retry' ? '다시' : '지금'} · {sentences[ra.index]}
+          {ra.statuses[ra.index] === 'retry' ? '다시' : '지금'} ·{' '}
+          <ReadingText text={sentences[ra.index] ?? ''} word={reading.word} />
         </Text>
         {next && <Text style={{ fontSize: 14, color: C.sub }}>남음 · {next}</Text>}
       </Card>
@@ -134,19 +142,5 @@ export default function MouthSignup() {
         </View>
       )}
     </OnboardingScaffold>
-  );
-}
-
-function StatusChip({ label, on }: { label: string; on: boolean }) {
-  return (
-    <View
-      style={{
-        paddingHorizontal: 12,
-        paddingVertical: 7,
-        borderRadius: 999,
-        backgroundColor: on ? '#E3F5EA' : C.card,
-      }}>
-      <Text style={{ fontSize: 13, fontWeight: '600', color: on ? C.ok : C.text }}>{label}</Text>
-    </View>
   );
 }

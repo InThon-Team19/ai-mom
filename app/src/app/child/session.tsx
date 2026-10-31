@@ -258,7 +258,7 @@ export default function Session() {
           {/* 상단: 일차 · 소리만 듣기 */}
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: 52 }}>
             <View style={{ backgroundColor: C.primary, borderRadius: R.pill, paddingHorizontal: 18, paddingVertical: 10 }}>
-              <Text style={{ color: C.white, fontSize: 18, fontWeight: '800' }}>{plan.day}일차</Text>
+              <Text style={{ color: C.onPrimary, fontSize: 18, fontWeight: '800' }}>{plan.day}일차</Text>
             </View>
             <PillButton
               small

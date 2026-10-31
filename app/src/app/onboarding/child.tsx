@@ -1,11 +1,12 @@
 // 온보딩 1-2 아이 정보 — 담당: 태희 (민철 와이어프레임 기준)
 // 이름·부르는 말(아바타가 부를 때), 생년월(콘텐츠 난이도), 말하기 수준(시작 템포), 좋아하는 것(선택). 건강 정보는 받지 않음
-import { router } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { useState, type ReactNode } from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
 
 import { Button, Chip, OnboardingScaffold } from '@/components/ui';
 import { updateProfile, useProfile, type Profile } from '@/lib/store';
+import { goNext } from '@/lib/nav';
 import { C, R, T } from '@/theme';
 
 const LEVELS: Profile['child']['level'][] = ['한 단어', '두 단어', '짧은 문장'];
@@ -18,6 +19,7 @@ export default function ChildInfo() {
 }
 
 function Form({ initial }: { initial: Profile['child'] }) {
+  const edit = useLocalSearchParams<{ edit?: string }>().edit === '1';
   const [name, setName] = useState(initial.nickname || initial.name);
   const [year, setYear] = useState(initial.birth.split('-')[0] ?? '');
   const [month, setMonth] = useState(initial.birth.split('-')[1] ?? '');
@@ -46,7 +48,7 @@ function Form({ initial }: { initial: Profile['child'] }) {
     if (!ready || !level) return;
     const n = name.trim();
     await updateProfile({ child: { name: n, nickname: n, birth: `${year}-${String(m).padStart(2, '0')}`, level, likes } });
-    router.push('/onboarding/parent');
+    goNext(edit, '/onboarding/parent');
   };
 
   return (
@@ -156,7 +158,7 @@ function Box({ label, selected, onPress }: { label: string; selected: boolean; o
         justifyContent: 'center',
         borderRadius: R.sm,
         borderWidth: selected ? 2 : 1,
-        borderColor: selected ? C.primary : C.sub,
+        borderColor: selected ? C.primaryStrong : C.sub,
         backgroundColor: selected ? C.primarySoft : C.white,
       }}>
       <Text style={{ fontSize: 15, fontWeight: selected ? '700' : '500', color: C.text }}>{label}</Text>

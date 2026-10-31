@@ -5,7 +5,7 @@ import secrets
 from datetime import timedelta
 from typing import Annotated
 
-from fastapi import Depends, HTTPException
+from fastapi import Depends, HTTPException, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlmodel import Session, select
 
@@ -27,7 +27,10 @@ def password_hash(password: str, salt: str | None = None) -> str:
 
 
 def verify_password(password: str, hashed: str) -> bool:
-    return hmac.compare_digest(password_hash(password, hashed.split(":")[0]), hashed)
+    try:
+        return hmac.compare_digest(password_hash(password, hashed.split(":")[0]), hashed)
+    except (ValueError, TypeError):
+        return False
 
 
 def issue_token(db: Session, parent_id: str, device_id: str | None = None):
@@ -37,9 +40,17 @@ def issue_token(db: Session, parent_id: str, device_id: str | None = None):
     return {"access_token": raw, "token_type": "bearer", "expires_at": expires}
 
 
-def principal(db: DB, credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(bearer)]):
-    token = db.exec(select(AccessToken).where(AccessToken.token_hash == digest(credentials.credentials))).first() if credentials else None
-    if not token or token.revoked_at or token.expires_at <= now():
+def principal(request: Request, db: DB, credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(bearer)]):
+    from app.config import CORS_ORIGINS, SESSION_COOKIE_NAME
+    raw = credentials.credentials if credentials else request.cookies.get(SESSION_COOKIE_NAME)
+    if not credentials and raw and request.method not in {"GET", "HEAD", "OPTIONS"}:
+        origin = request.headers.get("origin")
+        if origin and origin not in CORS_ORIGINS and origin != str(request.base_url).rstrip("/"):
+            raise HTTPException(403, "허용되지 않은 요청 출처예요")
+    token = db.exec(select(AccessToken).where(
+        AccessToken.token_hash == digest(raw), AccessToken.expires_at > now(), AccessToken.revoked_at.is_(None)
+    )).first() if raw else None
+    if not token or not db.get(Parent, token.parent_id):
         raise HTTPException(401, "유효한 인증 토큰이 필요해요", headers={"WWW-Authenticate": "Bearer"})
     if token.device_id:
         device = db.get(Device, token.device_id)
@@ -79,6 +90,10 @@ def owned(db: Session, model, record_id: str, parent_id: str):
 def rate_limit(db: Session, bucket: str, limit: int = 5):
     if db.get_bind().dialect.name == "sqlite":
         db.connection().exec_driver_sql("BEGIN IMMEDIATE")
+    elif db.get_bind().dialect.name == "postgresql":
+        from sqlalchemy import text
+        lock_id = int.from_bytes(hashlib.sha256(bucket.encode()).digest()[:8], "big", signed=True)
+        db.execute(text("SELECT pg_advisory_xact_lock(:key)"), {"key": lock_id})
     cutoff = now() - timedelta(minutes=1)
     # 제한 기록도 DB에 남겨 재시작/다중 worker에서 공유한다.
     from sqlalchemy import delete

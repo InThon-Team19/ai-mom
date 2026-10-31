@@ -18,7 +18,7 @@ export const AVATAR_OPTIONS = {
 export type AvatarCategory = keyof typeof AVATAR_OPTIONS;
 
 const HAIR_COLORS = ['#2B2118', '#4A3426', '#6B4A2F', '#1F1F1F', '#7A5A3A', '#3A2A20', '#5C3D2E', '#2E2E3A'];
-const OUTFIT_COLORS = ['#2453D6', '#E07A5F', '#81B29A', '#F2CC8F', '#9B5DE5', '#EF476F', '#118AB2', '#3D405B'];
+const OUTFIT_COLORS = ['#F2B705', '#E07A5F', '#81B29A', '#F2CC8F', '#9B5DE5', '#EF476F', '#118AB2', '#3D405B'];
 
 function faceShape(i: number) {
   const shapes: [number, number, number][] = [

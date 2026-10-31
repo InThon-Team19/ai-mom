@@ -141,7 +141,7 @@ export function PillButton({
           paddingHorizontal: small ? 18 : 30,
           borderRadius: R.pill,
           borderWidth: 2,
-          borderColor: dark ? C.white : primary || selected ? C.primary : C.text,
+          borderColor: dark ? C.white : primary || selected ? C.primaryStrong : C.text,
           backgroundColor: dark ? 'transparent' : primary ? C.primary : selected ? C.primarySoft : C.white,
           alignItems: 'center',
           justifyContent: 'center',
@@ -149,7 +149,7 @@ export function PillButton({
         },
         style,
       ]}>
-      <Text style={{ fontSize: small ? 16 : 22, fontWeight: '800', color: dark || primary ? C.white : selected ? C.primary : C.text }}>{label}</Text>
+      <Text style={{ fontSize: small ? 16 : 22, fontWeight: '800', color: dark ? C.white : primary ? C.onPrimary : selected ? C.link : C.text }}>{label}</Text>
     </Pressable>
   );
 }

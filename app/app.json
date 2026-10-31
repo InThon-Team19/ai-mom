@@ -1,15 +1,15 @@
 {
   "expo": {
-    "name": "아이봄",
-    "slug": "aibom",
+    "name": "아이맘",
+    "slug": "ai-mom",
     "version": "1.0.0",
     "orientation": "default",
     "icon": "./assets/images/icon.png",
-    "scheme": "aibom",
+    "scheme": "aimom",
     "userInterfaceStyle": "automatic",
     "ios": {
       "icon": "./assets/expo.icon",
-      "bundleIdentifier": "com.team19.aibom",
+      "bundleIdentifier": "com.team19.aimom",
       "supportsTablet": true
     },
     "android": {
@@ -20,7 +20,7 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.team19.aibom"
+      "package": "com.team19.aimom"
     },
     "web": {
       "output": "server",
