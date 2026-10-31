@@ -2,7 +2,7 @@
 // 이미 가입한 가족: 새 폰·앱 재설치·아이 태블릿에서 부모 모드로 바꿀 때 아이디·비밀번호로 같은 가족 정보를 불러옴
 import { router, type Href } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, Text, TextInput, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, Pressable, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button, H1, Sub } from '@/components/ui';
@@ -47,8 +47,11 @@ export default function Login() {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: C.bg, paddingVertical: 24, paddingHorizontal: gutter, gap: 16 }}>
-      <Pressable onPress={() => goBack('/' as Href)} hitSlop={12} accessibilityLabel="뒤로">
+    <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }}>
+      {/* 키보드가 올라오면 아래 버튼이 가려지지 않게 스크롤 (iOS 는 padding, Android 는 창이 줄어듦) */}
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <ScrollView contentContainerStyle={{ flexGrow: 1, paddingVertical: 24, paddingHorizontal: gutter, gap: 16 }} keyboardShouldPersistTaps="handled">
+      <Pressable onPress={() => goBack('/' as Href)} hitSlop={8} accessibilityLabel="뒤로" style={{ width: 44, height: 44, marginLeft: -10, alignItems: 'center', justifyContent: 'center' }}>
         <Text style={{ fontSize: 28, color: C.text }}>‹</Text>
       </Pressable>
       <View style={{ gap: 6 }}>
@@ -67,6 +70,8 @@ export default function Login() {
       <View style={{ flex: 1 }} />
       <Button label={busy ? '로그인 중…' : '로그인'} disabled={busy || id.trim().length < 3 || pw.length < 1} onPress={submit} />
       <Button label="처음이에요 · 가입하기" variant="ghost" onPress={() => router.replace('/onboarding/start')} />
+      </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

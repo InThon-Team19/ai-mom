@@ -1,6 +1,6 @@
 // 공용 UI — 와이어프레임 스타일 (파란 주색, 회색 카드, 둥근 모서리). 담당: 태희
 import type { ReactNode } from 'react';
-import { Pressable, ScrollView, Text, View, type StyleProp, type TextStyle, type ViewStyle } from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View, type StyleProp, type TextStyle, type ViewStyle } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { C, R, T } from '@/theme';
@@ -37,7 +37,7 @@ export function Button({ label, onPress, variant = 'primary', disabled, style, t
         },
         style,
       ]}>
-      <Text style={[{ fontSize: 17, fontWeight: '700', color: primary ? C.onPrimary : variant === 'ghost' ? C.link : C.text }, textStyle]}>
+      <Text style={[{ fontSize: 17, fontWeight: '700', textAlign: 'center', color: primary ? C.onPrimary : variant === 'ghost' ? C.link : C.text }, textStyle]}>
         {label}
       </Text>
     </Pressable>
@@ -112,8 +112,8 @@ export function OnboardingScaffold({
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }}>
       <View style={[{ paddingHorizontal: 24, paddingTop: 8, gap: 10 }, frame]}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', height: 40 }}>
-          <Pressable onPress={() => goBack(prevOf(step))} hitSlop={12} accessibilityLabel="뒤로">
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', height: 44 }}>
+          <Pressable onPress={() => goBack(prevOf(step))} hitSlop={8} accessibilityLabel="뒤로" style={{ width: 44, height: 44, marginLeft: -10, alignItems: 'center', justifyContent: 'center' }}>
             <Text style={{ fontSize: 28, color: C.text }}>‹</Text>
           </Pressable>
           <Text style={T.small}>
@@ -124,8 +124,10 @@ export function OnboardingScaffold({
           <View style={{ width: `${(step / 7) * 100}%`, height: 4, backgroundColor: C.primary, borderRadius: 2 }} />
         </View>
       </View>
+      {/* iOS 는 키보드가 화면을 줄이지 않아 아래 입력칸·다음 버튼이 가려짐 → padding (Android 는 창이 줄어듦) */}
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       {scroll ? (
-        <ScrollView style={{ flex: 1 }} contentContainerStyle={[{ padding: 24, gap: 16 }, frame]}>
+        <ScrollView style={{ flex: 1 }} contentContainerStyle={[{ padding: 24, gap: 16 }, frame]} keyboardShouldPersistTaps="handled">
           {head}
           {children}
         </ScrollView>
@@ -136,6 +138,7 @@ export function OnboardingScaffold({
         </View>
       )}
       {!!footer && <View style={[{ padding: 24, paddingTop: 8 }, frame]}>{footer}</View>}
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -227,7 +230,7 @@ export function BigButton({
         style,
       ]}>
       {icon}
-      <Text style={{ fontSize: small ? 14 : 16, fontWeight: '800', color: C.text }}>{label}</Text>
+      <Text style={{ flexShrink: 1, textAlign: 'center', fontSize: small ? 14 : 16, fontWeight: '800', color: C.text }}>{label}</Text>
     </Pressable>
   );
 }
@@ -251,7 +254,7 @@ export function PillChip({ label, selected, onPress, icon }: { label: string; se
         backgroundColor: selected ? C.primarySoft : C.white,
       }}>
       {icon}
-      <Text style={{ fontSize: 14, fontWeight: selected ? '700' : '500', color: C.text }}>{label}</Text>
+      <Text style={{ flexShrink: 1, fontSize: 14, fontWeight: selected ? '700' : '500', color: C.text }}>{label}</Text>
     </Pressable>
   );
 }

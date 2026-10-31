@@ -38,8 +38,8 @@ function confirm(title: string, msg: string, ok: string, onOk: () => void) {
 function Section({ title, children, right }: { title: string; children: ReactNode; right?: ReactNode }) {
   return (
     <View style={{ borderRadius: R.md, borderWidth: 1, borderColor: C.border, padding: 16, gap: 10 }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-        <Text style={{ fontSize: 17, fontWeight: '800', color: C.text }}>{title}</Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+        <Text style={{ flexShrink: 1, fontSize: 17, fontWeight: '800', color: C.text }}>{title}</Text>
         {right}
       </View>
       {children}
@@ -57,7 +57,7 @@ function Row({ label, value }: { label: string; value: string }) {
 }
 
 const Link = ({ label, href }: { label: string; href: string }) => (
-  <Pressable onPress={() => router.push(href as Href)} hitSlop={8}>
+  <Pressable onPress={() => router.push(href as Href)} hitSlop={8} style={{ minHeight: 36, justifyContent: 'center' }}>
     <Text style={{ color: C.link, fontWeight: '700' }}>{label}</Text>
   </Pressable>
 );
@@ -213,7 +213,7 @@ export default function Settings() {
                   <Text style={T.small}>마지막 사용 {fmt(d.last_seen)}</Text>
                 </View>
                 {d.device_id !== me && (
-                  <Pressable onPress={() => unlink(d.device_id, d.name || '기기')} hitSlop={8}>
+                  <Pressable onPress={() => unlink(d.device_id, d.name || '기기')} hitSlop={8} style={{ minHeight: 44, justifyContent: 'center' }}>
                     <Text style={{ color: C.warn, fontWeight: '700' }}>연결 해제</Text>
                   </Pressable>
                 )}
@@ -230,7 +230,7 @@ export default function Settings() {
             <RingGauge progress={voice?.progress ?? 0} baseline={voice?.baseline} size={96} stroke={10} label="음성" />
             <RingGauge progress={mouth?.progress ?? 0} baseline={mouth?.baseline} size={96} stroke={10} label="입모양" />
           </View>
-          <View style={{ flexDirection: 'row', gap: 8, justifyContent: 'center' }}>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'center' }}>
             <Chip label="목소리 더 녹음" onPress={() => router.push('/onboarding/voice?edit=1' as Href)} />
             <Chip label="입모양 더 촬영" onPress={() => router.push('/onboarding/mouth?edit=1' as Href)} />
           </View>
@@ -273,7 +273,7 @@ export default function Settings() {
             ))}
           </View>
           <Text style={T.small}>하루 사용 상한</Text>
-          <View style={{ flexDirection: 'row', gap: 8 }}>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
             {[20, 30, 60].map((m) => (
               <Chip key={m} label={m === 60 ? '1시간' : `${m}분`} selected={p.settings.dailyLimitMin === m} onPress={() => setSettings({ dailyLimitMin: m })} />
             ))}
@@ -282,7 +282,7 @@ export default function Settings() {
 
         <Section title="소리·진동·화면">
           <Text style={T.small}>소리 크기</Text>
-          <View style={{ flexDirection: 'row', gap: 8 }}>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
             {(
               [
                 ['작게', 0.4],
@@ -293,12 +293,12 @@ export default function Settings() {
               <Chip key={label} label={label} selected={Math.abs((p.settings.volume ?? 0.8) - v) < 0.16} onPress={() => setSettings({ volume: v })} />
             ))}
           </View>
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-            <Text style={{ fontSize: 15, color: C.text }}>진동 사용 (약하게, 짧게)</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+            <Text style={{ flex: 1, fontSize: 15, color: C.text }}>진동 사용 (약하게, 짧게)</Text>
             <Switch value={p.settings.vibration} onValueChange={(v) => setSettings({ vibration: v })} trackColor={{ true: C.green }} />
           </View>
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-            <Text style={{ fontSize: 15, color: C.text }}>움직임 줄이기 (튀는 효과 한 번만)</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+            <Text style={{ flex: 1, fontSize: 15, color: C.text }}>움직임 줄이기 (튀는 효과 한 번만)</Text>
             <Switch value={!!p.settings.reduceMotion} onValueChange={(v) => setSettings({ reduceMotion: v })} trackColor={{ true: C.green }} />
           </View>
         </Section>
@@ -314,7 +314,7 @@ export default function Settings() {
               maxLength={4}
               placeholder={p.pinHash ? '새 PIN' : 'PIN 정하기'}
               placeholderTextColor={C.muted}
-              style={{ flex: 1, fontSize: 16, borderWidth: 1, borderColor: C.border, borderRadius: R.sm, paddingHorizontal: 12, color: C.text }}
+              style={{ flex: 1, minHeight: 44, fontSize: 16, borderWidth: 1, borderColor: C.border, borderRadius: R.sm, paddingHorizontal: 12, color: C.text }}
             />
             <Button label="저장" style={{ minHeight: 44 }} onPress={savePin} />
           </View>

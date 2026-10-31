@@ -69,16 +69,17 @@ export default function VoiceSignup() {
           hitSlop={12}
           disabled={ra.recording || ra.index === 0}
           onPress={() => ra.setIndex(Math.max(0, ra.index - 1))}
-          style={{ width: 96, alignItems: 'center', opacity: ra.recording || ra.index === 0 ? 0.4 : 1 }}>
+          style={{ width: 84, minHeight: 44, alignItems: 'center', justifyContent: 'center', opacity: ra.recording || ra.index === 0 ? 0.4 : 1 }}>
           <Text style={{ fontSize: 16, color: C.sub }}>이전 문장</Text>
         </Pressable>
-        <View style={{ alignItems: 'center', gap: 4 }}>
+        {/* 가운데 안내 글이 길어도 양옆 버튼을 밀어내지 않게 (폰 폭 360에서 '다음 단계'가 밖으로 밀리던 문제) */}
+        <View style={{ flex: 1, alignItems: 'center', gap: 4 }}>
           <MicButton recording={ra.recording} onPress={ra.toggle} />
-          <Text style={{ fontSize: 12, color: C.sub, minHeight: 16 }}>
+          <Text style={{ fontSize: 12, color: C.sub, minHeight: 16, textAlign: 'center' }}>
             {ra.recording ? `녹음 중 ${ra.seconds}초 · 다 읽으면 누르세요` : ra.busy ? '확인하는 중...' : ''}
           </Text>
         </View>
-        <Pressable hitSlop={12} onPress={onNext} style={{ width: 96, alignItems: 'center', opacity: ra.recording || ra.busy ? 0.4 : 1 }}>
+        <Pressable hitSlop={12} onPress={onNext} style={{ width: 84, minHeight: 44, alignItems: 'center', justifyContent: 'center', opacity: ra.recording || ra.busy ? 0.4 : 1 }}>
           <Text style={{ fontSize: 16, fontWeight: '800', color: C.link }}>다음 단계</Text>
         </Pressable>
       </View>

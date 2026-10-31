@@ -1,7 +1,7 @@
 // 부모 앱 아바타 탭 "내 아바타" (민철 디자인 AvatarLearn / AvatarEdit): 학습하기 | 꾸미기 — 담당: 태희
 // 학습하기: 음성·입모양 학습률 카드 + 인식 카메라(FaceGuide) + 문장 읽기(useReadAloud). 영상은 저장하지 않고 입 벌림 수치만 서버로
 // 꾸미기: 실제 얼굴이 아닌 캐릭터 고르기 (온보딩 1-4 와 같은 선택지) → updateProfile 로 저장
-import { router, useIsFocused, type Href } from 'expo-router';
+import { router, useFocusEffect, useIsFocused, type Href } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -28,6 +28,14 @@ const CATEGORIES: { key: AvatarCategory; label: string }[] = [
   { key: 'outfit', label: '옷' },
   { key: 'color', label: '색' },
 ];
+
+/** 카메라 아이콘 (촬영 시작 카드) */
+const CameraIcon = ({ color = C.text, size = 44 }: { color?: string; size?: number }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24">
+    <Path d="M4 8h3l1.5-2h7L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z" stroke={color} strokeWidth={1.8} fill="none" strokeLinejoin="round" />
+    <Path d="M12 16.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z" stroke={color} strokeWidth={1.8} fill="none" />
+  </Svg>
+);
 
 const MicIcon = ({ color = C.text, size = 30 }: { color?: string; size?: number }) => (
   <Svg width={size} height={size} viewBox="0 0 24 24">
@@ -128,6 +136,15 @@ function Learn({ profile, onLock }: { profile: Profile; onLock: (v: boolean) => 
     if (!focused && recording) cancel();
   }, [focused, recording, cancel]);
 
+  // 탭에 들어오자마자 카메라를 켜지 않음: '촬영 시작하기'를 눌러야 카메라·읽기 버튼이 켜짐. 탭을 떠나면 다시 시작 카드로
+  const [camOn, setCamOn] = useState(false);
+  useFocusEffect(useCallback(() => () => setCamOn(false), []));
+  const showCam = camOn && focused;
+  const endCam = () => {
+    if (ra.recording) ra.cancel(); // 탭을 떠날 때와 같이 녹음은 보내지 않고 멈춤
+    setCamOn(false);
+  };
+
   const lock = ra.recording || ra.busy;
   // 녹음 중에는 꾸미기로 못 넘어가게
   useEffect(() => {
@@ -150,7 +167,27 @@ function Learn({ profile, onLock }: { profile: Profile; onLock: (v: boolean) => 
       {/* 인식 카메라: 얼굴 틀·입 윤곽은 FaceGuide 가 실제 인식값으로만 그림. 아래 알약이 얼굴 인식 상태 */}
       <View style={{ gap: 6 }}>
         <View style={{ alignSelf: 'center' }}>
-          {focused ? (
+          {!showCam ? (
+            <View
+              style={{
+                ...device.camera,
+                borderRadius: 18,
+                borderWidth: 2,
+                borderBottomWidth: 4,
+                borderColor: C.primaryStrong,
+                backgroundColor: C.primarySoft,
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 10,
+                padding: 16,
+              }}>
+              <CameraIcon color={C.link} />
+              <Text style={{ fontSize: 15, fontWeight: '700', lineHeight: 22, color: C.text, textAlign: 'center' }}>
+                카메라로 읽으면 목소리와 입모양을 함께 배워요
+              </Text>
+              <BigButton label="촬영 시작하기" onPress={() => setCamOn(true)} style={{ alignSelf: 'center', width: '100%', maxWidth: 320 }} />
+            </View>
+          ) : focused ? (
             <FaceGuide
               onFrame={onFrame}
               onError={setCamError}
@@ -161,11 +198,23 @@ function Learn({ profile, onLock }: { profile: Profile; onLock: (v: boolean) => 
           ) : (
             <View style={{ ...device.camera, borderRadius: 18, backgroundColor: '#3A3128' }} />
           )}
-          <View pointerEvents="none" style={{ position: 'absolute', top: 12, right: 12, paddingHorizontal: 10, paddingVertical: 6, borderRadius: R.pill, backgroundColor: '#4E4338' }}>
-            <Text style={{ fontSize: 12, color: C.bg }}>인식 카메라</Text>
-          </View>
+          {showCam && (
+            <View pointerEvents="none" style={{ position: 'absolute', top: 12, right: 12, paddingHorizontal: 10, paddingVertical: 6, borderRadius: R.pill, backgroundColor: '#4E4338' }}>
+              <Text style={{ fontSize: 12, color: C.bg }}>인식 카메라</Text>
+            </View>
+          )}
         </View>
         <Text style={{ fontSize: 12, color: C.sub, textAlign: 'center' }}>얼굴은 저장하지 않고 입 벌림 수치만 남겨요</Text>
+        {showCam && (
+          <Pressable
+            onPress={endCam}
+            accessibilityRole="button"
+            accessibilityLabel="촬영 끝내기"
+            hitSlop={6}
+            style={{ alignSelf: 'center', minHeight: 44, paddingHorizontal: 16, borderRadius: R.pill, borderWidth: 2, borderColor: C.border, backgroundColor: C.white, justifyContent: 'center' }}>
+            <Text style={{ fontSize: 14, fontWeight: '700', color: C.text }}>촬영 끝내기</Text>
+          </Pressable>
+        )}
         {!!camError && <Text style={{ fontSize: 12, color: C.warn }}>카메라 오류: {camError.slice(0, 60)}</Text>}
       </View>
 
@@ -189,14 +238,14 @@ function Learn({ profile, onLock }: { profile: Profile; onLock: (v: boolean) => 
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
         <Pressable
           onPress={() => move(-1)}
-          disabled={lock || ra.index === 0}
+          disabled={!showCam || lock || ra.index === 0}
           accessibilityRole="button"
-          style={{ minWidth: 84, height: 44, justifyContent: 'center', opacity: lock || ra.index === 0 ? 0.4 : 1 }}>
+          style={{ minWidth: 84, height: 44, justifyContent: 'center', opacity: !showCam || lock || ra.index === 0 ? 0.4 : 1 }}>
           <Text style={{ fontSize: 15, color: C.sub }}>이전 문장</Text>
         </Pressable>
         <Pressable
           onPress={ra.toggle}
-          disabled={ra.busy}
+          disabled={!showCam || ra.busy}
           accessibilityRole="button"
           accessibilityLabel={ra.recording ? '읽기 멈추고 보내기' : '읽으며 학습 시작'}
           style={({ pressed }) => ({
@@ -208,21 +257,21 @@ function Learn({ profile, onLock }: { profile: Profile; onLock: (v: boolean) => 
             backgroundColor: ra.recording ? '#E5484D' : C.primary,
             borderBottomWidth: 4,
             borderBottomColor: ra.recording ? '#B4282D' : C.primaryDeep,
-            opacity: ra.busy ? 0.5 : 1,
+            opacity: !showCam || ra.busy ? 0.5 : 1,
             transform: [{ translateY: pressed ? 2 : 0 }],
           })}>
           {ra.recording ? <View style={{ width: 22, height: 22, borderRadius: 4, backgroundColor: C.white }} /> : <MicIcon />}
         </Pressable>
         <Pressable
           onPress={() => move(1)}
-          disabled={lock || ra.index >= sentences.length - 1}
+          disabled={!showCam || lock || ra.index >= sentences.length - 1}
           accessibilityRole="button"
-          style={{ minWidth: 84, height: 44, justifyContent: 'center', alignItems: 'flex-end', opacity: lock || ra.index >= sentences.length - 1 ? 0.4 : 1 }}>
+          style={{ minWidth: 84, height: 44, justifyContent: 'center', alignItems: 'flex-end', opacity: !showCam || lock || ra.index >= sentences.length - 1 ? 0.4 : 1 }}>
           <Text style={{ fontSize: 15, fontWeight: '700', color: C.link }}>다음 문장</Text>
         </Pressable>
       </View>
       <Text style={{ fontSize: 12, color: C.sub, textAlign: 'center' }}>
-        {ra.busy ? '보내는 중...' : ra.recording ? `읽는 중 · ${ra.seconds}초 — 다 읽으면 다시 눌러 주세요` : '마이크를 누르고 문장을 읽어 주세요'}
+        {ra.busy ? '보내는 중...' : ra.recording ? `읽는 중 · ${ra.seconds}초 — 다 읽으면 다시 눌러 주세요` : showCam ? '마이크를 누르고 문장을 읽어 주세요' : '촬영을 시작하면 읽을 수 있어요'}
       </Text>
     </>
   );
@@ -306,7 +355,7 @@ function Edit({ profile }: { profile: Profile }) {
         onPress={() => router.push('/onboarding/parent?edit=1' as Href)}
         accessibilityRole="button"
         style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 10 }}>
-        <Text style={{ fontSize: 14, color: C.text }}>
+        <Text style={{ flex: 1, fontSize: 14, color: C.text }}>
           말투·호칭 바꾸기 <Text style={{ color: C.sub }}>({profile.parent.title} · {profile.parent.tone})</Text>
         </Text>
         <Text style={{ fontSize: 20, color: C.sub }}>›</Text>

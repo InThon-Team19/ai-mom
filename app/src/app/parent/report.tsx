@@ -105,7 +105,7 @@ const SenseHead = ({ k, desc }: { k: SenseKey; desc: string }) => (
     <View style={{ paddingHorizontal: 12, paddingVertical: 3, borderRadius: 999, borderWidth: 2, borderColor: SENSE[k].color, backgroundColor: SENSE[k].soft }}>
       <Text style={{ fontSize: 13, fontWeight: '800', color: C.text }}>{LABEL[k]}</Text>
     </View>
-    <Text style={{ fontSize: 12, color: C.sub }}>{desc}</Text>
+    <Text style={{ flexShrink: 1, fontSize: 12, color: C.sub }}>{desc}</Text>
   </View>
 );
 
@@ -128,7 +128,8 @@ export default function Report() {
   const [summary, setSummary] = useState<Summary | null>(null);
   const [sensory, setSensory] = useState<SensoryReport | null>(null);
   const [state, setState] = useState<'loading' | 'ok' | 'fail'>('loading');
-  const { frame } = useDevice();
+  const { frame, width } = useDevice();
+  const narrow = width < 400; // 폰 폭 360: 도넛 옆 줄(색·감각·n번·상태 칩)이 넘치지 않게 도넛·간격을 줄임
 
   useFocusEffect(
     useCallback(() => {
@@ -185,16 +186,18 @@ export default function Report() {
           ) : (
             <>
               <View
-                style={{ flexDirection: 'row', alignItems: 'center', gap: 18 }}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: narrow ? 12 : 18 }}
                 accessible
                 accessibilityLabel={`오늘 감각 반응 ${total}번: ${ORDER.map((k) => `${LABEL[k]} ${counts[k]}번 ${statusOf(k)}`).join(', ')}`}>
-                <Donut counts={counts} />
+                <Donut counts={counts} size={narrow ? 92 : 112} />
                 <View style={{ flex: 1, gap: 10 }}>
                   {ORDER.map((k) => (
-                    <View key={k} style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <View key={k} style={{ flexDirection: 'row', alignItems: 'center', gap: narrow ? 6 : 8 }}>
                       <View style={{ width: 12, height: 12, borderRadius: 3, backgroundColor: SENSE[k].color }} />
                       <Text style={{ fontSize: 14, color: C.text }}>{LABEL[k]}</Text>
-                      <Text style={{ flex: 1, fontSize: 14, fontWeight: '800', color: C.text }}>{counts[k]}번</Text>
+                      <Text style={{ flex: 1, minWidth: 28, fontSize: 14, fontWeight: '800', color: C.text }} numberOfLines={1}>
+                        {counts[k]}번
+                      </Text>
                       <StatusChip status={statusOf(k)} />
                     </View>
                   ))}

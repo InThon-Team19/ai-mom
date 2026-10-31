@@ -13,13 +13,15 @@ import { api } from '@/lib/api';
 import { logEvent } from '@/lib/sense';
 import { useProfile } from '@/lib/store';
 import { C, R } from '@/theme';
-import { ParentExit } from '@/components/ParentExit';
+import { ParentExit, parentExitZone } from '@/components/ParentExit';
+import { useDevice } from '@/lib/layout';
 
 export default function Story() {
   const profile = useProfile();
   const { fav, basket } = useLocalSearchParams<{ fav?: string; basket?: string }>();
   const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();
+  const { isTablet } = useDevice();
   const focused = useIsFocused();
   const { speak, stop, mouth, speaking } = useSpeak(profile?.childId);
   const scale = useMouthScale(profile?.childId);
@@ -77,16 +79,32 @@ export default function Story() {
 
   if (!story) return <View style={{ flex: 1, backgroundColor: C.bg }} />;
   const cur = story.pages[page];
+  // 폰 가로(높이 약 360): 여백·글자·버튼을 줄여 아바타 칸이 문장 상자 위로 넘치지 않게 (태블릿은 그대로)
+  const compact = height < 520;
+  const gap = compact ? 8 : 16;
+  const navSize = compact ? 64 : 96;
 
   return (
-    <View style={{ flex: 1, backgroundColor: C.bg, gap: 16, paddingTop: 16 + insets.top, paddingBottom: 16 + insets.bottom, paddingLeft: 150 + insets.left, paddingRight: 40 + insets.right }}>
+    <View
+      style={{
+        flex: 1,
+        backgroundColor: C.bg,
+        gap,
+        paddingTop: (compact ? 6 : 16) + insets.top,
+        paddingBottom: (compact ? 6 : 16) + insets.bottom,
+        paddingLeft: parentExitZone(isTablet) + 10 + insets.left,
+        paddingRight: (compact ? 20 : 40) + insets.right,
+      }}>
       <ParentExit home />
-      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: 52 }}>
-        <View style={{ backgroundColor: C.primary, borderRadius: R.pill, paddingHorizontal: 18, paddingVertical: 10 }}>
-          <Text style={{ color: C.onPrimary, fontSize: 18, fontWeight: '800' }}>{story.title}</Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, minHeight: compact ? 44 : 52 }}>
+        <View style={{ flexShrink: 1, backgroundColor: C.primary, borderRadius: R.pill, paddingHorizontal: 18, paddingVertical: compact ? 6 : 10 }}>
+          <Text numberOfLines={1} style={{ color: C.onPrimary, fontSize: compact ? 16 : 18, fontWeight: '800' }}>
+            {story.title}
+          </Text>
         </View>
         <PillButton
           small
+          style={compact ? { minHeight: 44 } : undefined}
           label="소리만 듣기"
           onPress={() => {
             stop();
@@ -95,29 +113,34 @@ export default function Story() {
         />
       </View>
 
-      <View style={{ flex: 1, flexDirection: 'row', gap: 20 }}>
-        <View style={{ flex: 26, backgroundColor: C.white, borderRadius: R.lg, borderWidth: 2, borderColor: C.border, alignItems: 'center', justifyContent: 'center', gap: 12 }}>
-          <Avatar config={profile?.avatar} mouth={mouth} scale={scale} size={Math.min(height * 0.3, width * 0.17)} expression={speaking ? 'neutral' : 'smile'} />
-          <Text style={{ fontSize: 15, color: C.sub }}>{speaking ? '읽어주는 중' : ' '}</Text>
+      <View style={{ flex: 1, flexDirection: 'row', gap: compact ? 12 : 20 }}>
+        <View style={{ flex: 26, backgroundColor: C.white, borderRadius: R.lg, borderWidth: 2, borderColor: C.border, alignItems: 'center', justifyContent: 'center', gap: compact ? 4 : 12, overflow: 'hidden' }}>
+          <Avatar config={profile?.avatar} mouth={mouth} scale={scale} size={Math.min(height * (compact ? 0.22 : 0.3), width * 0.17)} expression={speaking ? 'neutral' : 'smile'} />
+          <Text style={{ fontSize: compact ? 13 : 15, color: C.sub }}>{speaking ? '읽어주는 중' : ' '}</Text>
         </View>
         <View style={{ flex: 74, backgroundColor: C.greenSoft, borderRadius: R.lg, borderWidth: 2, borderColor: C.green, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
           <Animated.Text
             key={page}
             entering={FadeIn.duration(700)}
             allowFontScaling={false}
-            style={{ fontSize: Math.min(height * 0.3, 220), lineHeight: Math.min(height * 0.36, 260), includeFontPadding: false }}>
+            style={{ fontSize: Math.min(height * (compact ? 0.24 : 0.3), 220), lineHeight: Math.min(height * (compact ? 0.29 : 0.36), 260), includeFontPadding: false }}>
             {cur.emoji}
           </Animated.Text>
         </View>
       </View>
 
-      <View style={{ backgroundColor: C.white, borderRadius: R.md, minHeight: 72, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24 }}>
-        <Animated.Text key={page} entering={FadeIn.duration(500)} style={{ fontSize: 26, fontWeight: '800', color: C.text, textAlign: 'center' }}>
+      <View style={{ backgroundColor: C.white, borderRadius: R.md, minHeight: compact ? 52 : 72, alignItems: 'center', justifyContent: 'center', paddingHorizontal: compact ? 16 : 24, paddingVertical: compact ? 4 : 8 }}>
+        <Animated.Text
+          key={page}
+          entering={FadeIn.duration(500)}
+          numberOfLines={compact ? 2 : 3}
+          adjustsFontSizeToFit
+          style={{ fontSize: compact ? 20 : 26, lineHeight: compact ? 26 : 34, fontWeight: '800', color: C.text, textAlign: 'center' }}>
           {cur.text}
         </Animated.Text>
       </View>
 
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 20 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: compact ? 14 : 20 }}>
         <View style={{ flex: 1, flexDirection: 'row', gap: 10 }}>
           {story.pages.map((_, i) => (
             <View
@@ -126,11 +149,11 @@ export default function Story() {
             />
           ))}
         </View>
-        <RoundButton label="이전 장" color={C.card} onPress={() => setPage(Math.max(0, page - 1))}>
-          <ChevronIcon left color={C.onPrimary} size={34} />
+        <RoundButton label="이전 장" size={navSize} color={C.card} onPress={() => setPage(Math.max(0, page - 1))}>
+          <ChevronIcon left color={C.onPrimary} size={compact ? 28 : 34} />
         </RoundButton>
-        <RoundButton label="다음 장" onPress={() => (page + 1 < story.pages.length ? setPage(page + 1) : toEnd())}>
-          <ChevronIcon size={34} />
+        <RoundButton label="다음 장" size={navSize} onPress={() => (page + 1 < story.pages.length ? setPage(page + 1) : toEnd())}>
+          <ChevronIcon size={compact ? 28 : 34} />
         </RoundButton>
       </View>
     </View>

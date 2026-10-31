@@ -1,7 +1,7 @@
 // 아이 태블릿 3-7 청각 집중 모드 (화면을 어둡게 하고 부모 목소리로만 이어서 들려줌 — 스크린 타임 대응) — 담당: 태희 (민철 와이어프레임 기준)
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useMemo, useRef, useState } from 'react';
-import { Text, View } from 'react-native';
+import { Text, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { PillButton, RoundButton, SkipIcon, Waveform, sleep, who } from '@/components/child/kit';
@@ -16,6 +16,7 @@ const BG = '#2A2219'; // 어둡게 (스크린 타임 대응) — 따뜻한 진�
 export default function AudioOnly() {
   const profile = useProfile();
   const insets = useSafeAreaInsets();
+  const compact = useWindowDimensions().height < 520;
   const { speak, stop, mouth } = useSpeak(profile?.childId);
   const { name, me, english } = who(profile);
   const [from, setFrom] = useState({ at: 0 }); // "다음" 누를 때마다 새 객체 → 흐름을 그 문장부터 다시 시작
@@ -70,10 +71,11 @@ export default function AudioOnly() {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: BG, alignItems: 'center', justifyContent: 'center', gap: 36, paddingTop: insets.top, paddingBottom: insets.bottom }}>
+    // 폰 가로(높이 약 360)에선 간격을 줄여 '다음' 버튼이 아래에 붙거나 잘리지 않게
+    <View style={{ flex: 1, backgroundColor: BG, alignItems: 'center', justifyContent: 'center', gap: compact ? 16 : 36, paddingTop: insets.top, paddingBottom: insets.bottom }}>
       <ParentExit dark home />
       <Waveform level={mouth} />
-      <Text style={{ fontSize: 32, fontWeight: '800', color: '#FFFFFF' }}>{me} 목소리를 들어봐요</Text>
+      <Text style={{ fontSize: compact ? 26 : 32, fontWeight: '800', color: '#FFFFFF', textAlign: 'center' }}>{me} 목소리를 들어봐요</Text>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 24 }}>
         <PillButton
           dark

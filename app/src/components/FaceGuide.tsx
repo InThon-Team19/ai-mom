@@ -178,6 +178,7 @@ export function FaceGuide({
           flexDirection: 'row',
           alignItems: 'center',
           alignSelf: 'flex-start',
+          maxWidth: '100%',
           gap: 8,
           paddingHorizontal: 12,
           paddingVertical: 7,
@@ -185,7 +186,7 @@ export function FaceGuide({
           backgroundColor: good ? C.greenSoft : C.primarySoft,
         }}>
         <View style={{ width: 9, height: 9, borderRadius: 5, backgroundColor: good ? C.ok : C.primaryStrong }} />
-        <Text style={{ fontSize: 14, fontWeight: '700', color: good ? C.ok : C.onPrimary }}>{message}</Text>
+        <Text style={{ flexShrink: 1, fontSize: 14, fontWeight: '700', color: good ? C.ok : C.onPrimary }}>{message}</Text>
       </View>
     </View>
   );

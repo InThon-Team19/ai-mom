@@ -19,7 +19,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Avatar, type AvatarExpression, type AvatarLook } from '@/components/Avatar';
 import type { FaceExpr, FaceFrame } from '@/components/FaceTracker';
-import { ParentExit } from '@/components/ParentExit';
+import { ParentExit, parentExitZone } from '@/components/ParentExit';
 import { dropDuration, ItemToy, type ToyLeave } from '@/components/child/ItemToy';
 import { EarListener, FaceSensor, PillButton, RoundButton, SkipIcon, sleep, useDailyLimit, useMouthScale, who } from '@/components/child/kit';
 import { Basket, NodBox } from '@/components/child/stage';
@@ -892,7 +892,8 @@ export default function Session() {
       <ParentExit home />
       {/* 상단: 일차 · 소리만 듣기 */}
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: headerH }}>
-        <View style={{ backgroundColor: C.primary, borderRadius: R.pill, paddingHorizontal: compact ? 14 : 18, paddingVertical: compact ? 6 : 10 }}>
+        {/* 왼쪽 위 자물쇠·홈 버튼 자리를 비움 (예전엔 일차 표시가 자물쇠 밑에 가려졌음) */}
+        <View style={{ marginLeft: parentExitZone(isTablet) + 8 - (compact ? 14 : 28), backgroundColor: C.primary, borderRadius: R.pill, paddingHorizontal: compact ? 14 : 18, paddingVertical: compact ? 6 : 10 }}>
           <Text style={{ color: C.onPrimary, fontSize: compact ? 15 : 18, fontWeight: '800' }}>{plan.day}일차</Text>
         </View>
         <PillButton

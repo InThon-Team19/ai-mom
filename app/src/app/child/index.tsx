@@ -2,7 +2,7 @@
 // 글자 최소. 들어오자마자 학습이 시작되지 않고 아이가 고름. 부모 모드는 왼쪽 위 자물쇠 3초 + PIN
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { Pressable, Text, TextInput, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View, useWindowDimensions } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -71,6 +71,11 @@ export default function ChildStart() {
 function Greeting() {
   const profile = useProfile();
   const insets = useSafeAreaInsets();
+  // 폰 가로(높이 약 360)에선 아바타·사물·버튼을 줄여 한 화면에 들어오게 (태블릿 크기는 그대로)
+  const { height } = useWindowDimensions();
+  const compact = height < 520;
+  const circle = compact ? Math.max(140, Math.min(280, Math.round((height - insets.top - insets.bottom) * 0.55))) : 280;
+  const itemSize = compact ? 60 : 110;
   const { speak, stop, mouth } = useSpeak(profile?.childId);
   const scale = useMouthScale(profile?.childId);
   const { name, me } = who(profile);
@@ -104,40 +109,61 @@ function Greeting() {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: C.bg, flexDirection: 'row', alignItems: 'center', paddingTop: insets.top, paddingBottom: insets.bottom, paddingHorizontal: 32 + insets.left, gap: 32 }}>
+    <View
+      style={{
+        flex: 1,
+        backgroundColor: C.bg,
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingTop: insets.top,
+        paddingBottom: insets.bottom,
+        paddingLeft: (compact ? 20 : 32) + insets.left,
+        paddingRight: (compact ? 20 : 32) + insets.right,
+        gap: compact ? 20 : 32,
+      }}>
       {/* 왼쪽: 아바타 (누르면 다시 인사) */}
-      <Pressable onPress={greet} accessibilityLabel={`${me} 아바타`} style={{ flex: 4, alignItems: 'center', gap: 12 }}>
-        <View style={{ width: 280, height: 280, borderRadius: 140, backgroundColor: C.primarySoft, overflow: 'hidden', alignItems: 'center', justifyContent: 'flex-end' }}>
-          <Avatar config={profile?.avatar} mouth={mouth} scale={scale} size={240} expression="smile" />
+      <Pressable onPress={greet} accessibilityLabel={`${me} 아바타`} style={{ flex: 4, alignItems: 'center', gap: compact ? 8 : 12 }}>
+        <View style={{ width: circle, height: circle, borderRadius: circle / 2, backgroundColor: C.primarySoft, overflow: 'hidden', alignItems: 'center', justifyContent: 'flex-end' }}>
+          <Avatar config={profile?.avatar} mouth={mouth} scale={scale} size={Math.round(circle * 0.86)} expression="smile" />
         </View>
-        <Animated.Text entering={FadeIn.duration(500)} style={{ fontSize: 26, fontWeight: '900', color: C.text, textAlign: 'center' }}>
+        <Animated.Text
+          entering={FadeIn.duration(500)}
+          numberOfLines={3}
+          style={{ fontSize: compact ? 20 : 26, lineHeight: compact ? 27 : 34, fontWeight: '900', color: C.text, textAlign: 'center' }}>
           {line}
         </Animated.Text>
       </Pressable>
 
-      {/* 오른쪽: 오늘 만날 친구들 + 놀자 + 동화·소리만 */}
-      <View style={{ flex: 6, alignItems: 'center', gap: 22 }}>
-        <View style={{ backgroundColor: C.primary, borderRadius: R.pill, paddingHorizontal: 18, paddingVertical: 8 }}>
-          <Text style={{ fontSize: 18, fontWeight: '900', color: C.onPrimary }}>{day.day}일차</Text>
+      {/* 오른쪽: 오늘 만날 친구들 + 놀자 + 동화·소리만. 그래도 넘치면 스크롤 */}
+      <ScrollView
+        style={{ flex: 6, alignSelf: 'stretch' }}
+        contentContainerStyle={{ flexGrow: 1, alignItems: 'center', justifyContent: 'center', gap: compact ? 8 : 22, paddingVertical: compact ? 8 : 16 }}
+        showsVerticalScrollIndicator={false}>
+        <View style={{ backgroundColor: C.primary, borderRadius: R.pill, paddingHorizontal: 18, paddingVertical: compact ? 5 : 8 }}>
+          <Text style={{ fontSize: compact ? 16 : 18, fontWeight: '900', color: C.onPrimary }}>{day.day}일차</Text>
         </View>
-        <View style={{ flexDirection: 'row', gap: 18 }}>
+        <View style={{ flexDirection: 'row', gap: compact ? 12 : 18 }}>
           {day.items.map((id) => (
-            <View key={id} style={{ width: 110, height: 110, borderRadius: 55, backgroundColor: C.white, alignItems: 'center', justifyContent: 'center', borderWidth: 3, borderColor: C.green }}>
-              <Text style={{ fontSize: 60 }}>{ITEMS[id].emoji}</Text>
+            <View
+              key={id}
+              style={{ width: itemSize, height: itemSize, borderRadius: itemSize / 2, backgroundColor: C.white, alignItems: 'center', justifyContent: 'center', borderWidth: 3, borderColor: C.green }}>
+              <Text allowFontScaling={false} style={{ fontSize: itemSize * 0.55, lineHeight: itemSize * 0.7, includeFontPadding: false }}>
+                {ITEMS[id].emoji}
+              </Text>
             </View>
           ))}
         </View>
-        <RoundButton size={140} label="놀자" onPress={() => go('/child/session')}>
-          <PlayIcon size={62} />
+        <RoundButton size={compact ? 88 : 140} label="놀자" onPress={() => go('/child/session')}>
+          <PlayIcon size={compact ? 40 : 62} />
         </RoundButton>
         {/* 버튼이 여럿이라 폰 가로 화면에선 줄을 바꿔 넘치지 않게 */}
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 12, maxWidth: '100%' }}>
-          <PillButton label="✋ 손 놀이" onPress={() => go('/child/play')} />
-          {day.story && <PillButton label="📖 동화 듣기" onPress={() => go('/child/story')} />}
-          <PillButton label="🎧 소리만 듣기" onPress={() => go('/child/audio')} />
-          <PillButton label="💬 이야기하기" onPress={() => go('/child/chat')} />
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: compact ? 8 : 12, maxWidth: '100%' }}>
+          <PillButton small={compact} label="✋ 손 놀이" onPress={() => go('/child/play')} />
+          {day.story && <PillButton small={compact} label="📖 동화 듣기" onPress={() => go('/child/story')} />}
+          <PillButton small={compact} label="🎧 소리만 듣기" onPress={() => go('/child/audio')} />
+          <PillButton small={compact} label="💬 이야기하기" onPress={() => go('/child/chat')} />
         </View>
-      </View>
+      </ScrollView>
 
       {/* 부모 모드: 왼쪽 위 자물쇠 3초 + PIN */}
       <ParentExit />
@@ -178,7 +204,9 @@ function LinkScreen({ onDone, canCancel }: { onDone: () => void; canCancel: bool
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: C.primarySoft, alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: C.primarySoft }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    {/* 폰 가로(높이 360)·키보드가 올라오면 카드가 화면보다 커서 스크롤 */}
+    <ScrollView contentContainerStyle={{ flexGrow: 1, alignItems: 'center', justifyContent: 'center', padding: 24 }} keyboardShouldPersistTaps="handled">
       <View style={{ backgroundColor: C.white, borderRadius: R.lg, padding: 32, gap: 18, width: '100%', maxWidth: 520, alignItems: 'stretch' }}>
         <Text style={T.h1}>태블릿 연결</Text>
         <Text style={T.sub}>부모 폰 설정 탭에서 받은 연결 코드 6자리를 입력해 주세요.</Text>
@@ -219,6 +247,7 @@ function LinkScreen({ onDone, canCancel }: { onDone: () => void; canCancel: bool
           />
         )}
       </View>
-    </View>
+    </ScrollView>
+    </KeyboardAvoidingView>
   );
 }

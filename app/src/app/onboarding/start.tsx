@@ -13,7 +13,7 @@ import { C, R } from '@/theme';
 import { useDevice } from '@/lib/layout';
 
 export default function Start() {
-  const { gutter } = useDevice();
+  const { gutter, height } = useDevice();
   // 가입은 아이디 만들기부터 (서버가 모든 저장에 로그인을 요구). 이미 로그인했으면 아이 정보로
   const start = async () => {
     const a = await loadAccount();
@@ -36,6 +36,7 @@ export default function Start() {
           style={{
             width: '100%',
             aspectRatio: 4 / 3,
+            maxHeight: Math.max(200, height * 0.42), // 태블릿 가로(높이 820)에서 그림이 너무 커 버튼이 밀려나지 않게
             borderRadius: R.md,
             backgroundColor: C.primarySoft,
             alignItems: 'center',

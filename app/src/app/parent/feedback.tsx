@@ -155,8 +155,8 @@ function FeedbackForm({ profile }: { profile: Profile }) {
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: C.bg }}>
       <View style={{ height: 52, paddingLeft: 20, paddingRight: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: C.white, borderBottomWidth: 1, borderBottomColor: C.border }}>
         <Text style={{ fontSize: 17, fontWeight: '800', color: C.text }}>피드백</Text>
-        <View style={{ paddingHorizontal: 10, paddingVertical: 5, borderRadius: R.pill, backgroundColor: C.primarySoft }}>
-          <Text style={{ fontSize: 12, fontWeight: '700', color: C.link }}>
+        <View style={{ flexShrink: 1, marginLeft: 12, paddingHorizontal: 10, paddingVertical: 5, borderRadius: R.pill, backgroundColor: C.primarySoft }}>
+          <Text numberOfLines={1} style={{ fontSize: 12, fontWeight: '700', color: C.link }}>
             내일 {tomorrow.day}일차 · {tomorrow.topic}
           </Text>
         </View>

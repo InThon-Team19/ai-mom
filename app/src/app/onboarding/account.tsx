@@ -2,7 +2,7 @@
 // 서버(민주)는 모든 저장 API 에 로그인 토큰을 요구하므로, 목소리·입모양 녹음(1-5·1-6) 전에 계정을 먼저 만든다
 import { router, type Href } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, Text, TextInput, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, Pressable, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button, H1, Sub } from '@/components/ui';
@@ -35,8 +35,11 @@ export default function Account() {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: C.bg, paddingVertical: 24, paddingHorizontal: gutter, gap: 16 }}>
-      <Pressable onPress={() => goBack('/onboarding/start' as Href)} hitSlop={12} accessibilityLabel="뒤로">
+    <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }}>
+      {/* 키보드가 올라오면 아래 버튼이 가려지지 않게 스크롤 (iOS 는 padding, Android 는 창이 줄어듦) */}
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <ScrollView contentContainerStyle={{ flexGrow: 1, paddingVertical: 24, paddingHorizontal: gutter, gap: 16 }} keyboardShouldPersistTaps="handled">
+      <Pressable onPress={() => goBack('/onboarding/start' as Href)} hitSlop={8} accessibilityLabel="뒤로" style={{ width: 44, height: 44, marginLeft: -10, alignItems: 'center', justifyContent: 'center' }}>
         <Text style={{ fontSize: 28, color: C.text }}>‹</Text>
       </Pressable>
       <View style={{ gap: 6 }}>
@@ -57,6 +60,8 @@ export default function Account() {
       <View style={{ flex: 1 }} />
       <Button label={busy ? '만드는 중…' : '아이디 만들고 시작하기'} disabled={busy || !ok} onPress={submit} />
       <Button label="이미 아이디가 있어요 · 로그인" variant="ghost" onPress={() => router.replace('/onboarding/login' as Href)} />
+      </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

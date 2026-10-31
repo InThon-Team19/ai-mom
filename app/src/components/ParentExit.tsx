@@ -8,6 +8,7 @@ import Svg, { Circle } from 'react-native-svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { PinPad } from '@/components/PinPad';
+import { useDevice } from '@/lib/layout';
 import { api } from '@/lib/api';
 import { getDeviceId } from '@/lib/device';
 import { authMessage, loadAccount, login, parentEntry } from '@/lib/account';
@@ -16,6 +17,11 @@ import { C } from '@/theme';
 
 export const CHILD_LINKED_KEY = 'aibom.childLinked'; // 이 태블릿이 등록된 child_id (연결 해제 감지용)
 const HOLD_MS = 3000;
+
+/** 자물쇠(+홈 버튼)가 차지하는 왼쪽 위 폭 (insets.left 제외). 아이 화면 머리줄 왼쪽 내용은 이만큼 비워 둠 */
+export function parentExitZone(isTablet: boolean, home = true) {
+  return 10 + 52 + (home ? 14 + (isTablet ? 64 : 48) : 0);
+}
 
 function adultMenu(childId?: string, onDone?: () => void) {
   // PIN 통과 → 부모 모드. 이 기기에 부모 로그인이 있으면 바로 부모 앱, 없으면(따로 쓰는 태블릿) 비밀번호 로그인
@@ -54,6 +60,8 @@ function adultMenu(childId?: string, onDone?: () => void) {
 export function ParentExit({ dark = false, home = false }: { dark?: boolean; home?: boolean }) {
   const profile = useProfile();
   const insets = useSafeAreaInsets();
+  const { isTablet } = useDevice();
+  const homeSize = isTablet ? 64 : 48; // 폰 가로(높이 360)에선 작게 — 머리줄(40)보다 크게 내려와 아바타 칸을 가리지 않게
   const [progress, setProgress] = useState(0);
   const [pinOpen, setPinOpen] = useState(false);
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -114,8 +122,8 @@ export function ParentExit({ dark = false, home = false }: { dark?: boolean; hom
           onPress={() => router.dismissTo('/child')} // 쌓인 아이 화면을 닫고 홈으로 (replace 는 홈이 겹겹이 쌓임)
           accessibilityLabel="아이 홈으로"
           hitSlop={8}
-          style={{ position: 'absolute', left: 10 + insets.left + size + 14, top: 10 + insets.top, width: 64, height: 64, borderRadius: 32, zIndex: 50, alignItems: 'center', justifyContent: 'center', backgroundColor: dark ? '#ffffff22' : C.primary }}>
-          <Text style={{ fontSize: 30 }}>🏠</Text>
+          style={{ position: 'absolute', left: 10 + insets.left + size + 14, top: 10 + insets.top, width: homeSize, height: homeSize, borderRadius: homeSize / 2, zIndex: 50, alignItems: 'center', justifyContent: 'center', backgroundColor: dark ? '#ffffff22' : C.primary }}>
+          <Text style={{ fontSize: isTablet ? 30 : 24 }}>🏠</Text>
         </Pressable>
       )}
       <PinPad

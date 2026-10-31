@@ -162,7 +162,7 @@ function PlanReader({ profile, plan }: { profile: Profile; plan: Day }) {
         </Card>
       </ScrollView>
 
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 20, paddingVertical: 12 }}>
+      <View style={[{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 20, paddingVertical: 12 }, device.frame]}>
         <MicButton recording={ra.recording} onPress={ra.toggle} size={64} />
         <Button
           label={profile.readingDone ? "낭독 완료됨 · 내일 아침 시작" : "낭독 완료"}
