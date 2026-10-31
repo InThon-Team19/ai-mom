@@ -102,7 +102,8 @@
 | POST | `/vision/parent-mouth-track` | JSON `{child_id, kind, text, track:[{t,open,width,face}]}` (앱이 기기 안에서 0.05초마다 잰 수치) | `ok, profile, gauge, gained, message` | 1-6, 2-4 |
 | POST | `/vision/parent-mouth` | (예비) `child_id, kind, text, file`(영상) → 수치만 뽑고 영상 삭제 | 위와 같음 | WebView 카메라 안 될 때 |
 | GET | `/vision/gauge/{child_id}` | | `Gauge` (최소 20초 / 100%=40초) | 2-1 홈 |
-| GET | `/vision/mouth-profile/{child_id}` | | `open_p50, open_p90, width_p50…` → 아바타 입 크기 | 아이 태블릿 |
+| GET | `/vision/mouth-profile/{child_id}` | | `open_p50, open_p90, width_p50…` → 아바타 입 크기 | 부모 전용 |
+| GET | `/vision/mouth-scale/{child_id}` | | 위와 같은 값 (태블릿 기기 토큰 허용, 가족 소유권 검사) | 아이 태블릿 아바타 입 크기 |
 | POST | `/voice/stt` | `file`, `expected`('사과\|apple'), `who` | `text, features, matched, alert` | 3-4 따라 말하기 |
 | POST | `/activity/{child_id}` | JSON `{events:[{type, t, data}]}` type: touch·gaze·smile·imitate·repeat·voice·listen·out_of_scope·alert·session | `ok` | 아이 태블릿 (3초마다 묶어서) |
 | GET | `/activity/{child_id}/summary?day=` | | `sessions, touches, reaction_ms, gaze_s, smiles, repeats, repeat_ok, words, favorites, balance{visual,audio,touch}, out_of_scope, alerts` | 2-1 홈, 2-2 리포트 |
