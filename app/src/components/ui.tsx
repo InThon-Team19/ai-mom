@@ -158,3 +158,144 @@ export function MicButton({ recording, onPress, size = 76 }: { recording?: boole
     </Pressable>
   );
 }
+
+// ---------- 부모 앱 (민철 디자인): 두툼한 카드 · 아래 그림자 있는 노랑 버튼 ----------
+
+/** 흰 바탕 + 2px 테두리 + 아래 4px (부모 앱 카드) */
+export function Panel({ children, style, tone = 'white' }: { children: ReactNode; style?: StyleProp<ViewStyle>; tone?: 'white' | 'yellow' }) {
+  return (
+    <View
+      style={[
+        {
+          padding: 14,
+          borderRadius: 18,
+          borderWidth: 2,
+          borderBottomWidth: 4,
+          borderColor: tone === 'yellow' ? C.primaryStrong : C.border,
+          backgroundColor: tone === 'yellow' ? C.primarySoft : C.white,
+          gap: 10,
+        },
+        style,
+      ]}>
+      {children}
+    </View>
+  );
+}
+
+/** 부모 앱 큰 버튼: primary = 노랑 + 진한 아래 그림자, outline = 흰 바탕 두툼한 테두리 */
+export function BigButton({
+  label,
+  onPress,
+  variant = 'primary',
+  disabled,
+  icon,
+  style,
+  small,
+}: {
+  label: string;
+  onPress?: () => void;
+  variant?: 'primary' | 'outline';
+  disabled?: boolean;
+  icon?: ReactNode;
+  style?: StyleProp<ViewStyle>;
+  small?: boolean;
+}) {
+  const primary = variant === 'primary';
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityState={{ disabled: !!disabled }}
+      onPress={onPress}
+      disabled={disabled}
+      style={({ pressed }) => [
+        {
+          minHeight: small ? 44 : 52,
+          paddingHorizontal: small ? 16 : 20,
+          borderRadius: small ? 14 : 16,
+          flexDirection: 'row',
+          gap: 8,
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: primary ? C.primary : C.white,
+          borderWidth: primary ? 0 : 2,
+          borderColor: C.border,
+          borderBottomWidth: 4,
+          borderBottomColor: primary ? C.primaryDeep : C.border,
+          opacity: disabled ? 0.45 : 1,
+          transform: [{ translateY: pressed && !disabled ? 2 : 0 }],
+        },
+        style,
+      ]}>
+      {icon}
+      <Text style={{ fontSize: small ? 14 : 16, fontWeight: '800', color: C.text }}>{label}</Text>
+    </Pressable>
+  );
+}
+
+/** 선택 칩 (부모 앱): 2px 테두리, 선택되면 노랑 */
+export function PillChip({ label, selected, onPress, icon }: { label: string; selected?: boolean; onPress?: () => void; icon?: ReactNode }) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityState={{ selected: !!selected }}
+      onPress={onPress}
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        minHeight: 44,
+        paddingHorizontal: 14,
+        borderRadius: R.pill,
+        borderWidth: 2,
+        borderColor: selected ? C.primaryStrong : C.border,
+        backgroundColor: selected ? C.primarySoft : C.white,
+      }}>
+      {icon}
+      <Text style={{ fontSize: 14, fontWeight: selected ? '700' : '500', color: C.text }}>{label}</Text>
+    </Pressable>
+  );
+}
+
+/** 탭 밖 화면 머리: ‹ 뒤로 + 제목 */
+export function BackHeader({ title, onBack, backLabel }: { title: string; onBack: () => void; backLabel: string }) {
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+      <Pressable
+        onPress={onBack}
+        accessibilityRole="button"
+        accessibilityLabel={backLabel}
+        hitSlop={8}
+        style={{ width: 44, height: 44, marginLeft: -12, alignItems: 'center', justifyContent: 'center' }}>
+        <Text style={{ fontSize: 30, color: C.text }}>‹</Text>
+      </Pressable>
+      <Text style={{ flex: 1, fontSize: 22, fontWeight: '900', color: C.text }}>{title}</Text>
+    </View>
+  );
+}
+
+/** 말풍선 (왼쪽 꼬리) — 아바타 옆 */
+export function Bubble({ children, style }: { children: ReactNode; style?: StyleProp<ViewStyle> }) {
+  return (
+    <View style={[{ flex: 1, justifyContent: 'center' }, style]}>
+      <View
+        style={{
+          position: 'absolute',
+          left: -7,
+          top: '50%',
+          marginTop: -8,
+          width: 14,
+          height: 14,
+          backgroundColor: C.white,
+          borderLeftWidth: 2,
+          borderBottomWidth: 2,
+          borderColor: C.border,
+          transform: [{ rotate: '45deg' }],
+          zIndex: 1,
+        }}
+      />
+      <View style={{ paddingVertical: 12, paddingHorizontal: 14, borderRadius: 16, borderWidth: 2, borderBottomWidth: 4, borderColor: C.border, backgroundColor: C.white }}>
+        {children}
+      </View>
+    </View>
+  );
+}

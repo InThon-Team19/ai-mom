@@ -1,26 +1,25 @@
-// 부모 앱 2-2 리포트: 감각 발달(시각·청각·촉각 변화·무리 신호·제안)을 맨 위에, 그 아래 단어 상태 · 아이 목소리 · 따라 말한 단어 · 감각 균형 · 확인 필요 — 담당: 태희 (민철 와이어프레임 기준)
+// 부모 앱 2-2 리포트 (민철 디자인 Report) "오늘 {이름}의 감각 일지": 감각별 반응 도넛 + 발전/유지·무리 신호 · 시각/촉각/청각 칸 · 아바타 제안 · 확인 필요 · 아이 녹음 기록 — 담당: 태희
+// 진단이 아니라 활동 기록으로 본 참고용 관찰 (lib/sensory)
 import { router, useFocusEffect, type Href } from 'expo-router';
 import { useCallback, useState, type ReactNode } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Svg, { Circle, G, Path, Rect, Text as SvgText } from 'react-native-svg';
 
-import { ClipList } from '@/components/ClipList';
-import { SensoryCard } from '@/components/SensoryCard';
-import { Button, Card, H1 } from '@/components/ui';
+import { Avatar } from '@/components/Avatar';
+import { ChecksBox } from '@/components/ChecksBox';
+import { StatusChip } from '@/components/SensoryCard';
+import { BigButton, Bubble, Panel } from '@/components/ui';
 import { ITEMS, dayOf, type Item } from '@/content/curriculum';
 import { useDevice } from '@/lib/layout';
-import { headline, today as todayYmd, wordStatus } from '@/lib/progress';
-import { loadSensory, type SensoryReport } from '@/lib/sensory';
-import { api } from '@/lib/api';
+import { josa } from '@/lib/progress';
+import { duration, loadSensory, type SenseKey, type SensoryReport } from '@/lib/sensory';
 import { useProfile } from '@/lib/store';
-import type { ChildClip, Summary } from '@/lib/types';
-import { C, R, T } from '@/theme';
+import type { Summary } from '@/lib/types';
+import { C, SENSE, T } from '@/theme';
 
-const SENSES = [
-  { key: 'visual', label: '시각 (입모양·그림)', short: '시각' },
-  { key: 'audio', label: '청각 (말·소리)', short: '청각' },
-  { key: 'touch', label: '촉각 (터치·진동)', short: '촉각' },
-] as const;
+const LABEL: Record<SenseKey, string> = { visual: '시각', touch: '촉각', audio: '청각' };
+const ORDER: SenseKey[] = ['visual', 'touch', 'audio'];
 
 const itemList = Object.values(ITEMS);
 /** 서버가 주는 단어/사물(한글·영어·id)을 커리큘럼 사물로 매칭 */
@@ -29,26 +28,98 @@ const findItem = (w: string): Item | undefined => {
   return itemList.find((it) => it.id === k || it.ko === k || it.en.toLowerCase() === k);
 };
 
-const pct = (v: number) => `${Math.round(v * 100)}%`;
-const duration = (sec: number) => {
-  const s = Math.max(0, Math.round(sec));
-  const m = Math.floor(s / 60);
-  return m > 0 ? `${m}분 ${s % 60}초` : `${s}초`;
+const dateLabel = () => {
+  const d = new Date();
+  return `${d.getMonth() + 1}월 ${d.getDate()}일 ${'일월화수목금토'[d.getDay()]}요일`;
 };
 
-/** 흰 바탕 테두리 카드 (와이어프레임 감각 균형 카드) */
-const Box = ({ children }: { children: ReactNode }) => (
-  <Card style={{ backgroundColor: C.white, borderWidth: 1, borderColor: C.border, gap: 10 }}>{children}</Card>
+/** 감각별 반응 수 (lib/sensory 의 활동량 계산과 같은 기준: 응시는 10초당 1번) */
+function senseCounts(s: Summary | null): Record<SenseKey, number> {
+  if (!s) return { visual: 0, touch: 0, audio: 0 };
+  const ex = (k: string) => s.expressions?.[k] ?? 0;
+  return {
+    visual: Math.round(s.gaze_s / 10) + s.smiles + ex('smile') + ex('surprise'),
+    touch: s.touches,
+    audio: s.repeats + (s.voices ?? 0),
+  };
+}
+
+/** 도넛 차트 (react-native-svg) */
+function Donut({ counts, size = 112 }: { counts: Record<SenseKey, number>; size?: number }) {
+  const total = ORDER.reduce((a, k) => a + counts[k], 0);
+  const r = 40;
+  const len = 2 * Math.PI * r;
+  const gap = total > 0 && ORDER.filter((k) => counts[k] > 0).length > 1 ? 2 : 0;
+  let offset = 0;
+  return (
+    <Svg width={size} height={size} viewBox="0 0 112 112">
+      <Circle cx={56} cy={56} r={r} stroke={C.track} strokeWidth={20} fill="none" />
+      <G transform="rotate(-90 56 56)">
+        {total > 0 &&
+          ORDER.map((k) => {
+            const seg = (counts[k] / total) * len;
+            if (seg <= 0) return null;
+            const el = (
+              <Circle
+                key={k}
+                cx={56}
+                cy={56}
+                r={r}
+                stroke={SENSE[k].color}
+                strokeWidth={20}
+                fill="none"
+                strokeDasharray={`${Math.max(0, seg - gap)} ${len}`}
+                strokeDashoffset={-offset}
+              />
+            );
+            offset += seg;
+            return el;
+          })}
+      </G>
+      <SvgText x={56} y={56} textAnchor="middle" fontSize={19} fontWeight="800" fill={C.text}>
+        {`${total}번`}
+      </SvgText>
+      <SvgText x={56} y={72} textAnchor="middle" fontSize={11} fill={C.sub}>
+        반응
+      </SvgText>
+    </Svg>
+  );
+}
+
+const ClockIcon = () => (
+  <Svg width={34} height={34} viewBox="0 0 24 24">
+    <Circle cx={12} cy={12} r={9} stroke={C.text} strokeWidth={2} fill="none" />
+    <Path d="M12 7v5l3 2" stroke={C.text} strokeWidth={2} fill="none" strokeLinecap="round" strokeLinejoin="round" />
+  </Svg>
+);
+const MicIcon = () => (
+  <Svg width={18} height={18} viewBox="0 0 24 24">
+    <Rect x={9} y={3} width={6} height={11} rx={3} stroke={C.text} strokeWidth={2} fill="none" />
+    <Path d="M5 11a7 7 0 0 0 14 0M12 18v3" stroke={C.text} strokeWidth={2} fill="none" strokeLinecap="round" />
+  </Svg>
 );
 
-const Tag = ({ label }: { label: string }) => (
-  <View style={{ backgroundColor: C.white, borderRadius: R.pill, paddingHorizontal: 14, paddingVertical: 8 }}>
-    <Text style={{ fontSize: 14, color: C.text }}>{label}</Text>
+/** 감각 머리: 색 테두리 알약 + 설명 */
+const SenseHead = ({ k, desc }: { k: SenseKey; desc: string }) => (
+  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+    <View style={{ paddingHorizontal: 12, paddingVertical: 3, borderRadius: 999, borderWidth: 2, borderColor: SENSE[k].color, backgroundColor: SENSE[k].soft }}>
+      <Text style={{ fontSize: 13, fontWeight: '800', color: C.text }}>{LABEL[k]}</Text>
+    </View>
+    <Text style={{ fontSize: 12, color: C.sub }}>{desc}</Text>
   </View>
 );
 
-const Title = ({ children }: { children: ReactNode }) => (
-  <Text style={{ fontSize: 16, fontWeight: '800', color: C.text }}>{children}</Text>
+/** 감각 칸 한 개: 작은 제목 · 아이콘 · 값 */
+const Tile = ({ label, icon, value }: { label: string; icon: ReactNode; value: string }) => (
+  <View style={{ flex: 1, alignItems: 'center', gap: 6, paddingVertical: 10, paddingHorizontal: 4, borderRadius: 16, borderWidth: 2, borderColor: C.border, backgroundColor: C.white }}>
+    <Text style={{ fontSize: 11, color: C.sub, textAlign: 'center' }} numberOfLines={1}>
+      {label}
+    </Text>
+    <View style={{ height: 34, justifyContent: 'center' }}>{typeof icon === 'string' ? <Text style={{ fontSize: 26 }}>{icon}</Text> : icon}</View>
+    <Text style={{ fontSize: 14, fontWeight: '800', color: C.text, textAlign: 'center' }} numberOfLines={2}>
+      {value}
+    </Text>
+  </View>
 );
 
 export default function Report() {
@@ -57,8 +128,6 @@ export default function Report() {
   const [summary, setSummary] = useState<Summary | null>(null);
   const [sensory, setSensory] = useState<SensoryReport | null>(null);
   const [state, setState] = useState<'loading' | 'ok' | 'fail'>('loading');
-  const [clips, setClips] = useState<ChildClip[]>([]);
-  const [clipState, setClipState] = useState<'loading' | 'ok' | 'fail'>('loading');
   const { frame } = useDevice();
 
   useFocusEffect(
@@ -75,16 +144,6 @@ export default function Report() {
         .catch(() => {
           if (alive) setState('fail');
         });
-      api
-        .childClips(childId, todayYmd())
-        .then((cs) => {
-          if (!alive) return;
-          setClips([...cs].sort((a, b) => b.at - a.at));
-          setClipState('ok');
-        })
-        .catch(() => {
-          if (alive) setClipState('fail');
-        });
       return () => {
         alive = false;
       };
@@ -94,169 +153,133 @@ export default function Report() {
   const name = profile?.child.nickname || profile?.child.name || '아이';
   const today = dayOf(profile?.day ?? 1);
   const s = summary;
-  const hasData = !!s && (s.sessions > 0 || s.touches > 0 || s.words.length > 0 || s.gaze_s > 0);
+  const hasData = !!s && (s.sessions > 0 || s.touches > 0 || s.words.length > 0 || s.gaze_s > 0 || (s.listen_s ?? 0) > 0);
+  const counts = senseCounts(s);
+  const total = ORDER.reduce((a, k) => a + counts[k], 0);
+  const statusOf = (k: SenseKey) => sensory?.senses.find((x) => x.key === k)?.status ?? '기록 없음';
 
-  // 감각 균형: 한쪽이 60% 넘으면 부드럽게 알려줌
-  const skewed = s ? SENSES.find((x) => (s.balance?.[x.key] ?? 0) > 0.6) : undefined;
-
-  // 언어 연계 팁: 교육 방향에 '영어'가 있고, 커리큘럼 사물 단어를 말했을 때
-  const wantsEnglish = !!profile?.parent.goals.some((g) => g.includes('영어'));
-  const tipItem = wantsEnglish && s ? s.words.map(findItem).find((x): x is Item => !!x) : undefined;
-
-  const favorites = (s?.favorites ?? []).map((f) => {
-    const it = findItem(f);
-    return it ? `${it.emoji} ${it.ko}` : f;
-  });
-
-  // 아이가 불편함을 말한 순간(alerts)을 맨 앞에
-  const checks = [
-    ...(s?.alerts ?? []).map((t) => ({ t, alert: true })),
-    ...(s?.out_of_scope ?? []).map((t) => ({ t, alert: false })),
-  ];
+  const favs = (s?.favorites ?? []).map(findItem).filter((x): x is Item => !!x);
+  const fav = favs[0];
+  const word = (s?.words ?? []).map(findItem).find((x): x is Item => !!x);
+  const smiles = (s?.smiles ?? 0) + (s?.expressions?.smile ?? 0) + (s?.expressions?.surprise ?? 0);
+  // 아바타 제안: 좋아한 사물 → 오늘 동화 → 오늘 주제 순
+  const talk = fav?.ko ?? today.story?.title ?? today.topic;
+  const withJosa = `${name}${josa(name, '이랑', '랑')}`;
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: C.bg }}>
-      <ScrollView contentContainerStyle={[{ padding: 20, gap: 14 }, frame]}>
-        <H1>오늘의 리포트</H1>
+      <ScrollView contentContainerStyle={[{ padding: 20, paddingTop: 24, gap: 14, flexGrow: 1 }, frame]}>
+        <View style={{ gap: 2 }}>
+          <Text style={{ fontSize: 12, color: C.sub }}>
+            {dateLabel()} · {today.day}일차
+          </Text>
+          <Text style={{ fontSize: 22, fontWeight: '900', color: C.text }}>오늘 {name}의 감각 일지</Text>
+        </View>
 
-        {/* 해커톤 주제 '감각': 오늘 감각 반응이 어떻게 달라졌는지가 먼저, 커리큘럼은 그 아래 */}
-        <SensoryCard report={sensory} loading={state === 'loading'} failed={state === 'fail'} />
-
-        <Card soft style={{ gap: 10 }}>
-          <Text style={{ fontSize: 13, fontWeight: '700', color: C.link }}>{today.day}일차</Text>
-          {/* 기획 2-7: 첫 줄은 활동 기록으로 판정한 '배움'·'만남'으로만 만듦 */}
-          <Text style={T.h2}>{headline(wordStatus(today.day, s))}</Text>
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-            {today.items.map((id) => {
-              const st = wordStatus(today.day, s);
-              const w = ITEMS[id].ko;
-              const label = st.learned.includes(w) ? '배움' : st.met.includes(w) ? '만남' : '예정';
-              return (
-                <View key={id} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: label === '배움' ? C.green : label === '만남' ? C.primary : C.card, borderRadius: R.pill, paddingHorizontal: 12, paddingVertical: 6 }}>
-                  <Text style={{ fontSize: 15 }}>{ITEMS[id].emoji}</Text>
-                  <Text style={{ fontSize: 14, fontWeight: '700', color: C.onPrimary }}>
-                    {w} · {label}
-                  </Text>
-                </View>
-              );
-            })}
-          </View>
-          {hasData && s && (
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-              {s.words.map((w) => (
-                <Tag key={w} label={`'${w}' 따라 말함`} />
-              ))}
-              {s.gaze_s > 0 && <Tag label={`함께한 시간 ${duration(s.gaze_s)}`} />}
-            </View>
-          )}
-        </Card>
-
-        <Box>
-          <Title>아이 목소리</Title>
-          {childId ? <ClipList childId={childId} clips={clips} state={clipState} /> : <Text style={T.sub}>오늘 녹음된 목소리가 없어요</Text>}
-          {clips.length > 0 && <Text style={T.small}>아이가 말한 순간 자동으로 녹음돼요. ✓는 따라 말한 단어와 비슷했다는 뜻이에요.</Text>}
-        </Box>
-
-        {!hasData || !s ? (
-          <Box>
-            <Title>{state === 'loading' ? '불러오는 중...' : '아직 오늘 대화 기록이 없어요'}</Title>
-            {state !== 'loading' && (
-              <Text style={T.sub}>
-                {state === 'fail'
-                  ? '서버에 연결하지 못했어요. 태블릿과 서버가 켜져 있는지 확인해 주세요.'
-                  : `${name}와(과) 아바타가 대화를 마치면 여기에 요약이 보여요.`}
-              </Text>
-            )}
-          </Box>
-        ) : (
-          <>
-            <Box>
-              <Title>따라 말한 단어</Title>
-              {s.words.length ? (
-                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-                  {s.words.map((w) => (
-                    <View key={w} style={{ backgroundColor: C.primarySoft, borderRadius: R.pill, paddingHorizontal: 14, paddingVertical: 8 }}>
-                      <Text style={{ fontSize: 15, fontWeight: '700', color: C.text }}>{w}</Text>
+        {/* 감각별 반응 도넛 + 지난 기록 대비 발전/유지 (해커톤 주제 '감각') */}
+        <Panel>
+          {state === 'loading' && !s ? (
+            <Text style={T.sub}>불러오는 중...</Text>
+          ) : state === 'fail' && !s ? (
+            <Text style={T.sub}>서버에 연결하지 못했어요. 태블릿과 서버가 켜져 있는지 확인해 주세요.</Text>
+          ) : (
+            <>
+              <View
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 18 }}
+                accessible
+                accessibilityLabel={`오늘 감각 반응 ${total}번: ${ORDER.map((k) => `${LABEL[k]} ${counts[k]}번 ${statusOf(k)}`).join(', ')}`}>
+                <Donut counts={counts} />
+                <View style={{ flex: 1, gap: 10 }}>
+                  {ORDER.map((k) => (
+                    <View key={k} style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                      <View style={{ width: 12, height: 12, borderRadius: 3, backgroundColor: SENSE[k].color }} />
+                      <Text style={{ fontSize: 14, color: C.text }}>{LABEL[k]}</Text>
+                      <Text style={{ flex: 1, fontSize: 14, fontWeight: '800', color: C.text }}>{counts[k]}번</Text>
+                      <StatusChip status={statusOf(k)} />
                     </View>
                   ))}
                 </View>
-              ) : (
-                <Text style={T.sub}>아직 따라 말한 단어는 없어요. 듣는 것만으로도 충분해요.</Text>
-              )}
-              {s.repeats > 0 && (
-                <Text style={T.small}>
-                  따라 말하기 {s.repeats}번 중 {s.repeat_ok}번 비슷하게 말했어요.
-                </Text>
-              )}
-            </Box>
-
-            <Box>
-              <Title>집중도</Title>
-              <Text style={T.body}>화면을 {duration(s.gaze_s)} 봤어요</Text>
-            </Box>
-
-            <Box>
-              <Title>세 감각 활동 균형</Title>
-              {SENSES.map((x) => {
-                const v = Math.max(0, Math.min(1, s.balance?.[x.key] ?? 0));
-                return (
-                  <View key={x.key} style={{ gap: 6 }}>
-                    <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                      <Text style={T.body}>{x.label}</Text>
-                      <Text style={T.body}>{pct(v)}</Text>
-                    </View>
-                    <View style={{ height: 12, borderRadius: 6, backgroundColor: C.track }}>
-                      <View style={{ width: `${v * 100}%`, height: 12, borderRadius: 6, backgroundColor: C.primary }} />
-                    </View>
-                  </View>
-                );
-              })}
-              <Text style={T.small}>
-                {skewed
-                  ? `오늘은 ${skewed.short} 활동이 많았어요. 내일은 다른 감각 활동도 골고루 섞어볼게요.`
-                  : '세 감각이 한쪽으로 치우치지 않게 골고루 쓰고 있어요.'}
-              </Text>
-            </Box>
-
-            <Box>
-              <Title>반응</Title>
-              <Text style={T.body}>좋아한 사물: {favorites.length ? favorites.join(', ') : '아직 없어요'}</Text>
-              <Text style={T.body}>
-                터치 {s.touches}번{s.reaction_ms > 0 ? ` · 평균 반응 ${(s.reaction_ms / 1000).toFixed(1)}초` : ''}
-              </Text>
-              <Text style={T.body}>웃음 {s.smiles}번</Text>
-            </Box>
-
-            {tipItem && (
-              <Card soft style={{ borderWidth: 0 }}>
-                <Text style={{ fontSize: 14, fontWeight: '700', color: C.link }}>언어 연계 팁</Text>
-                <Text style={T.body}>
-                  {`한국어로 '${tipItem.ko}'를 잘 말했으니, 이제 영어 '${tipItem.en}'을 들려줄 타이밍이에요.`}
-                </Text>
-              </Card>
-            )}
-          </>
-        )}
-
-        {checks.length > 0 && (
-          <Card dashed style={[{ gap: 10 }, checks[0].alert && { borderColor: C.warn }]}>
-            <Title>확인 필요 {checks.length}건</Title>
-            {checks.map((c, i) => (
-              <View key={`${c.alert ? 'a' : 'o'}-${i}`} style={{ gap: 2 }}>
-                {c.alert ? (
-                  <>
-                    <Text style={{ fontSize: 15, fontWeight: '800', color: C.warn }}>{`⚠ ${name} "${c.t}"`}</Text>
-                    <Text style={T.sub}>불편함을 말한 순간이에요. 아바타는 판단하지 않았어요. 아이 상태를 직접 살펴봐 주세요.</Text>
-                  </>
-                ) : (
-                  <Text style={T.sub}>{`${name} "${c.t}" → 답을 만들지 않고 오늘 주제로 돌려 안내했어요.`}</Text>
-                )}
               </View>
-            ))}
-          </Card>
+              {sensory && (
+                <View style={{ gap: 4, borderTopWidth: 1, borderTopColor: C.track, paddingTop: 10 }}>
+                  <Text style={{ fontSize: 15, fontWeight: '800', color: C.text }}>{sensory.overall}</Text>
+                  {sensory.hasData && (
+                    <Text style={T.small}>{sensory.historyDays ? `지난 ${sensory.historyDays}일 평균과 비교했어요` : '비교할 지난 기록이 아직 없어요'}</Text>
+                  )}
+                  {sensory.strain.map((t) => (
+                    <Text key={t} style={{ fontSize: 13, fontWeight: '700', color: C.warn }}>
+                      ⚠ {t}
+                    </Text>
+                  ))}
+                  {sensory.suggestions[0] && <Text style={[T.small, { color: C.text }]}>내일 해볼 만한 것 · {sensory.suggestions[0]}</Text>}
+                  <Text style={{ fontSize: 11, color: C.muted }}>{sensory.note}</Text>
+                </View>
+              )}
+            </>
+          )}
+        </Panel>
+
+        <ChecksBox summary={s} name={name} />
+
+        {hasData && s ? (
+          <>
+            <View style={{ gap: 8 }}>
+              <SenseHead k="visual" desc="보고 반응한 것" />
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                <Tile label="바라본 시간" icon={<ClockIcon />} value={duration(s.gaze_s)} />
+                <Tile label="좋아한 사물" icon={fav?.emoji ?? '👀'} value={fav?.ko ?? '아직 없어요'} />
+                <Tile label="웃음·놀람" icon="😊" value={`${smiles}번`} />
+              </View>
+            </View>
+
+            <View style={{ gap: 8 }}>
+              <SenseHead k="touch" desc="만지고 눌러 본 것" />
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                <Tile label="가장 많이 터치한" icon={fav?.emoji ?? '✋'} value={fav?.ko ?? '아직 없어요'} />
+                <Tile
+                  label="터치 · 평균 반응"
+                  icon="✋"
+                  value={`${s.touches}번${s.reaction_ms > 0 ? ` · ${(s.reaction_ms / 1000).toFixed(1)}초` : ''}`}
+                />
+              </View>
+            </View>
+
+            <View style={{ gap: 8 }}>
+              <SenseHead k="audio" desc="듣고 따라 말한 것" />
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                <Tile label="따라 말한 단어" icon={word?.emoji ?? '🗣️'} value={s.words.length ? s.words.join(', ') : '아직 없어요'} />
+                <Tile label="따라 말하기" icon="🔁" value={s.repeats > 0 ? `${s.repeats}번 중 ${s.repeat_ok}번` : '-'} />
+                <Tile label="들은 시간" icon="👂" value={(s.listen_s ?? 0) > 0 ? duration(s.listen_s ?? 0) : '-'} />
+              </View>
+            </View>
+          </>
+        ) : (
+          state !== 'loading' && (
+            <View style={{ alignItems: 'center', gap: 6, paddingVertical: 18, paddingHorizontal: 14, borderRadius: 16, borderWidth: 2, borderStyle: 'dashed', borderColor: C.border, backgroundColor: C.white }}>
+              <Text style={{ fontSize: 28 }}>🌱</Text>
+              <Text style={[T.body, { fontWeight: '700', textAlign: 'center' }]}>아직 오늘 대화 기록이 없어요</Text>
+              <Text style={[T.small, { textAlign: 'center' }]}>
+                {name}
+                {josa(name, '과', '와')} 아바타가 놀고 나면 감각 일지가 채워져요.
+              </Text>
+            </View>
+          )
         )}
 
-        <Button label="피드백 쓰러 가기" onPress={() => router.navigate('/parent/feedback' as Href)} style={{ marginTop: 8 }} />
+        {/* 아바타 제안 말풍선 */}
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+          <View style={{ width: 52, height: 52, borderRadius: 26, backgroundColor: C.primarySoft, overflow: 'hidden', alignItems: 'center', justifyContent: 'flex-end' }}>
+            {profile && <Avatar config={profile.avatar} size={48} expression="smile" />}
+          </View>
+          <Bubble>
+            <Text style={{ fontSize: 14, lineHeight: 22, color: C.text }}>
+              오늘 {withJosa} <Text style={{ fontWeight: '800' }}>{talk}</Text> 얘기를 해 보는 건 어때요?
+            </Text>
+          </Bubble>
+        </View>
+
+        <View style={{ flex: 1, minHeight: 8 }} />
+        <BigButton variant="outline" label="아이 녹음 기록" icon={<MicIcon />} onPress={() => router.navigate('/parent/recordings' as Href)} />
       </ScrollView>
     </SafeAreaView>
   );

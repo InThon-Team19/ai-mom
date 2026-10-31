@@ -1,8 +1,8 @@
-// 부모 앱 2-x 하단 탭 5개 (홈 · 리포트 · 피드백 · 내일 계획 · 설정) — 담당: 태희 (민철 와이어프레임 기준)
+// 부모 앱 2-x 하단 탭 5개 (홈 · 리포트 · 피드백 · 아바타 · 설정) + 탭 밖 화면 내일 계획(plan, 피드백에서) · 아이 녹음 기록(recordings, 리포트에서) — 담당: 태희 (민철 와이어프레임 기준)
 import { Tabs } from 'expo-router/js-tabs';
 import { useEffect } from 'react';
 import type { ColorValue } from 'react-native';
-import Svg, { Circle, Path, Rect } from 'react-native-svg';
+import Svg, { Circle, Path } from 'react-native-svg';
 
 import { registerThisDevice } from '@/lib/device';
 import { router, type Href } from 'expo-router';
@@ -31,10 +31,12 @@ const PenIcon = ({ color, size }: IconProps) => (
     <Path d="M4 20l1-4L16 5l3 3L8 19z M14 7l3 3" {...stroke(color)} />
   </Svg>
 );
-const PlanIcon = ({ color, size }: IconProps) => (
+/** 아바타 탭: 둥근 얼굴 + 어깨 (다른 아이콘과 같은 선 굵기) */
+const AvatarIcon = ({ color, size }: IconProps) => (
   <Svg width={size} height={size} viewBox="0 0 24 24">
-    <Rect x={4} y={4} width={16} height={16} rx={2} {...stroke(color)} />
-    <Path d="M8 9h8M8 13h8M8 17h5" {...stroke(color)} />
+    <Circle cx={12} cy={9} r={5} {...stroke(color)} />
+    <Path d="M10 9.5h.01M14 9.5h.01M10.5 11.5q1.5 1 3 0" {...stroke(color)} />
+    <Path d="M4 21c1.2-3.6 4.3-5.5 8-5.5s6.8 1.9 8 5.5" {...stroke(color)} />
   </Svg>
 );
 
@@ -72,6 +74,8 @@ export default function ParentTabs() {
 
   return (
     <Tabs
+      // 숨긴 화면(내일 계획·녹음 기록)에서 뒤로 가면 들어온 탭으로 돌아가게
+      backBehavior="history"
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: C.link,
@@ -82,8 +86,12 @@ export default function ParentTabs() {
       <Tabs.Screen name="index" options={{ title: '홈', tabBarIcon: (p) => <HomeIcon color={p.color} size={22} /> }} />
       <Tabs.Screen name="report" options={{ title: '리포트', tabBarIcon: (p) => <ReportIcon color={p.color} size={22} /> }} />
       <Tabs.Screen name="feedback" options={{ title: '피드백', tabBarIcon: (p) => <PenIcon color={p.color} size={22} /> }} />
-      <Tabs.Screen name="plan" options={{ title: '내일 계획', tabBarIcon: (p) => <PlanIcon color={p.color} size={22} /> }} />
+      <Tabs.Screen name="avatar" options={{ title: '아바타', tabBarIcon: (p) => <AvatarIcon color={p.color} size={22} /> }} />
       <Tabs.Screen name="settings" options={{ title: '설정', tabBarIcon: (p) => <GearIcon color={p.color} size={22} /> }} />
+      {/* 내일 계획 낭독: 탭 막대에는 숨기고 피드백 '낭독하기'에서 들어감 */}
+      <Tabs.Screen name="plan" options={{ href: null, title: '내일 계획' }} />
+      {/* 아이 녹음 기록: 리포트 아래 버튼에서 들어감 */}
+      <Tabs.Screen name="recordings" options={{ href: null, title: '아이 녹음 기록' }} />
     </Tabs>
   );
 }

@@ -58,3 +58,6 @@ export function dayAdvancePatch(p: Profile, force = false): Partial<Profile> | n
   if (!force && r.date === today()) return null;
   return { day: r.forDay, readingDone: null };
 }
+
+/** 오늘 밤 낭독을 마쳤는지 (readingDone 이 오늘 날짜로 찍혔을 때만) */
+export const readToday = (p: Profile | null | undefined) => !!p?.readingDone && p.readingDone.date === today();

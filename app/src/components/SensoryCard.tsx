@@ -5,7 +5,7 @@ import { Card } from '@/components/ui';
 import type { SenseStatus, SensoryReport } from '@/lib/sensory';
 import { C, R, T } from '@/theme';
 
-const ICON = { visual: '👀', audio: '👂', touch: '✋' } as const;
+export const ICON = { visual: '👀', audio: '👂', touch: '✋' } as const;
 
 const chipBg = (s: SenseStatus) =>
   s === '발전' ? C.green : s === '유지' ? C.primarySoft : s === '줄었어요' ? C.accent : s === '첫 기록' ? C.primary : C.track;

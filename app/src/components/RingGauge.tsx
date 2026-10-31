@@ -11,6 +11,7 @@ export function RingGauge({
   stroke = 12,
   label,
   showBaselineText = true,
+  color = C.primary,
 }: {
   progress: number; // 0~1
   baseline?: number; // 최소 기준 위치 0~1
@@ -18,6 +19,7 @@ export function RingGauge({
   stroke?: number;
   label?: string;
   showBaselineText?: boolean;
+  color?: string; // 채움 색 (기본 노랑)
 }) {
   const r = (size - stroke) / 2;
   const cx = size / 2;
@@ -37,7 +39,7 @@ export function RingGauge({
             cx={cx}
             cy={cx}
             r={r}
-            stroke={C.primary}
+            stroke={color}
             strokeWidth={stroke}
             fill="none"
             strokeLinecap="round"

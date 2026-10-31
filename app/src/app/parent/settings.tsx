@@ -1,12 +1,11 @@
-// 부모 앱 설정 탭 — 담당: 태희
-// 로그인 · 계정 정보 · 아바타 · 태블릿 연결 키(조회·재발급) · 등록된 기기 · 학습 이력 · 대화 설정 · 이 기기 모드 전환
+// 부모 앱 설정 탭 — 담당: 태희 (아바타 모습 바꾸기는 아바타 탭 '꾸미기'로 옮김)
+// 로그인 · 계정 정보 · 태블릿 연결 키(조회·재발급) · 등록된 기기 · 학습 이력 · 대화 설정 · 이 기기 모드 전환
 import { router, useFocusEffect, type Href } from 'expo-router';
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { Alert, Platform, Pressable, ScrollView, Switch, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AccountSection } from '@/components/AccountSection';
-import { Avatar } from '@/components/Avatar';
 import { RingGauge } from '@/components/RingGauge';
 import { Button, Chip } from '@/components/ui';
 import { api } from '@/lib/api';
@@ -178,12 +177,6 @@ export default function Settings() {
           <Row label="교육 방향" value={p.parent.goals.join(', ') || '-'} />
           <Row label="가입 ID" value={p.childId} />
           <Link label="부모 성향 수정" href="/onboarding/parent?edit=1" />
-        </Section>
-
-        <Section title="아바타" right={<Link label="아바타 바꾸기" href="/onboarding/avatar?edit=1" />}>
-          <View style={{ alignItems: 'center', backgroundColor: C.primarySoft, borderRadius: R.sm, paddingTop: 8 }}>
-            <Avatar config={p.avatar} size={110} mouth={0.15} />
-          </View>
         </Section>
 
         <Section title="아이 기기 연결">

@@ -1,20 +1,86 @@
-// 부모 앱 2-1 홈: 오늘 일차 · 감각 발달 한 줄(시각/청각/촉각) · 무리 신호 · 오늘 밤 할 일 · 오늘/내일 주제 · 확인 필요 · 아바타 학습률 — 담당: 태희 (민철 와이어프레임 기준)
+// 부모 앱 2-1 홈 (민철 디자인 Home): 내 아바타 학습률(다 배우면 숨김) · {이름}의 오늘 · 아바타 말풍선(일차·배움 한 줄) · 오늘 {이름}는… 3줄 · 감각 일지 보기 — 담당: 태희
 import { router, useFocusEffect, type Href } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Svg, { Circle, Path } from 'react-native-svg';
 
+import { Avatar } from '@/components/Avatar';
+import { ChecksBox } from '@/components/ChecksBox';
 import { RingGauge } from '@/components/RingGauge';
-import { SensoryChips, StrainCard } from '@/components/SensoryCard';
-import { Button, Card, H1 } from '@/components/ui';
-import { DAYS, dayOf } from '@/content/curriculum';
-import { useDevice } from '@/lib/layout';
-import { headline, wordStatus } from '@/lib/progress';
-import { loadSensory, type SensoryReport } from '@/lib/sensory';
+import { BigButton, Bubble, Panel } from '@/components/ui';
+import { ITEMS, dayOf, type Item } from '@/content/curriculum';
 import { api } from '@/lib/api';
+import { useDevice } from '@/lib/layout';
+import { headline, josa, wordStatus } from '@/lib/progress';
+import { duration, loadSensory, type SensoryReport } from '@/lib/sensory';
 import { useProfile } from '@/lib/store';
 import type { Gauge, Summary } from '@/lib/types';
-import { C, T } from '@/theme';
+import { C, R, T } from '@/theme';
+
+const itemList = Object.values(ITEMS);
+const findItem = (w: string): Item | undefined => {
+  const k = w.trim().toLowerCase();
+  return itemList.find((it) => it.id === k || it.ko === k || it.en.toLowerCase() === k);
+};
+
+const dateLabel = () => {
+  const d = new Date();
+  return `${d.getMonth() + 1}월 ${d.getDate()}일 ${'일월화수목금토'[d.getDay()]}요일`;
+};
+
+/** 머리 아이콘: 노랑 칸 안 웃는 집 */
+const HomeBadge = () => (
+  <View style={{ width: 42, height: 42, borderRadius: 13, backgroundColor: C.primary, alignItems: 'center', justifyContent: 'center' }}>
+    <Svg width={24} height={24} viewBox="0 0 24 24">
+      <Path d="M3.5 11 L12 4 L20.5 11 V20 H3.5 Z" stroke={C.text} strokeWidth={2} fill="none" strokeLinejoin="round" />
+      <Circle cx={9.5} cy={13.5} r={1.2} fill={C.text} />
+      <Circle cx={14.5} cy={13.5} r={1.2} fill={C.text} />
+      <Path d="M9.5 16.5 Q12 18.5 14.5 16.5" stroke={C.text} strokeWidth={1.6} fill="none" strokeLinecap="round" />
+    </Svg>
+  </View>
+);
+
+type Row = { key: string; icon: string; before?: string; bold: string; after: string };
+
+/** '오늘 {이름}는…' 줄: 실제 활동 기록으로만 만듦 (없는 일을 지어내지 않음) */
+function todayRows(s: Summary | null, story: { title: string; emoji: string } | null, me: string): Row[] {
+  if (!s) return [];
+  const rows: Row[] = [];
+  const fav = (s.favorites ?? []).map(findItem).find((x): x is Item => !!x);
+  const smiles = s.smiles + (s.expressions?.smile ?? 0);
+  if (fav) {
+    rows.push(
+      smiles > 0
+        ? { key: 'fav', icon: fav.emoji, bold: fav.ko, after: `${josa(fav.ko, '을', '를')} 보고 웃었어요` }
+        : { key: 'fav', icon: fav.emoji, bold: fav.ko, after: `${josa(fav.ko, '을', '를')} 가장 좋아했어요` },
+    );
+  } else if (smiles > 0) {
+    rows.push({ key: 'smile', icon: '😊', bold: `${smiles}번`, after: ' 웃었어요' });
+  }
+  const word = s.words.map(findItem).find((x): x is Item => !!x);
+  if (word || s.words.length) {
+    const w = word?.ko ?? s.words[0];
+    rows.push({
+      key: 'word',
+      icon: word?.emoji ?? '🗣️',
+      bold: w,
+      after: s.repeat_ok > 1 ? `${josa(w, '을', '를')} ${s.repeat_ok}번 따라 말했어요` : `${josa(w, '을', '를')} 따라 말했어요`,
+    });
+  } else if (s.repeats > 0) {
+    rows.push({ key: 'word', icon: '🗣️', before: '따라 말하기를 ', bold: `${s.repeats}번`, after: ' 해 봤어요' });
+  }
+  const listen = s.listen_s ?? 0;
+  if (story && listen > 0) {
+    rows.push({ key: 'story', icon: story.emoji, before: '전래동화 ', bold: story.title, after: `${josa(story.title, '을', '를')} 들었어요` });
+  } else if (listen > 0) {
+    rows.push({ key: 'listen', icon: '👂', before: `${me} 목소리를 `, bold: duration(listen), after: ' 들었어요' });
+  } else if (s.gaze_s > 0) {
+    rows.push({ key: 'gaze', icon: '👀', before: '화면을 ', bold: duration(s.gaze_s), after: ' 바라봤어요' });
+  }
+  if (s.touches > 0 && rows.length < 3) rows.push({ key: 'touch', icon: '✋', before: '화면을 ', bold: `${s.touches}번`, after: ' 눌러 봤어요' });
+  return rows.slice(0, 3);
+}
 
 export default function ParentHome() {
   const profile = useProfile();
@@ -22,7 +88,7 @@ export default function ParentHome() {
   const [summary, setSummary] = useState<Summary | null>(null);
   const [sensory, setSensory] = useState<SensoryReport | null>(null);
   const [linked, setLinked] = useState<boolean | null>(null); // null = 확인 중
-  const { frame } = useDevice();
+  const { frame, isTablet } = useDevice();
   const [voice, setVoice] = useState<Gauge | null>(null);
   const [mouth, setMouth] = useState<Gauge | null>(null);
 
@@ -53,97 +119,122 @@ export default function ParentHome() {
   );
 
   const name = profile?.child.nickname || profile?.child.name || '우리 아이';
-  const dayNum = profile?.day ?? 1;
-  const today = dayOf(dayNum);
-  const tomorrowNum = Math.min(dayNum + 1, DAYS.length);
-  const tomorrow = dayOf(tomorrowNum);
-  const alerts = summary?.alerts.length ?? 0;
-  const outOfScope = summary?.out_of_scope.length ?? 0;
-  const checks = alerts + outOfScope;
+  const me = profile?.parent.title || '엄마';
+  const today = dayOf(profile?.day ?? 1);
+  const st = wordStatus(today.day, summary);
+  // "오늘은 사과를 배웠어요" → "지호는 오늘 사과를 배웠어요"
+  const line = headline(st).replace(/^오늘은 /, `${name}${josa(name, '은', '는')} 오늘 `);
+  const story = today.story ? { title: today.story.title, emoji: today.story.pages[0]?.emoji ?? '📖' } : null;
+  const rows = todayRows(summary, story, me);
+  // 학습률 카드: 둘 다 아이에게 쓸 수 있으면 숨김 (불러오기 전에는 보이지 않게)
+  const showLearn = !!(voice && mouth) && !(voice.usable && mouth.usable);
 
-  const go = (tab: 'report' | 'feedback' | 'plan') => router.navigate(`/parent/${tab}` as Href);
+  const go = (href: string) => router.navigate(href as Href);
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: C.bg }}>
-      <ScrollView contentContainerStyle={[{ padding: 20, gap: 14 }, frame]}>
-        <View style={{ gap: 6 }}>
-          <H1>{name}의 오늘</H1>
-          {/* 기획 2-5: 맨 위 정보는 오늘의 일차와 주제 한 줄 */}
-          <Text style={{ fontSize: 17, fontWeight: '800', color: C.text }}>
-            오늘은 {today.day}일차, {today.topic}
-          </Text>
-          <Text style={T.sub}>{headline(wordStatus(today.day, summary))}</Text>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-            <View style={{ width: 9, height: 9, borderRadius: 5, backgroundColor: linked ? C.primary : C.muted }} />
-            <Text style={T.sub}>
-              {linked === null ? '연결 확인 중...' : linked ? `태블릿 연결됨 · 오늘 대화 ${summary?.sessions ?? 0}번` : '태블릿 연결 대기'}
+      <ScrollView contentContainerStyle={[{ padding: 20, paddingTop: 24, gap: 16, flexGrow: 1 }, frame]}>
+        {showLearn && (
+          <Panel>
+            <View style={{ gap: 2 }}>
+              <Text style={{ fontSize: 15, fontWeight: '800', color: C.text }}>내 아바타 학습률</Text>
+              <Text style={{ fontSize: 12, color: C.sub }}>100%가 되면 {name}에게 더 자연스럽게 말해요</Text>
+            </View>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+              <RingGauge progress={voice?.progress ?? 0} baseline={voice?.baseline} size={48} stroke={6} label="음성" />
+              <RingGauge progress={mouth?.progress ?? 0} baseline={mouth?.baseline} size={48} stroke={6} label="입모양" color={C.green} />
+              <View style={{ flex: 1 }} />
+              <BigButton small label="학습하러 가기" onPress={() => go('/parent/avatar')} />
+            </View>
+          </Panel>
+        )}
+
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+          <HomeBadge />
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: 24, fontWeight: '900', color: C.text }}>{name}의 오늘</Text>
+            <Text style={{ fontSize: 12, color: C.sub }}>
+              {dateLabel()}
+              {'  ·  '}
+              <Text style={{ color: linked ? C.ok : C.sub, fontWeight: '700' }}>
+                {linked === null ? '연결 확인 중' : linked ? '태블릿 연결됨' : '태블릿 연결 대기'}
+              </Text>
             </Text>
           </View>
         </View>
 
-        {/* 감각 발달 한 줄 + 시각/청각/촉각 상태 (자세한 건 리포트) */}
-        {sensory && (
-          <Pressable onPress={() => go('report')} style={{ gap: 8 }}>
-            <Text style={{ fontSize: 16, fontWeight: '700', color: C.text }}>{sensory.overall}</Text>
-            {sensory.hasData && <SensoryChips report={sensory} />}
+        {/* 아바타 + 말풍선: 오늘 일차 · 배움 한 줄 */}
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+          <View
+            style={{
+              width: isTablet ? 120 : 96,
+              height: isTablet ? 140 : 112,
+              borderRadius: 18,
+              backgroundColor: C.primarySoft,
+              alignItems: 'center',
+              justifyContent: 'flex-end',
+              overflow: 'hidden',
+            }}
+            accessibilityLabel={`${me} 아바타`}>
+            {profile && <Avatar config={profile.avatar} size={isTablet ? 112 : 92} expression="smile" />}
+          </View>
+          <Bubble>
+            <Text style={{ fontSize: 13, fontWeight: '800', color: C.link }}>오늘 {today.day}일차!</Text>
+            <Text style={{ marginTop: 4, fontSize: 16, fontWeight: '700', lineHeight: 24, color: C.text }}>{line}</Text>
+          </Bubble>
+        </View>
+
+        {/* 위험 신호·무리 신호는 작게라도 꼭 보이게 */}
+        <ChecksBox summary={summary} name={name} compact onPress={() => go('/parent/recordings')} />
+        {!!sensory?.strain.length && (
+          <Pressable
+            onPress={() => go('/parent/report')}
+            accessibilityRole="button"
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 10, paddingHorizontal: 14, borderRadius: 16, borderWidth: 2, borderColor: C.warn, backgroundColor: C.warnSoft }}>
+            <Text style={{ flex: 1, fontSize: 14, fontWeight: '700', color: C.warn }} numberOfLines={2}>
+              ⚠ 무리 신호 {sensory.strain.length}개 · {sensory.strain[0]}
+            </Text>
+            <Text style={{ fontSize: 22, color: C.sub }}>›</Text>
           </Pressable>
         )}
-        {sensory && <StrainCard strain={sensory.strain} onPress={() => go('report')} />}
 
-        <Card soft style={{ gap: 10 }}>
-          <Text style={{ fontSize: 14, fontWeight: '700', color: C.link }}>오늘 밤 할 일</Text>
-          {['오늘의 리포트 보기', '피드백 남기기', '내일 계획 읽기'].map((t, i) => (
-            <Pressable key={t} onPress={() => go((['report', 'feedback', 'plan'] as const)[i])}>
-              <Text style={T.body}>
-                {i + 1}. {t}
+        <View style={{ gap: 10 }}>
+          <Text style={{ fontSize: 17, fontWeight: '800', color: C.text }}>
+            오늘 {name}
+            {josa(name, '은', '는')}…
+          </Text>
+          {rows.length ? (
+            rows.map((r) => (
+              <View
+                key={r.key}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 8, paddingLeft: 8, paddingRight: 14, borderRadius: 16, borderWidth: 2, borderColor: C.border, backgroundColor: C.white }}>
+                <View style={{ width: 48, height: 48, borderRadius: 12, backgroundColor: C.card, alignItems: 'center', justifyContent: 'center' }}>
+                  <Text style={{ fontSize: 28 }}>{r.icon}</Text>
+                </View>
+                <Text style={{ flex: 1, fontSize: 15, color: C.text }}>
+                  {r.before}
+                  <Text style={{ fontWeight: '800' }}>{r.bold}</Text>
+                  {r.after}
+                </Text>
+              </View>
+            ))
+          ) : (
+            <View style={{ alignItems: 'center', gap: 6, paddingVertical: 18, paddingHorizontal: 14, borderRadius: 16, borderWidth: 2, borderStyle: 'dashed', borderColor: C.border, backgroundColor: C.white }}>
+              <Text style={{ fontSize: 28 }}>🌱</Text>
+              <Text style={[T.body, { textAlign: 'center', fontWeight: '700' }]}>
+                {linked === false ? '서버에 연결하지 못했어요' : '아직 오늘 놀이 기록이 없어요'}
               </Text>
-            </Pressable>
-          ))}
-          <Button label="리포트 보기" onPress={() => go('report')} style={{ marginTop: 6 }} />
-        </Card>
-
-        <View style={{ flexDirection: 'row', gap: 10 }}>
-          <Card style={{ flex: 1, gap: 2 }}>
-            <Text style={T.sub}>오늘 · {today.day}일차</Text>
-            <Text style={{ fontSize: 16, fontWeight: '800', color: C.text }}>{today.topic}</Text>
-          </Card>
-          <Card style={{ flex: 1, gap: 2 }}>
-            <Text style={T.sub}>
-              내일 · {tomorrow.day}일차{tomorrowNum === dayNum ? ' (마지막)' : ''}
-            </Text>
-            <Text style={{ fontSize: 16, fontWeight: '800', color: C.text }}>{tomorrow.topic}</Text>
-            <Text style={T.small}>
-              {profile?.readingDone ? '낭독 완료 · 내일 아침 시작' : '오늘 밤 낭독하면 넘어가요'}
-            </Text>
-          </Card>
-        </View>
-
-        <Pressable onPress={() => go('report')}>
-          <Card dashed style={[{ flexDirection: 'row', alignItems: 'center' }, alerts > 0 && { borderColor: C.warn }]}>
-            <View style={{ flex: 1, gap: 2 }}>
-              <Text style={{ fontSize: 16, fontWeight: '800', color: alerts > 0 ? C.warn : C.text }}>확인 필요 {checks}건</Text>
-              <Text style={T.sub}>
-                {alerts > 0
-                  ? `아이가 불편함을 말한 순간이 ${alerts}번 있었어요. 꼭 확인해 주세요.`
-                  : outOfScope > 0
-                    ? '범위 밖 질문이 있었어요.'
-                    : summary
-                      ? '오늘은 확인할 일이 없어요.'
-                      : '대화 기록이 생기면 여기에 알려드려요.'}
+              <Text style={[T.small, { textAlign: 'center' }]}>
+                {linked === false
+                  ? '태블릿과 서버가 켜져 있는지 확인해 주세요.'
+                  : `${name}${josa(name, '이', '가')} 아바타와 놀고 나면 여기에 보여요.`}
               </Text>
             </View>
-            <Text style={{ fontSize: 24, color: C.text }}>›</Text>
-          </Card>
-        </Pressable>
+          )}
+        </View>
 
-        <Card style={{ backgroundColor: C.white, borderWidth: 1, borderColor: C.border, gap: 12 }}>
-          <Text style={{ fontSize: 16, fontWeight: '800', color: C.text }}>내 아바타 학습률</Text>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-around' }}>
-            <RingGauge progress={voice?.progress ?? 0} baseline={voice?.baseline ?? 0.5} size={100} label="음성" />
-            <RingGauge progress={mouth?.progress ?? 0} baseline={mouth?.baseline ?? 0.5} size={100} label="입모양" />
-          </View>
-          <Text style={[T.small, { textAlign: 'center' }]}>검은 눈금이 최소 기준이에요. 계획을 읽을수록 올라가요.</Text>
-        </Card>
+        <View style={{ flex: 1, minHeight: 8 }} />
+        <BigButton label={`자세한 오늘 ${name} 감각 일지 보기`} onPress={() => go('/parent/report')} style={{ borderRadius: R.md }} />
       </ScrollView>
     </SafeAreaView>
   );

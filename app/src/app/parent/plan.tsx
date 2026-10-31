@@ -1,4 +1,4 @@
-// 부모 앱 2-4 내일 계획 낭독: 입모양을 보이며 읽기 → 입모양·음성 학습률 상승, 코칭, "낭독 완료" → 다음날 — 담당: 태희 (민철 와이어프레임 기준)
+// 부모 앱 2-4 내일 계획 낭독 (탭 막대에는 없음 — 피드백 '낭독하기'에서 들어옴, 위 '‹'로 돌아감): 입모양을 보이며 읽기 → 입모양·음성 학습률 상승, 코칭, "낭독 완료" → 다음날 — 담당: 태희 (민철 와이어프레임 기준)
 // 카메라 위 인식 표시(얼굴 틀·입 윤곽·체크)와 상태 문구는 기획 2-4 → components/FaceGuide
 import { router, useIsFocused, type Href } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -8,7 +8,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { FaceGuide, ReadingText, doneSignal, useReadingWord } from '@/components/FaceGuide';
 import type { FaceFrame } from '@/components/FaceTracker';
 import { RingGauge } from '@/components/RingGauge';
-import { Button, Card, H1, MicButton, Sub } from '@/components/ui';
+import { BackHeader, Button, Card, MicButton } from '@/components/ui';
 import { DAYS, dayOf, fill, type Day } from '@/content/curriculum';
 import { useReadAloud } from '@/hooks/useReadAloud';
 import { api } from '@/lib/api';
@@ -17,6 +17,7 @@ import { readingDonePatch } from '@/lib/progress';
 import { updateProfile, useProfile, type Profile } from '@/lib/store';
 import { C, R, T } from '@/theme';
 import { useDevice } from '@/lib/layout';
+import { goBack } from '@/lib/nav';
 
 const DEFAULT_TIP = '카메라에 얼굴이 잘 보이게 하고, 입모양을 크게 보이며 천천히 읽어주세요.';
 
@@ -87,9 +88,11 @@ function PlanReader({ profile, plan }: { profile: Profile; plan: Day }) {
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: C.bg }}>
       <ScrollView contentContainerStyle={[{ padding: 20, gap: 14 }, device.frame]}>
-        <View style={{ gap: 6 }}>
-          <H1>내일 {plan.day}일차 계획</H1>
-          <Sub>쭉 읽어주세요. 입모양을 보이며 읽을수록 학습률이 올라가요.</Sub>
+        <View style={{ gap: 4 }}>
+          <BackHeader title="내일 계획을 읽어 주세요" backLabel="피드백으로 돌아가기" onBack={() => goBack('/parent/feedback' as Href)} />
+          <Text style={{ fontSize: 13, color: C.sub }}>
+            {plan.day}일차 · {plan.topic} — 읽어 주신 목소리와 입모양으로 내일 아바타가 말해요.
+          </Text>
         </View>
 
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
