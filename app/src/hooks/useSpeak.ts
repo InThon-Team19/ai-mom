@@ -95,7 +95,12 @@ export function useSpeak(childId: string | undefined) {
         startFake();
         try {
           if (!childId) throw new Error('no child');
-          const { url } = await api.tts(childId, text);
+          // 한 번 실패해도 바로 기기 음성(로봇 목소리)으로 바꾸지 않고 한 번 더 시도
+          const { url } = await api.tts(childId, text).catch(async () => {
+            await new Promise((r) => setTimeout(r, 400));
+            if (my !== gen.current) throw new Error('stale');
+            return api.tts(childId, text);
+          });
           if (my !== gen.current) return; // 기다리는 사이 멈췄거나 다음 문장으로 넘어감 → 늦게 온 소리는 틀지 않음
           await setAudioModeAsync({ playsInSilentMode: true, allowsRecording: false });
           if (my !== gen.current) return;

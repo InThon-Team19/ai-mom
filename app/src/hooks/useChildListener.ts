@@ -32,6 +32,9 @@ export const LISTEN = {
   HANG_DB: 3, // 말하는 중엔 기준 - 3dB 까지 말소리로 봄 (끊김 방지)
   SILENCE_MS: 1000, // 말한 뒤 이만큼 조용하면 끝
   MAX_SPEECH_MS: 8000,
+  // 따라 말하기는 단어 하나만 들으면 됨 → 짧게 끊어서 바로 올림 (시끄러운 방에서 조용한 1초가 안 와 8초를 꽉 채우던 문제)
+  REPEAT_MAX_SPEECH_MS: 2500,
+  REPEAT_SILENCE_MS: 700,
   MIN_SPEECH_MS: 300, // 이보다 짧으면 소음(딸깍 등)으로 보고 버림
   IDLE_WINDOW_MS: 6000, // 말 없이 이만큼 지나면 창을 새로 시작 (파일이 커지지 않게)
   FIXED_WINDOW_MS: 3500, // 대체 모드 창 길이
@@ -316,8 +319,9 @@ export function useChildListener({
         // 말하는 중
         if ((valid && (db as number) > thr - LISTEN.HANG_DB) || t < forceUntil.current) lastLoud = t;
         setSpeechLevel(lv);
-        const silent = t - lastLoud > LISTEN.SILENCE_MS;
-        const tooLong = t - speechStart > LISTEN.MAX_SPEECH_MS;
+        const rep = winMeta.phase === 'repeat';
+        const silent = t - lastLoud > (rep ? LISTEN.REPEAT_SILENCE_MS : LISTEN.SILENCE_MS);
+        const tooLong = t - speechStart > (rep ? LISTEN.REPEAT_MAX_SPEECH_MS : LISTEN.MAX_SPEECH_MS);
         if (silent || tooLong) {
           const keep = forcedWin || lastLoud - speechStart >= LISTEN.MIN_SPEECH_MS;
           await endWindow(keep);

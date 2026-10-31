@@ -670,9 +670,24 @@ export default function Session() {
         ['praise', 2000],
         ['smile', 800],
       ]);
-      await talk(fill('잘했어, 우리 {name}!', { name, me }));
+      await talk(fill('참 잘했어, 우리 {name}!', { name, me }));
       if (t !== run.current) return;
-      await sleep(400);
+      // 한 번 더 해 보기: 짧게 한 번만 기다리고, 말하든 안 하든 칭찬 후 넘어감 (계속 붙잡지 않음)
+      await talk(`한 번 더 해 볼까? ${item.ko}!`);
+      if (t !== run.current) return;
+      const again = await waitUtterance(t, 4000);
+      if (t !== run.current) return;
+      if (again) {
+        logEvent('repeat', { word: item.ko, matched: again.res ? again.res.matched : null, text: again.res?.text ?? '', clip_id: again.res?.id ?? null });
+        setSuccess((n) => n + 1);
+        playSfx('pop');
+        react([['praise', 1500]]);
+        await talk('우와, 최고야!');
+        if (t !== run.current) return;
+      }
+      await talk('이제 다음으로 넘어가 볼까?');
+      if (t !== run.current) return;
+      await sleep(300);
     } else {
       // 다르게 말함·옹알이: 실패음·틀림 표시 없이 아바타가 한 번 더 말하고 넘어감
       react([['smile', 1800]]);

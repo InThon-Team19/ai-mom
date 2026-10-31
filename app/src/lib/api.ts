@@ -4,7 +4,7 @@ import { File } from 'expo-file-system';
 import { readAsStringAsync } from 'expo-file-system/legacy';
 
 import { getApiUrl } from './config';
-import { getParentToken, getToken, isParentDevice, setToken } from './session';
+import { getParentToken, getToken, isParentDevice, notifyAuthLost, setToken } from './session';
 import type {
   ActivityEvent,
   AnalysisOut,
@@ -51,6 +51,7 @@ export async function req<T>(path: string, init?: RequestInit): Promise<T> {
       res = await fetch(`${getApiUrl()}${path}`, { ...init, headers });
     }
   }
+  if (res.status === 401 && !(await isParentDevice())) notifyAuthLost(); // 아이 모드: 다시 연결해야 함
   if (!res.ok) throw new Error(`${res.status} ${path}: ${await res.text()}`);
   return res.json() as Promise<T>;
 }

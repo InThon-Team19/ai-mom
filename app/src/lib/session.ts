@@ -51,3 +51,16 @@ export async function restoreParentToken(): Promise<boolean> {
   if (p) await setToken(p);
   return !!p;
 }
+
+/** 아이 모드에서 토큰이 모두 끊김(부모 토큰으로 다시 시도해도 401) → 태블릿 연결 화면으로 안내.
+ *  child/_layout 이 처리기를 등록. 같은 일로 여러 번 불리지 않게 10초에 한 번만 */
+let authLost: (() => void) | null = null;
+let authLostAt = 0;
+export function setAuthLostHandler(fn: (() => void) | null) {
+  authLost = fn;
+}
+export function notifyAuthLost() {
+  if (!authLost || Date.now() - authLostAt < 10000) return;
+  authLostAt = Date.now();
+  authLost();
+}
