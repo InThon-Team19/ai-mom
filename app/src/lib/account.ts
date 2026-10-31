@@ -7,7 +7,7 @@ import { api, req } from '@/lib/api';
 import { setToken } from '@/lib/session';
 import { loadProfile, setProfileFromServer, type Profile } from '@/lib/store';
 
-export type Account = { loginId: string; token?: string; pending?: boolean }; // pending: 서버 가입 전 (기기에만 있음)
+export type Account = { loginId: string; token?: string; childId?: string; pending?: boolean }; // childId: 이 계정의 아이 (서버 기준) // pending: 서버 가입 전 (기기에만 있음)
 
 const KEY = 'aibom.account';
 let current: Account | null | undefined;
@@ -62,7 +62,7 @@ export async function signup(loginId: string, password: string, childId: string)
   const id = loginId.trim().toLowerCase();
   try {
     const r = await api.signup({ login_id: id, password, child_id: childId, profile: { ...(await loadProfile()), onboarded: false } }); // 가입 완료는 1-7 에서 (서버가 PIN·동의를 확인)
-    await save({ loginId: r.login_id, token: r.token });
+    await save({ loginId: r.login_id, token: r.token, childId: r.child_id ?? childId });
     return { ok: true as const, pending: false };
   } catch (e) {
     const msg = authMessage(e);
@@ -74,12 +74,12 @@ export async function signup(loginId: string, password: string, childId: string)
 export async function login(loginId: string, password: string) {
   const r = await api.login({ login_id: loginId.trim().toLowerCase(), password });
   await setProfileFromServer({ ...(r.profile as Partial<Profile>), childId: r.child_id, onboarded: true });
-  await save({ loginId: r.login_id, token: r.token });
+  await save({ loginId: r.login_id, token: r.token, childId: r.child_id });
 }
 
 export async function changePassword(loginId: string, password: string, newPassword: string) {
   const r = await api.changePassword({ login_id: loginId, password, new_password: newPassword });
-  await save({ loginId, token: r.token });
+  await save({ ...(await loadAccount()), loginId, token: r.token });
 }
 
 export async function logoutAccount() {
@@ -91,8 +91,13 @@ export async function logoutAccount() {
 export async function syncAccountProfile(profile: Profile) {
   const a = await loadAccount();
   if (!a?.token) return;
-  await req('/auth/profile', {
+  const view = await req<Partial<Profile>>('/auth/profile', {
     method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${a.token}` },
     body: JSON.stringify(profile),
   });
+  if (!view?.childId) return;
+  // 이 폰의 프로필이 계정의 아이와 다르면(다른 가족 태블릿으로 연결했던 폰 등) 계정 쪽 아이 번호로 맞춤.
+  // 안 맞추면 목소리·입모양 업로드가 다른 아이 번호로 가서 404 로 거절됨
+  if (view.childId !== profile.childId) await setProfileFromServer({ ...view, onboarded: profile.onboarded });
+  if (a.childId !== view.childId) await save({ ...a, childId: view.childId });
 }

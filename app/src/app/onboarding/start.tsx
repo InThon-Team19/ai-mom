@@ -3,7 +3,8 @@
 import { router, type Href } from 'expo-router';
 
 import { loadAccount } from '@/lib/account';
-import { resetLocal, setRole } from '@/lib/store';
+import { api } from '@/lib/api';
+import { loadProfile, resetLocal, setProfileFromServer, setRole, type Profile } from '@/lib/store';
 import { Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -21,6 +22,14 @@ export default function Start() {
       // 새 가입: 이전 버전에서 남은 기기 가입 정보를 비우고 새 아이 ID로 시작 (부모 기기로 표시)
       await resetLocal();
       await setRole('parent');
+    } else {
+      await setRole('parent'); // 부모 계정 토큰으로 되돌림
+      // 이 폰이 다른 가족 태블릿으로 연결됐던 적이 있으면 프로필이 남의 아이일 수 있음 → 계정의 아이로 맞춤
+      const p = await loadProfile();
+      if (a.childId && p.childId !== a.childId) {
+        const server = await api.getProfile(a.childId).catch(() => null);
+        if (server) await setProfileFromServer({ ...(server as Partial<Profile>), childId: a.childId });
+      }
     }
     router.push((a?.token ? '/onboarding/child' : '/onboarding/account') as Href);
   };
