@@ -3,29 +3,31 @@
 > 낮에는 부모 아바타가 아이와 청각·시각·촉각 대화를 하고, 밤에는 부모가 피드백과 입모양 낭독으로 다음날을 갱신합니다.
 
 ## 구조
+기준 문서: **`docs/기획서.md`(최종 v2)**, **`docs/wireframe.md` + `docs/wireframe/*.png`**
 ```
 aibom/
-├─ app/                      # Expo (React Native) — 부모 폰 + 아이 태블릿
+├─ app/                          # Expo SDK 58 — 부모 폰 + 아이 태블릿 (시작 화면에서 기기 용도 선택)
 │  └─ src/
-│     ├─ app/parent/         # 태희: 화면 전체 (민철 와이어프레임 기준)
-│     │                      #   └ voice·mouth·plan-read = 부모 음성/입모양 영상 입력
-│     ├─ app/child/          # 태희: index(시작), talk(아바타 + 아이 영상/음성 입력)
-│     ├─ components/         # 태희: 공용 UI (민철 디자인 반영)
-│     ├─ hooks/              # 태희: 녹음·카메라 훅
-│     └─ lib/                # 민주: api.ts, types.ts / config.ts
-├─ server/                   # FastAPI
+│     ├─ app/onboarding/         # 가입 1-1~1-7 (아이 정보·부모 성향·아바타·목소리·입모양·설정/연결 코드)
+│     ├─ app/parent/             # 부모 앱 탭: 홈 · 리포트 · 피드백 · 내일 계획(낭독)
+│     ├─ app/child/              # 아이 태블릿 3-1~3-8 (연결·놀이·따라 말하기·동화·청각 모드·마무리)
+│     ├─ components/             # ui · Avatar(부모가 꾸민 캐릭터) · RingGauge · FaceTracker(기기 안 얼굴 인식)
+│     ├─ hooks/                  # useReadAloud(낭독) · useSpeak(아바타 말하기) · useVoiceRecorder
+│     ├─ lib/                    # api · store(프로필) · sense(효과음·진동·반응 기록) · config(서버 주소)
+│     └─ content/curriculum.ts   # 1일차 사과·바나나(+동화), 2일차 과자 — 콘텐츠는 출력 담당이 교체
+├─ server/                       # FastAPI
 │  └─ app/
-│     ├─ main.py db.py models.py   # 민주
-│     ├─ routers/            # 민주: children, voice, vision, conversation, evening
-│     ├─ tts/                # 민주: ElevenLabs 목소리 등록·합성
-│     ├─ vision/             # 태희: MediaPipe 입모양(부모·아이)·응시
-│     ├─ voice/              # 태희: STT(부모·아이), 말하기 특성
-│     ├─ agent/              # 충항: 에이전트 흐름·프롬프트, 안전 검사
-│     └─ content/            # 충항: 검증된 학습 범위 데이터
-├─ docs/                     # api.md(민주), data-sources.md(민철)
-└─ scripts/setup-github.sh   # 팀장 1회: repo·권한 설정
+│     ├─ routers/voice.py        # 부모 음성·학습률·특성 분석·코칭, STT, TTS(Fish Audio)
+│     ├─ routers/vision.py       # 입모양 기준값·학습률 (앱이 보낸 수치)
+│     ├─ routers/activity.py     # 아이 반응 기록·하루 요약(세 감각 균형)
+│     ├─ routers/profile.py      # (임시) 프로필·태블릿 연결 — 민주 children API 로 교체 예정
+│     ├─ routers/children·conversation·evening.py  # 민주·충항 자리
+│     ├─ voice/ vision/          # 오디오 특성 · MediaPipe
+│     ├─ agent/  llm.py          # 충항: 에이전트 (LLM = Lablup Token Factory)
+│     └─ tts/fish.py             # Fish Audio 목소리 복제·합성
+├─ docs/                         # 기획서 · 와이어프레임 · api.md · data-sources.md
+└─ scripts/setup-github.sh
 ```
-지금은 **빈 뼈대**: 앱은 화면 이동만, 서버는 `/health`만 동작.
 
 ## 역할
 | 이름 | 역할 | 맡은 곳 |
@@ -35,11 +37,11 @@ aibom/
 | 충항 | **에이전트** (흐름 + 프롬프트 + 안전 검사) | `server/app/agent/`, `server/app/content/` |
 | 민철 (PM) | 와이어프레임·디자인 · 발표 · QA | 와이어프레임, `docs/data-sources.md` |
 
-- 앱 화면 디테일은 **민철 와이어프레임이 나오면 그대로 따라감**. 그 전엔 화면은 Placeholder로 두고 TTS·에이전트·입력 파이프라인 API부터.
-- 민주·충항은 앱 화면을 신경 쓰지 말고 **TTS / 에이전트 서버 작업만**. 화면 붙이기는 태희가 함.
+- 앱 화면은 와이어프레임 21장 기준으로 구현 완료. 민주·충항은 **TTS / 에이전트 서버 작업만**, 화면 연결은 태희가 함.
+- 아바타 대사는 지금 `content/curriculum.ts` 고정 문장 → 충항 에이전트 API 가 생기면 교체.
 
 ## 실행
-**서버** (Python 3.11 또는 3.12 — MediaPipe 호환. 첫 실행 때 얼굴 모델을 `server/models/`에 자동 다운로드)
+**서버** (Python 3.11 또는 3.12. `.env`에 키: `GROQ_API_KEY`(무료 STT) · `FISH_API_KEY`(엄마 목소리) · `ANTHROPIC_*`(Token Factory). 키가 없어도 앱은 동작 — STT 없이 칭찬, 기기 기본 음성)
 ```bash
 cd server
 python3.11 -m venv .venv && source .venv/bin/activate
