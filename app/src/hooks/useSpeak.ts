@@ -17,11 +17,14 @@ export function useSpeak(childId: string | undefined) {
   const rate = useRef(1);
   const gen = useRef(0); // 말하기 차례 번호: stop·새 speak 뒤에 늦게 도착한 TTS·끝남 알림은 버림
   const watchdog = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // 서버가 준 소리 크기 그래프(0.04초 간격)로 입 움직임 — 재생 위치에 맞춰서 목소리와 정확히 맞춤
+  const env = useRef<{ v: number[]; ms: number } | null>(null);
+  const envTimer = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // 재생 중 PCM 음량 → 입 벌림 (0~1)
   useAudioSampleListener(player, (s) => {
     const f = s.channels[0]?.frames ?? [];
-    if (!f.length) return;
+    if (!f.length || env.current) return; // 소리 크기 그래프가 있으면 그걸 씀
     gotSamples.current = true;
     let sum = 0;
     for (const v of f) sum += v * v;
@@ -40,8 +43,21 @@ export function useSpeak(childId: string | undefined) {
   const stopFake = useCallback(() => {
     if (fake.current) clearInterval(fake.current);
     fake.current = null;
+    if (envTimer.current) clearInterval(envTimer.current);
+    envTimer.current = null;
     setMouth(0);
   }, []);
+
+  /** 실제 소리가 나오기 시작할 때만 입을 움직임: 그래프가 있으면 재생 위치대로, 없으면 기기 음량 → 가짜 리듬 */
+  const startMouth = useCallback(() => {
+    const e = env.current;
+    if (!e) return startFake();
+    if (envTimer.current) return;
+    envTimer.current = setInterval(() => {
+      const i = Math.floor((player.currentTime * 1000) / e.ms);
+      setMouth(player.playing ? Math.min(1, (e.v[i] ?? 0) * 0.9 + 0.05 * Number((e.v[i] ?? 0) > 0)) : 0);
+    }, 40);
+  }, [player, startFake]);
 
   const finish = useCallback(() => {
     if (watchdog.current) clearTimeout(watchdog.current);
@@ -55,10 +71,11 @@ export function useSpeak(childId: string | undefined) {
   // 재생이 끝나면 finish (상태 이벤트 구독)
   useEffect(() => {
     const sub = player.addListener('playbackStatusUpdate', (st) => {
+      if (st.playing && st.currentTime > 0 && done.current) startMouth(); // 소리가 실제로 나기 시작함
       if (st.didJustFinish) finish();
     });
     return () => sub.remove();
-  }, [player, finish]);
+  }, [player, finish, startMouth]);
 
   useEffect(() => () => stopFake(), [stopFake]);
 
@@ -92,11 +109,12 @@ export function useSpeak(childId: string | undefined) {
         };
         setSpeaking(true);
         gotSamples.current = false;
-        startFake();
+        env.current = null;
+        stopFake(); // 목소리가 오기 전에는 입을 닫고 기다림 (소리 없이 입만 움직이지 않게)
         try {
           if (!childId) throw new Error('no child');
           // 한 번 실패해도 바로 기기 음성(로봇 목소리)으로 바꾸지 않고 한 번 더 시도
-          const { url } = await api.tts(childId, text).catch(async () => {
+          const { url, env: v, env_ms } = await api.tts(childId, text).catch(async () => {
             await new Promise((r) => setTimeout(r, 400));
             if (my !== gen.current) throw new Error('stale');
             return api.tts(childId, text);
@@ -104,9 +122,11 @@ export function useSpeak(childId: string | undefined) {
           if (my !== gen.current) return; // 기다리는 사이 멈췄거나 다음 문장으로 넘어감 → 늦게 온 소리는 틀지 않음
           await setAudioModeAsync({ playsInSilentMode: true, allowsRecording: false });
           if (my !== gen.current) return;
+          env.current = v && v.length ? { v, ms: env_ms || 40 } : null;
           player.replace({ uri: url });
           player.setPlaybackRate(rate.current);
           player.play();
+          if (env.current) startMouth(); // 0.04초마다 실제 재생 위치를 보고 입을 움직임 (재생 전엔 닫힘)
           guard();
           setUsingFallback(false);
         } catch {
@@ -117,13 +137,16 @@ export function useSpeak(childId: string | undefined) {
             language: 'ko-KR',
             rate: 0.9 * rate.current,
             pitch: 1.1,
+            onStart: () => {
+              if (my === gen.current) startFake(); // 기기 음성은 소리 크기를 못 받아 리듬으로
+            },
             onDone: onEnd,
             onStopped: onEnd,
             onError: onEnd,
           });
         }
       }),
-    [childId, player, startFake, finish],
+    [childId, player, startFake, stopFake, startMouth, finish],
   );
 
   const stop = useCallback(() => {

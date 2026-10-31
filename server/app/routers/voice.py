@@ -2,6 +2,7 @@
 import base64
 import binascii
 import hashlib
+import numpy as np
 import re
 import json
 import math
@@ -361,6 +362,41 @@ class TtsIn(BaseModel):
 
 class TtsOut(BaseModel):
     url: str
+    # 입 모양 맞추기: 0.04초마다 소리 크기(0~1). 앱이 재생 위치에 맞춰 아바타 입을 벌림 (기기가 소리 크기를 못 읽어도 정확히 맞음)
+    env: list[float] | None = None
+    env_ms: int = 40
+
+
+ENV_MS = 40
+
+
+def _mouth_envelope(child_id: str, key: str, mp3: Path) -> list[float] | None:
+    """TTS mp3 -> 40ms 간격 소리 크기. 비공개 폴더에 캐시 (공개 /static 에는 mp3 만)"""
+    cache = child_dir(child_id, "tts_env") / f"{key}.json"
+    if cache.exists():
+        try:
+            return json.loads(cache.read_text(encoding="utf-8"))
+        except ValueError:
+            pass
+    wav = tmp_path(".wav")
+    try:
+        to_wav(mp3, wav)
+        pcm, sr = read_wav(wav)
+    except Exception:
+        return None
+    finally:
+        wav.unlink(missing_ok=True)
+    hop = max(1, int(sr * ENV_MS / 1000))
+    n = len(pcm) // hop
+    if n == 0:
+        return None
+    rms = np.sqrt(np.mean(pcm[: n * hop].reshape(n, hop) ** 2, axis=1))
+    ref = float(np.percentile(rms, 95)) or 1.0
+    env = np.clip(rms / ref, 0, 1)
+    env[env < 0.08] = 0.0  # 숨소리·잡음은 입을 닫음
+    out = [round(float(v), 2) for v in env]
+    cache.write_text(json.dumps(out), encoding="utf-8")
+    return out
 
 
 def _reference_samples(child_id: str, n: int = 6) -> list[dict]:  # Fish 권장 10~30초 → 6문장(약 10초+)
@@ -415,7 +451,7 @@ def tts(body: TtsIn):
         except httpx.RequestError:
             out.unlink(missing_ok=True)
             raise HTTPException(502, "Fish Audio에 연결할 수 없어요. 잠시 후 다시 시도해 주세요")
-    return TtsOut(url=public_url(out))
+    return TtsOut(url=public_url(out), env=_mouth_envelope(body.child_id, key, out), env_ms=ENV_MS)
 
 
 # ---------- 아이 말소리 클립 (소음 감지로 자동 녹음 → 부모가 나중에 들음) — 담당: 태희 ----------

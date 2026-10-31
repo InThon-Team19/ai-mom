@@ -117,7 +117,7 @@
 ## TTS (민주, Fish Audio 초안 태희) — `routers/voice.py`, `tts/fish.py`
 | POST | `/voice/register` | `child_id` | `model_id, state, sample_count` | 품질 좋은 최근 20문장 + 대본으로 목소리 등록/갱신 |
 |---|---|---|---|---|
-| POST | `/voice/tts` | JSON `{child_id, text}` | `url`(mp3, 공개 /static) | 아바타 말하기 (실패 시 앱이 기기 TTS로 대체) |
+| POST | `/voice/tts` | JSON `{child_id, text}` | `url`(mp3, 공개 /static), `env?`(0.04초마다 소리 크기 0~1, 입 모양 맞추기), `env_ms` | 아바타 말하기 (실패 시 앱이 기기 TTS로 대체). 앱은 재생 위치에 맞춰 `env`로 입을 벌림 |
 
 - 저장: 부모 음성 `server/data/children/<id>/parent/voice/<kind>/sample_NNN.{wav,json}`, 입모양 `…/parent/mouth/<kind>/profile_NNN.json`, 아이 반응 `…/activity/<날짜>.jsonl` (모두 비공개)
 - **민주**: 목소리 등록 원본은 `routers/voice.py`의 `samples(child_id)` (wav + 대본 text + 품질)

@@ -156,7 +156,8 @@ export const api = {
   registerVoice: (childId: string) =>
     form<{ model_id: string; state: string; sample_count: number }>('/voice/register', { child_id: childId }),
   // 서버가 멈춰도 아바타 말이 계속 기다리지 않게 20초 제한 (넘으면 기기 음성으로 대신 말함)
-  tts: (childId: string, text: string) => withTimeout(req<{ url: string }>('/voice/tts', json('POST', { child_id: childId, text })), 20000, 'TTS'),
+  // env: 0.04초마다 소리 크기(0~1) → 아바타 입을 재생 위치에 맞춤
+  tts: (childId: string, text: string) => withTimeout(req<{ url: string; env?: number[] | null; env_ms?: number }>('/voice/tts', json('POST', { child_id: childId, text })), 20000, 'TTS'),
 
   // 아이 반응 기록 · 하루 요약 (리포트 원자료)
   logActivity: (childId: string, events: ActivityEvent[]) =>
