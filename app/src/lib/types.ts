@@ -126,6 +126,7 @@ export type Summary = {
   expressions?: Record<string, number>; // 표정 변화 {smile, surprise, frown}
   voices?: number; // 소리 반응·자동 녹음된 말소리 수
   listen_s?: number; // 부모 목소리 들은 시간
+  moods?: Record<string, number>; // 사물별 아이 상태 {engaged, calm, distracted, overloaded}
 };
 
 // 아이 말소리 클립 (소음 감지 자동 녹음 → 부모가 나중에 들음)

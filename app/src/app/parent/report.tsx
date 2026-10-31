@@ -1,15 +1,19 @@
-// 부모 앱 2-2 리포트: 대화 기록 대신 요약 (주제 · 따라 말한 단어 · 집중도 · 감각 균형 · 언어 연계 팁 · 확인 필요) — 담당: 태희 (민철 와이어프레임 기준)
+// 부모 앱 2-2 리포트: 감각 발달(시각·청각·촉각 변화·무리 신호·제안)을 맨 위에, 그 아래 단어 상태 · 아이 목소리 · 따라 말한 단어 · 감각 균형 · 확인 필요 — 담당: 태희 (민철 와이어프레임 기준)
 import { router, useFocusEffect, type Href } from 'expo-router';
 import { useCallback, useState, type ReactNode } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { ClipList } from '@/components/ClipList';
+import { SensoryCard } from '@/components/SensoryCard';
 import { Button, Card, H1 } from '@/components/ui';
 import { ITEMS, dayOf, type Item } from '@/content/curriculum';
-import { headline, wordStatus } from '@/lib/progress';
+import { useDevice } from '@/lib/layout';
+import { headline, today as todayYmd, wordStatus } from '@/lib/progress';
+import { loadSensory, type SensoryReport } from '@/lib/sensory';
 import { api } from '@/lib/api';
 import { useProfile } from '@/lib/store';
-import type { Summary } from '@/lib/types';
+import type { ChildClip, Summary } from '@/lib/types';
 import { C, R, T } from '@/theme';
 
 const SENSES = [
@@ -51,21 +55,35 @@ export default function Report() {
   const profile = useProfile();
   const childId = profile?.childId;
   const [summary, setSummary] = useState<Summary | null>(null);
+  const [sensory, setSensory] = useState<SensoryReport | null>(null);
   const [state, setState] = useState<'loading' | 'ok' | 'fail'>('loading');
+  const [clips, setClips] = useState<ChildClip[]>([]);
+  const [clipState, setClipState] = useState<'loading' | 'ok' | 'fail'>('loading');
+  const { frame } = useDevice();
 
   useFocusEffect(
     useCallback(() => {
       if (!childId) return;
       let alive = true;
-      api
-        .summary(childId)
-        .then((s) => {
+      loadSensory(childId)
+        .then(({ today: s, report }) => {
           if (!alive) return;
           setSummary(s);
+          setSensory(report);
           setState('ok');
         })
         .catch(() => {
           if (alive) setState('fail');
+        });
+      api
+        .childClips(childId, todayYmd())
+        .then((cs) => {
+          if (!alive) return;
+          setClips([...cs].sort((a, b) => b.at - a.at));
+          setClipState('ok');
+        })
+        .catch(() => {
+          if (alive) setClipState('fail');
         });
       return () => {
         alive = false;
@@ -98,8 +116,11 @@ export default function Report() {
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: C.bg }}>
-      <ScrollView contentContainerStyle={{ padding: 20, gap: 14 }}>
+      <ScrollView contentContainerStyle={[{ padding: 20, gap: 14 }, frame]}>
         <H1>오늘의 리포트</H1>
+
+        {/* 해커톤 주제 '감각': 오늘 감각 반응이 어떻게 달라졌는지가 먼저, 커리큘럼은 그 아래 */}
+        <SensoryCard report={sensory} loading={state === 'loading'} failed={state === 'fail'} />
 
         <Card soft style={{ gap: 10 }}>
           <Text style={{ fontSize: 13, fontWeight: '700', color: C.link }}>{today.day}일차</Text>
@@ -129,6 +150,12 @@ export default function Report() {
             </View>
           )}
         </Card>
+
+        <Box>
+          <Title>아이 목소리</Title>
+          {childId ? <ClipList childId={childId} clips={clips} state={clipState} /> : <Text style={T.sub}>오늘 녹음된 목소리가 없어요</Text>}
+          {clips.length > 0 && <Text style={T.small}>아이가 말한 순간 자동으로 녹음돼요. ✓는 따라 말한 단어와 비슷했다는 뜻이에요.</Text>}
+        </Box>
 
         {!hasData || !s ? (
           <Box>

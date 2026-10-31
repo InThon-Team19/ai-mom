@@ -80,6 +80,7 @@ class Summary(BaseModel):
     expressions: dict[str, int] = {}  # 표정 변화 횟수 {smile, surprise, frown, ...}
     voices: int = 0                    # 소리 반응·자동 녹음된 말소리 수
     listen_s: float = 0.0              # 부모 목소리 들은 시간
+    moods: dict[str, int] = {}         # 사물별 아이 상태 {engaged, calm, distracted, overloaded} (앱이 감각 반응으로 추정)
 
 
 def summarize(events: list[dict], day: str) -> Summary:
@@ -92,7 +93,8 @@ def summarize(events: list[dict], day: str) -> Summary:
     smiles = len(by("smile"))
     rt = [e["data"]["reaction_ms"] for e in touches if e["data"].get("reaction_ms")]
     # 감각 활동량: 시각 = 응시 10초당 1 + 웃음 + 입모양 따라 하기, 청각 = 따라 말하기 + 소리 반응 + 듣기 10초당 1, 촉각 = 터치
-    exprs = Counter(e["data"].get("kind", "") for e in by("expression"))
+    exprs = Counter(e["data"].get("kind", "") for e in by("expression") if e["data"].get("kind") != "state")
+    moods = Counter(e["data"].get("mood", "") for e in by("expression") if e["data"].get("kind") == "state")
     vis = gaze_s / 10 + smiles + len(by("imitate")) + sum(exprs.values())
     aud = len(repeats) + len(by("voice")) + listen_s / 10
     tch = len(touches)
@@ -118,6 +120,7 @@ def summarize(events: list[dict], day: str) -> Summary:
         expressions={k: v for k, v in exprs.items() if k},
         voices=len(by("voice")),
         listen_s=round(listen_s, 1),
+        moods={k: v for k, v in moods.items() if k},
     )
 
 

@@ -1,13 +1,16 @@
-// 부모 앱 2-1 홈: 오늘 밤 할 일 · 오늘/내일 주제 · 확인 필요 · 아바타 학습률 — 담당: 태희 (민철 와이어프레임 기준)
+// 부모 앱 2-1 홈: 오늘 일차 · 감각 발달 한 줄(시각/청각/촉각) · 무리 신호 · 오늘 밤 할 일 · 오늘/내일 주제 · 확인 필요 · 아바타 학습률 — 담당: 태희 (민철 와이어프레임 기준)
 import { router, useFocusEffect, type Href } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { RingGauge } from '@/components/RingGauge';
+import { SensoryChips, StrainCard } from '@/components/SensoryCard';
 import { Button, Card, H1 } from '@/components/ui';
 import { DAYS, dayOf } from '@/content/curriculum';
+import { useDevice } from '@/lib/layout';
 import { headline, wordStatus } from '@/lib/progress';
+import { loadSensory, type SensoryReport } from '@/lib/sensory';
 import { api } from '@/lib/api';
 import { useProfile } from '@/lib/store';
 import type { Gauge, Summary } from '@/lib/types';
@@ -17,7 +20,9 @@ export default function ParentHome() {
   const profile = useProfile();
   const childId = profile?.childId;
   const [summary, setSummary] = useState<Summary | null>(null);
+  const [sensory, setSensory] = useState<SensoryReport | null>(null);
   const [linked, setLinked] = useState<boolean | null>(null); // null = 확인 중
+  const { frame } = useDevice();
   const [voice, setVoice] = useState<Gauge | null>(null);
   const [mouth, setMouth] = useState<Gauge | null>(null);
 
@@ -26,16 +31,17 @@ export default function ParentHome() {
     useCallback(() => {
       if (!childId) return;
       let alive = true;
-      api
-        .summary(childId)
-        .then((s) => {
+      loadSensory(childId)
+        .then(({ today: s, report }) => {
           if (!alive) return;
           setSummary(s);
+          setSensory(report);
           setLinked(true);
         })
         .catch(() => {
           if (!alive) return;
           setSummary(null);
+          setSensory(null);
           setLinked(false);
         });
       api.voiceGauge(childId).then((g) => { if (alive) setVoice(g); }).catch(() => {});
@@ -59,7 +65,7 @@ export default function ParentHome() {
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: C.bg }}>
-      <ScrollView contentContainerStyle={{ padding: 20, gap: 14 }}>
+      <ScrollView contentContainerStyle={[{ padding: 20, gap: 14 }, frame]}>
         <View style={{ gap: 6 }}>
           <H1>{name}의 오늘</H1>
           {/* 기획 2-5: 맨 위 정보는 오늘의 일차와 주제 한 줄 */}
@@ -74,6 +80,15 @@ export default function ParentHome() {
             </Text>
           </View>
         </View>
+
+        {/* 감각 발달 한 줄 + 시각/청각/촉각 상태 (자세한 건 리포트) */}
+        {sensory && (
+          <Pressable onPress={() => go('report')} style={{ gap: 8 }}>
+            <Text style={{ fontSize: 16, fontWeight: '700', color: C.text }}>{sensory.overall}</Text>
+            {sensory.hasData && <SensoryChips report={sensory} />}
+          </Pressable>
+        )}
+        {sensory && <StrainCard strain={sensory.strain} onPress={() => go('report')} />}
 
         <Card soft style={{ gap: 10 }}>
           <Text style={{ fontSize: 14, fontWeight: '700', color: C.link }}>오늘 밤 할 일</Text>
