@@ -198,9 +198,9 @@ export default function ParentHome() {
           <Pressable
             onPress={() => go('/parent/report')}
             accessibilityRole="button"
-            style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 10, paddingHorizontal: 14, borderRadius: 16, borderWidth: 2, borderColor: C.warn, backgroundColor: C.warnSoft }}>
-            <Text style={{ flex: 1, fontSize: 14, fontWeight: '700', color: C.warn }} numberOfLines={2}>
-              우리 아이 확인해 줄 점 {sensory.strain.length}가지 · {sensory.strain[0]}
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 10, paddingHorizontal: 14, borderRadius: 16, backgroundColor: C.primarySoft }}>
+            <Text style={{ flex: 1, fontSize: 14, fontWeight: '700', color: C.text }} numberOfLines={2}>
+              우리 아이 확인해 줄 점이 있어요 · {sensory.strain[0]}
             </Text>
             <Text style={{ fontSize: 22, color: C.sub }}>›</Text>
           </Pressable>

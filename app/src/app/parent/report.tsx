@@ -197,8 +197,8 @@ export default function Report() {
                     <Text style={T.small}>{sensory.historyDays ? `지난 ${sensory.historyDays}일 평균과 비교했어요` : '비교할 지난 기록이 아직 없어요'}</Text>
                   )}
                   {sensory.strain.map((t) => (
-                    <Text key={t} style={{ fontSize: 13, fontWeight: '700', color: C.warn }}>
-                      ⚠ {t}
+                    <Text key={t} style={{ fontSize: 13, fontWeight: '700', color: C.text }}>
+                      · {t}
                     </Text>
                   ))}
                   {sensory.suggestions[0] && <Text style={[T.small, { color: C.text }]}>내일 해볼 만한 것 · {sensory.suggestions[0]}</Text>}
