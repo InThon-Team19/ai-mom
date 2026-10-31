@@ -5,6 +5,7 @@ import hashlib
 import json
 import math
 import shutil
+from uuid import uuid4
 from pathlib import Path
 
 import httpx
@@ -103,8 +104,7 @@ def _save_parent_sample(child_id: str, text: str, kind: str, src: Path) -> Paren
     except ValueError:
         raise HTTPException(400, "child_id 형식 오류")
     before = voice_gauge(child_id).progress
-    n = len(list(out.glob("sample_*.json")))
-    wav = out / f"sample_{n:03d}.wav"
+    wav = out / f"sample_{uuid4().hex}.wav"
     try:
         to_wav(src, wav)
     except Exception:
@@ -323,6 +323,8 @@ def register(child_id: str = Form(...)):
         raise HTTPException(503, str(e))
     except httpx.HTTPStatusError as e:
         raise HTTPException(502, f"Fish Audio 오류: {e.response.text[:200]}")
+    except httpx.RequestError:
+        raise HTTPException(502, "Fish Audio에 연결할 수 없어요. 잠시 후 다시 시도해 주세요")
     _voice_id_file(child_id).write_text(res["_id"], encoding="utf-8")
     return VoiceRegisterOut(model_id=res["_id"], state=res.get("state", ""), sample_count=len(ss))
 
@@ -355,4 +357,6 @@ def tts(body: TtsIn):
             raise HTTPException(503, str(e))
         except httpx.HTTPStatusError as e:
             raise HTTPException(502, f"Fish Audio 오류: {e.response.text[:200]}")
+        except httpx.RequestError:
+            raise HTTPException(502, "Fish Audio에 연결할 수 없어요. 잠시 후 다시 시도해 주세요")
     return TtsOut(url=public_url(out))

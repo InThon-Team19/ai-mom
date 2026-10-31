@@ -5,6 +5,9 @@
 
 # python
 server/.venv/
+server/.tools/
+server/.uv-cache/
+server/.python/
 __pycache__/
 *.pyc
 server/*.db

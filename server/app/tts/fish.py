@@ -25,12 +25,10 @@ def register_voice(title: str, wavs: list[Path], texts: list[str] | None = None)
     if not wavs:
         raise ValueError("목소리 샘플이 없음")
     files = [("voices", (p.name, p.read_bytes(), "audio/wav")) for p in wavs[:20]]
-    data: list[tuple[str, str]] = [
-        ("type", "tts"), ("title", title), ("train_mode", "fast"),
-        ("visibility", "private"), ("enhance_audio_quality", "true"),
-    ]
-    for t in (texts or [])[:20]:
-        data.append(("texts", t))
+    data = {"type": "tts", "title": title, "train_mode": "fast",
+            "visibility": "private", "enhance_audio_quality": "true"}
+    if texts:
+        data["texts"] = texts[:20]
     res = httpx.post(f"{API}/model", headers={"Authorization": f"Bearer {_key()}"},
                      data=data, files=files, timeout=120)
     res.raise_for_status()

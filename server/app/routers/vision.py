@@ -2,6 +2,7 @@
 import json
 import math
 import shutil
+from uuid import uuid4
 from pathlib import Path
 
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
@@ -84,8 +85,7 @@ def _save_track(child_id: str, kind: str, text: str, track: list[dict]) -> Mouth
         raise HTTPException(400, "child_id 형식 오류")
     before = mouth_gauge(child_id).progress
     prof = profile(track)
-    n = len(list(d.glob("profile_*.json")))
-    (d / f"profile_{n:03d}.json").write_text(json.dumps({**prof, "text": text}, ensure_ascii=False), encoding="utf-8")
+    (d / f"profile_{uuid4().hex}.json").write_text(json.dumps({**prof, "text": text}, ensure_ascii=False), encoding="utf-8")
     g = mouth_gauge(child_id)
     ok = prof["face_ratio"] >= 0.6
     return MouthTrackOut(ok=ok, profile=MouthProfile(**prof), gauge=g, gained=round(g.progress - before, 3),

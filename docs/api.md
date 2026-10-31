@@ -1,5 +1,74 @@
 # API 명세 (담당: 민주)
 
+## 영속 백엔드 `/api` — 2026-10-31
+
+현재 구현은 `server/app/routers/backend.py`, 입력 계약은 `server/app/schemas.py`, DB는 `server/app/models.py`다. 실행과 흐름 예시는 [server/README.md](../server/README.md)를 따른다. `/docs`의 OpenAPI가 필드·형식·필수값의 전체 명세다. 모든 요청/응답 필드는 **snake_case**다.
+
+인증: `Authorization: Bearer <access_token>`. 부모 토큰은 7일, 기기 토큰은 30일. 로그아웃/기기 해제 후 즉시 거부하며 원본 토큰과 비밀번호는 저장하지 않는다. 부모와 태블릿 API의 권한을 분리한다. 타인 소유 ID는 404다.
+
+| 권한 | 메서드·경로 (`/api` 기준) | 입력·동작 |
+|---|---|---|
+| 공개 | `POST /auth/signup` | `email`, `password`(10~128자), `display_name`; 토큰과 부모 반환 |
+| 공개 | `POST /auth/login` | `email`, `password`; 토큰 반환 |
+| 공통 | `POST /auth/logout` | 현재 토큰 철회 |
+| 부모 | `GET /me` | 비밀번호 제외 부모 정보 |
+| 공개 | `GET /ui-options`, `GET /recording-prompts` | 선택값·녹음 예문 |
+| 부모 | `POST /children`, `GET /children`, `GET /children/{id}` | 생성: `nickname`, `birth_month`(YYYY-MM), `speech_level?`, `interests?` |
+| 부모 | `POST /personas`, `GET /personas` | `parent_title?`, `speaking_style?`, `english_enabled?`, `education_goals?`, `avatar?` |
+| 부모 | `POST /personas/{id}/confirm` | 페르소나 확정 |
+| 부모 | `PUT /children/{id}/consents` | `parent_biometrics`, `child_signals`, `policy_version: demo-v1`; 변경 이력 저장 |
+| 부모 | `PUT /children/{id}/settings` | `haptics_enabled`, `daily_limit_minutes`(1~120), `window_start`, `window_end`(HH:mm). 기본값은 OpenAPI 참고 |
+| 부모 | `GET /children/{id}/onboarding?persona_id=` | 가입 체크리스트와 `ready` |
+| 부모 | `POST /children/{id}/samples/audio` | multipart: `file`, `persona_id`, `text`, `purpose?`, `plan_id?`. 20MB 제한, 음성 품질 검사 |
+| 부모 | `POST /children/{id}/samples/mouth` | JSON: `persona_id`, `text?`, `track:[{t,open,width,face?}]`, `purpose?`, `plan_id?`. 영상 대신 수치 저장 |
+| 부모 | `GET /children/{id}/training-progress?persona_id=` | 샘플 등록량. 모델 정확도가 아님 |
+| 부모 | `GET /children/{id}/voice-analysis?persona_id=` | 부모 음성 특성·안내 |
+| 부모 | `GET /children/{id}/coaching?persona_id=` | 가입 기준 대비 낭독 코칭 |
+| 부모 | `POST /children/{id}/voice/register?persona_id=` | 실제 Fish Audio 모델 등록. `FISH_API_KEY` 필요 |
+| 부모 | `POST /children/{id}/pairing-codes` | `persona_id`; 5분·1회용 6자리 코드 |
+| 공개 | `POST /tablet/pair` | `code`, `label?`; 기기 토큰·기기 반환. IP당 분당 5회 |
+| 부모 | `GET /devices`, `DELETE /devices/{id}` | 기기 목록·연결 해제 |
+| 태블릿 | `GET /tablet/context` | 기기·아이·페르소나·오늘 계획·체크리스트 |
+| 공통 | `GET /learning-content` | 내부 시연 자료: 1일차 사과·바나나, 2일차 과자 |
+| 부모 | `POST /children/{id}/plans` | `date`, `persona_id`, `day_number`(1/2), `feedback_id?` |
+| 부모 | `GET /plans/{id}` | 계획·자료 ID·낭독 대본 |
+| 부모 | `POST /plans/{id}/reading` | `audio_sample_id`, `mouth_sample_id`; 같은 계획·아이·페르소나의 실제 등록 샘플 검사 |
+| 태블릿 | `POST /tablet/sessions` | `plan_id`, `mode?`; 세션과 첫 발화. 오늘·동의·낭독·사용 시간 검사 |
+| 태블릿 | `POST /tablet/sessions/{id}/messages` | `text`; 자료 기반 응답과 `source_ids`, `engine`, 세션 상태 |
+| 태블릿 | `POST /tablet/sessions/{id}/events` | `content_id`, `sense`, `action`, `reaction_ms?` |
+| 태블릿 | `PATCH /tablet/sessions/{id}` | `mode: multisensory/audio_only` |
+| 태블릿 | `POST /tablet/sessions/{id}/end` | 종료. 반복 호출 가능 |
+| 태블릿 | `POST /tablet/sessions/{id}/stt` | multipart `file`; 실제 STT. 임시 파일 삭제 |
+| 태블릿 | `POST /tablet/sessions/{id}/turn` | multipart `file`; STT → 자료 기반 응답. 무음은 `heard:false` |
+| 태블릿 | `POST /tablet/sessions/{id}/messages/{message_id}/tts` | 저장된 서버 발화만 TTS 합성. 임의 텍스트 합성 불가 |
+| 태블릿 | `POST /tablet/sessions/{id}/frame` | multipart `file`; 프레임 분석 후 저장하지 않음 |
+| 태블릿 | `GET /tablet/mouth-profile` | 연결한 페르소나의 입모양 기준값 |
+| 부모 | `GET /children/{id}/home?date=&persona_id=` | 홈 요약과 저녁 할 일 |
+| 부모 | `GET /children/{id}/report?date=&period=day/week` | 지정일 또는 최근 7일 집계 |
+| 부모 | `GET /children/{id}/review?date=` | 부모 확인 항목 |
+| 부모 | `PATCH /reviews/{id}` | `status: reviewed` |
+| 부모 | `GET /children/{id}/timeline?date=` | 세션 시각·상태와 확인 항목. 전체 대화 원문 제외 |
+| 부모 | `POST /children/{id}/evening-review` | `date`; 같은 날짜 반복 호출 가능 |
+| 부모 | `POST /children/{id}/feedback` | `for_date`, `concerns?`, `new_words?`; `too_fast`는 다음 계획 slow |
+
+### 처리 규칙
+
+- 음성·입모양 등록에는 두 동의가 필요하다. `purpose`는 `onboarding` 또는 `night_reading`; 후자는 `plan_id` 필수다. 낭독 접수는 `required → submitted`이며 모델 학습 완료를 뜻하지 않는다.
+- 부모·아이·페르소나·계획·기기·샘플의 소유 범위를 검사한다. 샘플과 TTS 모델은 아이+페르소나 조합으로 분리한다.
+- 태블릿은 전체 가입 체크리스트와 현재 동의를 매 요청 검사한다. 철회/기기 해제 시 진행 세션을 종료한다.
+- 대화 시간대는 서울 시각, 계획 날짜는 서울 날짜다. 같은 날의 시작/종료 시간만 지원하며 하루 상한은 서버가 수락한 세션 경과 시간 합계다. 새 세션/메시지/이벤트에서 제한한다. 단말의 자동 재생 중단은 앱이 담당한다.
+- 아이별 동시 활성 세션은 하나. 계획 `(child_id,date)`, 계획 순서 `(plan_id,position)`, 발화 순서 `(session_id,sequence)`, 저녁 확인 `(child_id,date)`, 피드백 적용은 DB 유일성 제약으로 보호한다.
+- 피드백은 같은 아이의 바로 다음날 계획에 한 번만 적용한다. 계획과 자료 연결은 단일 트랜잭션이다. 다른 피드백 선택지는 기록만 한다.
+- 청각 모드에서 시각·촉각 이벤트를 거부한다. `haptics_enabled:false`는 단말 진동 금지이며 실제 터치 반응 기록 자체는 허용한다.
+- 아이 발화 원문은 DB에 저장하지 않는다. 범위 밖 질문은 안내·부모 확인 항목을 남긴다. 위험 표현은 가까운 어른에게 연결하는 문구와 함께 세션을 종료한다. 키워드 규칙은 의료/위험 판정 시스템이 아니다.
+- LLM 키가 없으면 자료 기반 결정형 응답. 키가 있으면 LLM은 제공 자료 ID와 허용 칭찬 유형만 고른다. 출력은 서버 문장으로 재구성하며 외부 LLM에 아이 원문을 보내지 않는다. 실패 시 `engine: curriculum_fallback`.
+- 감각 비율은 클라이언트가 보낸 이벤트 개수 비율이고 없으면 null. `practiced_words`는 따라 말하기 이벤트의 자료 단어이며 성공/습득 판정이 아니다. 발달 점수·학습률은 null. 세션 시간은 계획 날짜에 귀속하며 자정으로 나누지 않는다.
+- 401 인증 오류, 403 역할 오류, 404 소유 항목 없음, 409 준비/상태/중복 오류, 413 파일 크기 초과, 422 입력 오류, 429 요청 제한, 502 외부 API 오류, 503 키 미설정/일시적 DB 잠금.
+
+## 기존 임시 API (호환 시연용)
+
+아래는 기존 앱이 호출하던 인증 없는 임시 경로다. **기본적으로 등록되지 않는다.** 격리된 시연 환경에서만 `ALLOW_LEGACY_API=true`로 켤 수 있다. 현재 앱 화면·`store.ts`는 아직 이 경로를 사용하므로 새 `/api` 토큰 흐름으로 전환해야 한다. 앱 화면 전환은 이 백엔드 변경에 포함하지 않았다.
+
 > 16:30까지 확정. 바꾸면 `server/app/models.py` + `app/src/lib/types.ts` 같이 수정하고 단톡 공지.
 > 서버 실행 후 `http://<서버>:8000/docs` 에서 바로 테스트 가능.
 

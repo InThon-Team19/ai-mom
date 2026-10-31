@@ -26,7 +26,7 @@ def client() -> anthropic.Anthropic:
     if _client is None:
         if not os.getenv("ANTHROPIC_AUTH_TOKEN") and not os.getenv("ANTHROPIC_API_KEY"):
             raise RuntimeError("ANTHROPIC_AUTH_TOKEN 이 server/.env 에 없음")
-        _client = anthropic.Anthropic(timeout=60.0, max_retries=2)
+        _client = anthropic.Anthropic(timeout=15.0, max_retries=0)
     return _client
 
 
