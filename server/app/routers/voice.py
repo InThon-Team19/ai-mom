@@ -300,7 +300,7 @@ def stt_b64(body: SttB64In):
 # ---------- TTS: 부모 목소리 복제·합성 (민주, Fish Audio 초안 태희) ----------
 class VoiceRegisterOut(BaseModel):
     model_id: str
-    state: str  # created | training | trained | failed
+    state: str  # created | training | trained | failed | inline(무료 등급: 즉석 복제)
     sample_count: int
 
 
@@ -322,6 +322,9 @@ def register(child_id: str = Form(...)):
     except RuntimeError as e:
         raise HTTPException(503, str(e))
     except httpx.HTTPStatusError as e:
+        if e.response.status_code in (402, 403):
+            # 무료 등급은 목소리 모델을 만들 수 없음(한도 0) → 오류가 아니라 TTS 가 즉석 복제(녹음 참고)로 엄마 목소리를 냄
+            return VoiceRegisterOut(model_id="", state="inline", sample_count=len(ss))
         raise HTTPException(502, f"Fish Audio 오류: {e.response.text[:200]}")
     except httpx.RequestError:
         raise HTTPException(502, "Fish Audio에 연결할 수 없어요. 잠시 후 다시 시도해 주세요")
