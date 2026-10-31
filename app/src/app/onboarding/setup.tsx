@@ -2,7 +2,7 @@
 // 페르소나 확정 카드(기획 2-1-1 ⑦) + 부모 PIN + 데이터 동의 2개(필수), 대화 시간대·하루 사용 상한, 진동 사용, 태블릿 연결 코드
 import { router } from 'expo-router';
 import { useState, type ReactNode } from 'react';
-import { Pressable, Text, TextInput, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 
 import { PersonaCard } from '@/components/PersonaCard';
 import { Button, OnboardingScaffold, Toggle, fieldStyle } from '@/components/ui';
@@ -12,6 +12,7 @@ import { prefetchDay } from '@/lib/prefetch';
 import { registerThisDevice } from '@/lib/device';
 import { updateProfile, useProfile, type Profile } from '@/lib/store';
 import { C, R, T } from '@/theme';
+import { Text, TextInput } from '@/components/AppText';
 
 const inputStyle = { ...fieldStyle, minHeight: 46, fontSize: 16 } as const;
 

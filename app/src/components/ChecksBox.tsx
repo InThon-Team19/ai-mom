@@ -1,9 +1,10 @@
 // 확인 필요 상자 (리포트·아이 녹음 기록): 불편함 알림 먼저, 그다음 범위 밖 질문 — 담당: 태희 (민철 디자인 Recordings)
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 
 import { josa } from '@/lib/progress';
 import type { Summary } from '@/lib/types';
 import { C, T } from '@/theme';
+import { Text } from '@/components/AppText';
 
 export function checksOf(s: Summary | null) {
   return [...(s?.alerts ?? []).map((t) => ({ t, alert: true })), ...(s?.out_of_scope ?? []).map((t) => ({ t, alert: false }))];

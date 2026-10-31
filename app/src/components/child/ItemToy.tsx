@@ -4,7 +4,7 @@
 //        · 아이 말소리 크기만큼 커짐 · 딴 데를 보면(attention) 더 크게 통통 튀며 흔들림 · 성공하면 크게 튀며 별 · 넘어갈 때 굴러서 바구니로 쏙
 // 감각 자극 제한: 깜빡임 없음, 움직임 한 번은 1초 안
 import { useEffect, useRef, useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -23,6 +23,7 @@ import { FruitSprite } from '@/components/child/FruitSprite';
 import { StarBurst } from '@/components/child/stage';
 import type { ItemId } from '@/content/curriculum';
 import { playSfx } from '@/lib/sense';
+import { Text } from '@/components/AppText';
 
 const GENTLE = { damping: 14, stiffness: 120 };
 const out = Easing.out(Easing.quad);

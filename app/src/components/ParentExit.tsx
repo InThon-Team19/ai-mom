@@ -3,7 +3,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router, type Href } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { Alert, Platform, Pressable, Text, View } from 'react-native';
+import { Alert, Platform, Pressable, View } from 'react-native';
 import Svg, { Path, Rect } from 'react-native-svg';
 
 import { PinPad } from '@/components/PinPad';
@@ -12,6 +12,7 @@ import { api } from '@/lib/api';
 import { getDeviceId } from '@/lib/device';
 import { authMessage, loadAccount, login, parentEntry } from '@/lib/account';
 import { resetLocal, setRole, useProfile } from '@/lib/store';
+import { Text } from '@/components/AppText';
 
 export const CHILD_LINKED_KEY = 'aibom.childLinked'; // 이 태블릿이 등록된 child_id (연결 해제 감지용)
 const HOLD_MS = 3000;

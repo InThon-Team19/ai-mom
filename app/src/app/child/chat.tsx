@@ -6,7 +6,7 @@
 // 흐름: 마무리(end) "엄마랑 더 이야기하기" 또는 아이 홈 "이야기하기" → 여기 → 마무리(end). params: fav · basket (받은 그대로 넘김)
 import { router, useIsFocused, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Text, View } from 'react-native';
+import { View } from 'react-native';
 
 import { Avatar, type AvatarExpression } from '@/components/Avatar';
 import { ParentExit } from '@/components/ParentExit';
@@ -19,6 +19,7 @@ import { useSpeak } from '@/hooks/useSpeak';
 import { agentSay, type TurnIn } from '@/lib/agent';
 import { logEvent, setVibration, startActivityLog } from '@/lib/sense';
 import { loadProfile, refreshProfile, useProfile } from '@/lib/store';
+import { Text } from '@/components/AppText';
 
 type Turn = NonNullable<TurnIn['history']>[number];
 

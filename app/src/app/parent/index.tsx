@@ -1,7 +1,7 @@
 // 부모 앱 2-1 홈 (민철 디자인 Home): 내 아바타 학습률(다 배우면 숨김) · {이름}의 오늘 · 아바타 말풍선(일차·배움 한 줄) · 오늘 {이름}는… 3줄 · 감각 일지 보기 — 담당: 태희
 import { router, useFocusEffect, type Href } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Circle, Path } from 'react-native-svg';
 
@@ -17,6 +17,7 @@ import { duration, loadSensory, type SensoryReport } from '@/lib/sensory';
 import { useProfile } from '@/lib/store';
 import type { Gauge, Summary } from '@/lib/types';
 import { C, R, T } from '@/theme';
+import { Text } from '@/components/AppText';
 
 const itemList = Object.values(ITEMS);
 const findItem = (w: string): Item | undefined => {

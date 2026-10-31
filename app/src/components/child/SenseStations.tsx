@@ -16,6 +16,7 @@ import { BasketArt, HandIcon, ItemArt, K } from '@/components/child/design';
 import { StarBurst } from '@/components/child/stage';
 import { ITEMS, type ItemId } from '@/content/curriculum';
 import { haptic, logEvent, playSfx } from '@/lib/sense';
+import { AnimatedText } from '@/components/AppText';
 
 const out = Easing.out(Easing.quad);
 const SNAP = { damping: 13, stiffness: 220 };
@@ -254,9 +255,9 @@ export function RevealStation({ items, w, h, reduceMotion, wiggle, english, onAc
       </Animated.View>
       <View style={{ height: 40, justifyContent: 'center' }}>
         {revealed && (
-          <Animated.Text key={idx} entering={ZoomIn.duration(220)} style={{ fontSize: 28, fontWeight: '800', color: K.ink }}>
+          <AnimatedText key={idx} entering={ZoomIn.duration(220)} style={{ fontSize: 28, fontWeight: '800', color: K.ink }}>
             {item.ko}!
-          </Animated.Text>
+          </AnimatedText>
         )}
       </View>
     </View>
@@ -361,9 +362,9 @@ export function DrumStation({ w, h, reduceMotion, wiggle, onActivity, say, feel,
         {/* 둥! (칠 때마다 톡) */}
         <View pointerEvents="none" style={{ position: 'absolute', left: 0, right: 0, top: 30 * k, height: wordSize * 1.6, alignItems: 'center', justifyContent: 'flex-end' }}>
           {word && (
-            <Animated.Text key={word.id} entering={ZoomIn.duration(180)} style={{ fontSize: wordSize * (0.8 + word.level * 0.15), fontWeight: '800', color: K.ink }}>
+            <AnimatedText key={word.id} entering={ZoomIn.duration(180)} style={{ fontSize: wordSize * (0.8 + word.level * 0.15), fontWeight: '800', color: K.ink }}>
               둥!
-            </Animated.Text>
+            </AnimatedText>
           )}
         </View>
         <Pressable
@@ -402,7 +403,7 @@ export function DrumStation({ w, h, reduceMotion, wiggle, onActivity, say, feel,
                 gap: 8,
               }}>
               <View style={{ width: dot, height: dot, borderRadius: dot / 2, backgroundColor: on ? K.white : K.line }} />
-              <Animated.Text style={{ fontSize: Math.max(13, chipH * 0.41), fontWeight: '800', color: on ? K.white : K.sub }}>{l}</Animated.Text>
+              <AnimatedText style={{ fontSize: Math.max(13, chipH * 0.41), fontWeight: '800', color: on ? K.white : K.sub }}>{l}</AnimatedText>
             </View>
           );
         })}

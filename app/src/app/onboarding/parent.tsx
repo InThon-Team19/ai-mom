@@ -2,12 +2,13 @@
 // 호칭 → 아바타의 자기 호칭, 말투 → 대화 문체, 바라는 방향(복수) → 콘텐츠 제안
 import { useLocalSearchParams } from 'expo-router';
 import { useState, type ReactNode } from 'react';
-import { Pressable, Text, TextInput, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 
 import { Button, Chip, OnboardingScaffold, fieldStyle } from '@/components/ui';
 import { updateProfile, useProfile, type Profile } from '@/lib/store';
 import { goNext } from '@/lib/nav';
 import { C, R } from '@/theme';
+import { Text, TextInput } from '@/components/AppText';
 
 type Tone = Profile['parent']['tone'];
 const TONES: { tone: Tone; example: string }[] = [

@@ -2,7 +2,7 @@
 // 이미 가입한 가족: 새 폰·앱 재설치·아이 태블릿에서 부모 모드로 바꿀 때 아이디·비밀번호로 같은 가족 정보를 불러옴
 import { router, type Href } from 'expo-router';
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, Pressable, Text, TextInput, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, Pressable, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button, H1, fieldStyle } from '@/components/ui';
@@ -12,6 +12,7 @@ import { setRole } from '@/lib/store';
 import { C, T } from '@/theme';
 import { useDevice } from '@/lib/layout';
 import { goBack } from '@/lib/nav';
+import { Text, TextInput } from '@/components/AppText';
 
 const input = fieldStyle;
 

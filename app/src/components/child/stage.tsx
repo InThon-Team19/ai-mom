@@ -1,12 +1,13 @@
 // 아이 학습 화면 무대 조각 (기획 2-3): 고개 끄덕이는 아바타 틀 · 작은 별 퍼짐 · 오늘 모은 사물 바구니 — 담당: 태희
 // 감각 자극 제한: 움직임 한 번은 1초 안, 깜빡임 없음 (별은 한 번 퍼지며 천천히 사라짐)
 import { useEffect, type ReactNode, type Ref } from 'react';
-import { Text, View, type HostInstance } from 'react-native';
+import { View, type HostInstance } from 'react-native';
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withSequence, withTiming, ZoomIn, type SharedValue } from 'react-native-reanimated';
 import Svg, { Path } from 'react-native-svg';
 
 import { ItemArt, K } from '@/components/child/design';
 import type { ItemId } from '@/content/curriculum';
+import { Text } from '@/components/AppText';
 
 /** 아바타가 단어를 말할 때 고개를 끄덕임. nod 가 바뀔 때마다 두 번 (움직임 줄이기면 한 번) */
 export function NodBox({ nod, reduceMotion, children }: { nod: number; reduceMotion?: boolean; children: ReactNode }) {

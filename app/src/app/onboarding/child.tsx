@@ -2,12 +2,13 @@
 // 이름·별명(아바타가 부를 때), 태어난 해·달(콘텐츠 난이도), 요즘 말하는 모습(시작 템포), 좋아하는 것(선택). 건강 정보·싫어하는 것은 받지 않음
 import { useLocalSearchParams } from 'expo-router';
 import { useState, type ReactNode } from 'react';
-import { Pressable, Text, TextInput, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 
 import { Button, Chip, OnboardingScaffold, fieldStyle } from '@/components/ui';
 import { updateProfile, useProfile, type Profile } from '@/lib/store';
 import { goNext } from '@/lib/nav';
 import { C, R } from '@/theme';
+import { Text, TextInput } from '@/components/AppText';
 
 type Level = Profile['child']['level'];
 

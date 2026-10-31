@@ -3,7 +3,7 @@
 // 꾸미기: 실제 얼굴이 아닌 캐릭터 고르기 (온보딩 1-4 와 같은 선택지) → updateProfile 로 저장
 import { router, useFocusEffect, useIsFocused, type Href } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 
@@ -18,6 +18,7 @@ import { useDevice } from '@/lib/layout';
 import { updateProfile, useProfile, type Profile } from '@/lib/store';
 import type { Gauge } from '@/lib/types';
 import { C, R } from '@/theme';
+import { Text } from '@/components/AppText';
 
 type Mode = 'learn' | 'edit';
 

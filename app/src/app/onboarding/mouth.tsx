@@ -4,7 +4,7 @@
 // 카메라 위 인식 표시(얼굴 틀·입 윤곽·체크)와 상태 문구는 기획 2-4 → components/FaceGuide
 import { useIsFocused, useLocalSearchParams } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 
 import { FaceGuide, ReadingText, doneSignal, useReadingWord } from '@/components/FaceGuide';
 import type { FaceFrame } from '@/components/FaceTracker';
@@ -16,6 +16,7 @@ import { updateProfile, useProfile } from '@/lib/store';
 import { goNext } from '@/lib/nav';
 import { C } from '@/theme';
 import { useDevice } from '@/lib/layout';
+import { Text } from '@/components/AppText';
 
 export default function MouthSignup() {
   const edit = useLocalSearchParams<{ edit?: string }>().edit === '1';

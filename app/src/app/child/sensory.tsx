@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { AppState, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { AppState, Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -11,6 +11,7 @@ import { SensoryToy } from '@/components/sensory/SensoryToy';
 import { ChunkyButton, K, SOFT2 } from '@/components/child/design';
 import { dayOf } from '@/content/curriculum';
 import { useProfile } from '@/lib/store';
+import { Text } from '@/components/AppText';
 
 export default function SensoryStories() {
   const profile = useProfile();

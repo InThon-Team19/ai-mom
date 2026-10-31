@@ -1,7 +1,7 @@
 // 부모 앱 2-x 하단 탭 5개 (홈 · 리포트 · 피드백 · 아바타 · 설정) + 탭 밖 화면 내일 계획(plan, 피드백에서) · 아이 녹음 기록(recordings, 리포트에서) — 담당: 태희 (민철 와이어프레임 기준)
 import { Tabs } from 'expo-router/js-tabs';
 import { useEffect } from 'react';
-import { Text, type ColorValue } from 'react-native';
+import { type ColorValue } from 'react-native';
 import Svg, { Circle, Path } from 'react-native-svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -13,6 +13,7 @@ import { api } from '@/lib/api';
 import { dayAdvancePatch } from '@/lib/progress';
 import { loadProfile, refreshProfile, updateProfile, type Profile } from '@/lib/store';
 import { C } from '@/theme';
+import { Text } from '@/components/AppText';
 
 // 탭 아이콘 (단순한 선 그림) — 아이콘이 없으면 탭이 깨져 보여서 다시 넣음
 type IconProps = { color: ColorValue; size: number };
@@ -86,7 +87,7 @@ export default function ParentTabs() {
         tabBarActiveTintColor: C.text,
         tabBarInactiveTintColor: C.sub,
         tabBarLabelPosition: 'below-icon',
-        tabBarLabelStyle: { fontSize: 13, fontWeight: '500', marginTop: 2 },
+        tabBarLabelStyle: { fontSize: 13, fontFamily: 'Pretendard-Medium', marginTop: 2 },
         tabBarItemStyle: { justifyContent: 'center', alignItems: 'center' },
         tabBarStyle: { height: 64 + insets.bottom, paddingBottom: insets.bottom, paddingTop: 6, backgroundColor: C.white, borderTopWidth: 1, borderTopColor: C.border, elevation: 0, shadowOpacity: 0 },
         sceneStyle: { backgroundColor: C.bg },

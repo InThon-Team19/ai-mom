@@ -2,13 +2,14 @@
 // 와이어프레임에 별도 화면이 없어 1-7 맨 위 카드로 넣음
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 
 import { Avatar } from '@/components/Avatar';
 import { api } from '@/lib/api';
 import type { Profile } from '@/lib/store';
 import type { Gauge } from '@/lib/types';
 import { C, R, T } from '@/theme';
+import { Text } from '@/components/AppText';
 
 function Row({ label, value, href }: { label: string; value: string; href: string }) {
   return (

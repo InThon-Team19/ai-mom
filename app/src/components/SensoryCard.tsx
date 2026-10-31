@@ -1,9 +1,10 @@
 // 감각 발달 카드 (리포트 맨 위) + 홈용 3칸 요약 칩 — 담당: 태희
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 
 import { Card } from '@/components/ui';
 import type { SenseStatus, SensoryReport } from '@/lib/sensory';
 import { C, R, T } from '@/theme';
+import { Text } from '@/components/AppText';
 
 export const ICON = { visual: '👀', audio: '👂', touch: '✋' } as const;
 

@@ -1,13 +1,14 @@
 // 아이 목소리: 오늘 자동 녹음된 말소리 클립 목록 + 재생 (한 번에 하나만) — 담당: 태희
 import { setAudioModeAsync, useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
 import { useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 import Svg, { Path, Rect } from 'react-native-svg';
 
 import { ITEMS } from '@/content/curriculum';
 import { api } from '@/lib/api';
 import type { ChildClip } from '@/lib/types';
 import { C, R, T } from '@/theme';
+import { Text } from '@/components/AppText';
 
 const time = (at: number) => {
   const d = new Date(at * 1000); // 서버 at = 초 단위

@@ -1,8 +1,9 @@
 // 원형 학습률 게이지 + 최소 기준 눈금 (와이어프레임 1-5, 1-6, 2-1, 2-4). 담당: 태희
-import { Text, View } from 'react-native';
+import { View } from 'react-native';
 import Svg, { Circle, Line } from 'react-native-svg';
 
 import { C } from '@/theme';
+import { Text } from '@/components/AppText';
 
 export function RingGauge({
   progress,

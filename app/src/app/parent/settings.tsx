@@ -2,7 +2,7 @@
 // 아이 모드로 바꾸기 · 로그인 · 아이 기기 연결(코드·등록된 기기) · 감각 자극 줄이기(진동·움직임·소리) · 사용 시간·학습 이력·아이 정보·부모 PIN · 이 기기 기록 지우기
 import { router, useFocusEffect, type Href } from 'expo-router';
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
-import { Alert, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { Alert, Platform, Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AccountSection } from '@/components/AccountSection';
@@ -17,6 +17,7 @@ import { refreshProfile, resetLocal, setRole, updateProfile, useProfile, type Pr
 import type { Gauge, History } from '@/lib/types';
 import { C, T } from '@/theme';
 import { useDevice } from '@/lib/layout';
+import { Text, TextInput } from '@/components/AppText';
 
 const pad = (n: number) => String(n).padStart(2, '0');
 const fmt = (sec: number) => {

@@ -1,7 +1,7 @@
 // 부모 앱 아이 녹음 기록 (민철 디자인 Recordings, 탭 막대에는 없음 — 리포트에서 들어옴): 오늘 자동 녹음된 아이 말소리 + 확인해 주세요 — 담당: 태희
 import { useFocusEffect, type Href } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { ScrollView, Text } from 'react-native';
+import { ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ChecksBox } from '@/components/ChecksBox';
@@ -15,6 +15,7 @@ import { josa, today as todayYmd } from '@/lib/progress';
 import { useProfile } from '@/lib/store';
 import type { ChildClip, Summary } from '@/lib/types';
 import { C, T } from '@/theme';
+import { Text } from '@/components/AppText';
 
 export default function Recordings() {
   const profile = useProfile();

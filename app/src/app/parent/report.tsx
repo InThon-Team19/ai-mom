@@ -2,7 +2,7 @@
 // 진단이 아니라 활동 기록으로 본 참고용 관찰 (lib/sensory)
 import { router, useFocusEffect, type Href } from 'expo-router';
 import { useCallback, useState, type ReactNode } from 'react';
-import { ScrollView, Text, View } from 'react-native';
+import { ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Circle, G, Text as SvgText } from 'react-native-svg';
 
@@ -17,6 +17,7 @@ import { duration, loadSensory, type SenseKey, type SensoryReport } from '@/lib/
 import { useProfile } from '@/lib/store';
 import type { Summary } from '@/lib/types';
 import { C, SENSE, T } from '@/theme';
+import { Text } from '@/components/AppText';
 
 const LABEL: Record<SenseKey, string> = { visual: '시각', touch: '촉각', audio: '청각' };
 const ORDER: SenseKey[] = ['visual', 'touch', 'audio'];

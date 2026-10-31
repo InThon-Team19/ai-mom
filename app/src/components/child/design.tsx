@@ -3,12 +3,13 @@
 // 감각 자극 제한: 깜빡임 없음 (듣는 표시는 부드럽게 커졌다 작아짐), 움직임은 짧게
 import { router } from 'expo-router';
 import { useEffect, useState, type ReactNode } from 'react';
-import { Pressable, Text, View, useWindowDimensions, type StyleProp, type TextStyle, type ViewStyle } from 'react-native';
+import { Pressable, View, useWindowDimensions, type StyleProp, type TextStyle, type ViewStyle } from 'react-native';
 import Animated, { cancelAnimation, useAnimatedStyle, useSharedValue, withRepeat, withTiming, type SharedValue } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle, G, Path, Rect } from 'react-native-svg';
 
 import type { ItemId } from '@/content/curriculum';
+import { Text } from '@/components/AppText';
 
 // ---------- 보드 색 ----------
 export const K = {

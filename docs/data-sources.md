@@ -9,3 +9,4 @@
 | 동화책 | 3-6 전래동화 (해님 달님 요약) | `app/src/content/curriculum.ts` | 전래동화 (공유 저작물), 문장은 팀이 새로 씀 | 공유 저작물 |
 | 학습 범위 자료 | 시연 커리큘럼 (사과·바나나·과자) | `app/src/content/curriculum.ts` | 팀 작성 (누리과정 기준 검토 예정) | 팀 자체 제작 |
 | 얼굴 인식 모델 | 입모양·응시 | CDN / `server/models/` | MediaPipe Face Landmarker (Google) | Apache 2.0 |
+| 글꼴 | 앱 전체 글자 | `app/assets/fonts/Pretendard-*.otf` | Pretendard 1.3.9 (orioncactus/pretendard) | SIL Open Font License 1.1 |

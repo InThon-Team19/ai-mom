@@ -2,7 +2,7 @@
 // 글자 최소. 들어오자마자 학습이 시작되지 않고 아이가 고름. 부모 모드는 오른쪽 위 "부모 · 3초 꾹" + PIN (민철 Design 보드 KidHome · TabLink)
 import { router, useFocusEffect } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import Svg, { Circle, Ellipse } from 'react-native-svg';
@@ -35,6 +35,7 @@ import { getOverride, getParentToken, getToken } from '@/lib/session';
 import { prefetchDay } from '@/lib/prefetch';
 import { api } from '@/lib/api';
 import { clearRole, linkTablet, loadProfile, refreshProfile, resetLocal, useProfile } from '@/lib/store';
+import { Text, TextInput, type TextInputRef } from '@/components/AppText';
 
 export default function ChildStart() {
   const profile = useProfile();
@@ -249,7 +250,7 @@ function LinkScreen({ onDone, canCancel }: { onDone: () => void; canCancel: bool
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const { u, f, width, height, insets } = useKid();
-  const input = useRef<React.ComponentRef<typeof TextInput>>(null);
+  const input = useRef<TextInputRef>(null);
 
   const submit = async () => {
     setBusy(true);

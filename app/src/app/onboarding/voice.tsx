@@ -3,7 +3,7 @@
 // 3문장 이상 읽으면 AI 특성 분석 + 의사소통 피드백 (기획 2-1-1 ⑤⑥). 떠날 때 TTS 목소리 등록 요청(실패 무시)
 import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 
 import { RingGauge } from '@/components/RingGauge';
 import { Button, MicButton, Note, OnboardingScaffold, SentenceLine } from '@/components/ui';
@@ -14,6 +14,7 @@ import { useProfile } from '@/lib/store';
 import type { AnalysisOut } from '@/lib/types';
 import { goNext } from '@/lib/nav';
 import { C } from '@/theme';
+import { Text } from '@/components/AppText';
 
 const STATUS_LABEL: Record<SentenceStatus, string> = { done: '읽음', now: '지금', todo: '남음', retry: '다시' };
 

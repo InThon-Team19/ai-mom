@@ -1,12 +1,13 @@
 // 설정 탭 "로그인" 구역: 로그인 상태·계정 만들기·비밀번호 변경·로그아웃. 담당: 태희 (서버 /auth/* 는 민주)
 import { router, type Href } from 'expo-router';
 import { useState } from 'react';
-import { Alert, Platform, Pressable, Text, TextInput, View } from 'react-native';
+import { Alert, Platform, Pressable, View } from 'react-native';
 
 import { Button, fieldStyle } from '@/components/ui';
 import { authMessage, changePassword, logoutAccount, signup, useAccount } from '@/lib/account';
 import { clearRole, resetLocal } from '@/lib/store';
 import { C, T } from '@/theme';
+import { Text, TextInput } from '@/components/AppText';
 
 const inputStyle = { ...fieldStyle, minHeight: 46, fontSize: 16 } as const;
 

@@ -2,7 +2,7 @@
 // 서버(민주)는 모든 저장 API 에 로그인 토큰을 요구하므로, 목소리·입모양 녹음(1-5·1-6) 전에 계정을 먼저 만든다
 import { router, type Href } from 'expo-router';
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, Pressable, Text, TextInput, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, Pressable, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button, H1, Note, fieldStyle } from '@/components/ui';
@@ -11,6 +11,7 @@ import { loadProfile } from '@/lib/store';
 import { C, T } from '@/theme';
 import { useDevice } from '@/lib/layout';
 import { goBack } from '@/lib/nav';
+import { Text, TextInput } from '@/components/AppText';
 
 const input = fieldStyle;
 

@@ -2,7 +2,7 @@
 // 공용 파일(ui.tsx, theme.ts 등)은 건드리지 않고 아이 화면에만 필요한 것을 여기 모음
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { memo, useEffect, useMemo, useRef, useState } from 'react';
-import { Pressable, Text, View, type StyleProp, type ViewStyle } from 'react-native';
+import { Pressable, View, type StyleProp, type ViewStyle } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withRepeat, withTiming, cancelAnimation, type SharedValue } from 'react-native-reanimated';
 import Svg, { Path, Rect } from 'react-native-svg';
 
@@ -10,6 +10,7 @@ import { FaceTracker, type FaceFrame } from '@/components/FaceTracker';
 import { api } from '@/lib/api';
 import type { Profile } from '@/lib/store';
 import { C, R } from '@/theme';
+import { Text } from '@/components/AppText';
 
 export const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 

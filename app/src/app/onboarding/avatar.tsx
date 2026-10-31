@@ -2,13 +2,14 @@
 // 실제 얼굴 대신 부모가 직접 고른 아바타 (기획 4장). 카테고리 칩 + 4x2 선택지 + 미리보기
 import { useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 
 import { Avatar, AVATAR_OPTIONS, type AvatarCategory, type AvatarConfig } from '@/components/Avatar';
 import { Button, Chip, OnboardingScaffold } from '@/components/ui';
 import { updateProfile, useProfile } from '@/lib/store';
 import { goNext } from '@/lib/nav';
 import { C, R } from '@/theme';
+import { Text } from '@/components/AppText';
 
 const CATEGORIES: { key: AvatarCategory; label: string }[] = [
   { key: 'face', label: '얼굴형' },

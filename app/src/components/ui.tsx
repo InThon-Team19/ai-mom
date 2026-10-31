@@ -1,12 +1,13 @@
 // 공용 UI — 민철 디자인(Design 아티팩트) 스타일: 크림 바탕 · 노랑 버튼 · 2px 테두리 카드 · 단순한 SVG 아이콘. 담당: 태희
 import type { ReactNode } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View, type StyleProp, type TextStyle, type ViewStyle } from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, View, type StyleProp, type TextStyle, type ViewStyle } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Circle, Ellipse, Path, Rect } from 'react-native-svg';
 
 import { C, R, T } from '@/theme';
 import { useDevice } from '@/lib/layout';
 import { goBack, prevOf } from '@/lib/nav';
+import { Text } from '@/components/AppText';
 
 type BtnProps = {
   label: string;

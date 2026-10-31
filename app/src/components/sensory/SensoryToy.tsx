@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Animated, StyleSheet, Text, View } from 'react-native';
+import { Animated, StyleSheet, View } from 'react-native';
 import { Image } from 'expo-image';
 import { PanGestureHandler, State, TapGestureHandler, type PanGestureHandlerEventPayload } from 'react-native-gesture-handler';
 import { frames, type WordId } from '@/content/sensory/assets';
@@ -7,6 +7,7 @@ import { hapticConfig, playSound, pulse, stopSound } from '@/content/sensory/fee
 import { initial, transition, type Input } from '@/content/sensory/machine';
 import { K, SOFT2 } from '@/components/child/design';
 import { useProfile } from '@/lib/store';
+import { Text } from '@/components/AppText';
 
 const AnimatedImage = Animated.createAnimatedComponent(Image);
 function Frame({ source, visible, duration }: { source: number; visible: boolean; duration: number }) {

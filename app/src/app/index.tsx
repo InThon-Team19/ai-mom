@@ -2,7 +2,7 @@
 // 와이어프레임 1-1 은 "역할 선택 없이 부모만 가입". 아이 태블릿은 1-7 의 연결 코드로 붙음 → 여기서는 기기 용도만 고름
 import { Redirect, router } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button, Note, fieldStyle } from '@/components/ui';
@@ -13,6 +13,7 @@ import { loadAccount, parentEntry } from '@/lib/account';
 import { getRole, loadProfile, setRole, type Role } from '@/lib/store';
 import { C } from '@/theme';
 import { useDevice } from '@/lib/layout';
+import { Text, TextInput } from '@/components/AppText';
 
 export default function Entry() {
   const { gutter } = useDevice();

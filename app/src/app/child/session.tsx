@@ -13,7 +13,7 @@
 // 폰(가로 약 800x360)과 태블릿 모두: 크기는 보드(1180x820) 비율로 계산 (useKid). 화면 모양은 민철 Design 보드 KidPlay(사물) · KidRepeat(따라 말하기)
 import { router, useIsFocused } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Text, View, useWindowDimensions, type HostInstance } from 'react-native';
+import { View, useWindowDimensions, type HostInstance } from 'react-native';
 import Animated, { FadeIn, FadeOut, ZoomIn } from 'react-native-reanimated';
 
 import { Avatar, type AvatarExpression, type AvatarLook } from '@/components/Avatar';
@@ -49,6 +49,7 @@ import { agentSay, type TurnIn } from '@/lib/agent';
 import { haptic, logEvent, playSfx, setVibration, startActivityLog } from '@/lib/sense';
 import { loadProfile, refreshProfile, useProfile } from '@/lib/store';
 import type { ChildClipOut } from '@/lib/types';
+import { AnimatedText, Text } from '@/components/AppText';
 
 type Phase = 'object' | 'repeat';
 /** 앱이 추정한 아이 상태 (사물마다) */
@@ -982,10 +983,10 @@ export default function Session() {
                 {line || ' '}
               </Text>
               {dropped ? (
-                <Animated.Text key={`w${idx}`} entering={FadeIn.duration(300)} numberOfLines={1} style={{ fontSize: wordFont, lineHeight: Math.round(wordFont * 1.15), fontWeight: '800', color: K.ink }}>
+                <AnimatedText key={`w${idx}`} entering={FadeIn.duration(300)} numberOfLines={1} style={{ fontSize: wordFont, lineHeight: Math.round(wordFont * 1.15), fontWeight: '800', color: K.ink }}>
                   {item.ko}
                   {english && <Text style={{ fontSize: Math.round(wordFont * 0.5), color: K.sub }}> {item.en}</Text>}
-                </Animated.Text>
+                </AnimatedText>
               ) : (
                 <View style={{ height: Math.round(wordFont * 1.15) }} />
               )}
@@ -1030,9 +1031,9 @@ export default function Session() {
                       {/* 의성어 (누를 때마다 톡) */}
                       <View style={{ position: 'absolute', top: u(10, 2), left: 0, right: 0, height: sfxFont * 1.4, alignItems: 'center' }}>
                         {presses > 0 && (
-                          <Animated.Text key={presses} entering={ZoomIn.duration(220)} style={{ fontSize: sfxFont, fontWeight: '800', color: K.ink }}>
+                          <AnimatedText key={presses} entering={ZoomIn.duration(220)} style={{ fontSize: sfxFont, fontWeight: '800', color: K.ink }}>
                             {item.sfxWord}
-                          </Animated.Text>
+                          </AnimatedText>
                         )}
                       </View>
                       <View ref={toyRef} collapsable={false} style={{ alignItems: 'center', marginTop: sfxFont * 0.8 }}>

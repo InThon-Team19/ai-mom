@@ -3,7 +3,7 @@
 // 감각 자극 제한: 깜빡임 없음 — 원·막대는 목소리 크기만큼 부드럽게만 움직임
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useMemo, useRef, useState } from 'react';
-import { Text, View } from 'react-native';
+import { View } from 'react-native';
 import Svg, { Circle, Ellipse, G } from 'react-native-svg';
 
 import { Avatar } from '@/components/Avatar';
@@ -14,6 +14,7 @@ import { dayOf, fill, ITEMS } from '@/content/curriculum';
 import { useSpeak } from '@/hooks/useSpeak';
 import { logEvent } from '@/lib/sense';
 import { useProfile } from '@/lib/store';
+import { Text } from '@/components/AppText';
 
 export default function AudioOnly() {
   const profile = useProfile();

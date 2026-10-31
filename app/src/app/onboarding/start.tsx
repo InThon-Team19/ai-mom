@@ -4,7 +4,7 @@ import { router, type Href } from 'expo-router';
 
 import { loadAccount, parentEntry } from '@/lib/account';
 import { resetLocal, setRole } from '@/lib/store';
-import { Text, View } from 'react-native';
+import { View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Avatar, DEFAULT_AVATAR } from '@/components/Avatar';
@@ -12,6 +12,7 @@ import { Logo } from '@/components/Logo';
 import { BigApple, Button } from '@/components/ui';
 import { C } from '@/theme';
 import { useDevice } from '@/lib/layout';
+import { Text } from '@/components/AppText';
 
 export default function Start() {
   const { gutter, height } = useDevice();

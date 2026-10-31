@@ -1,10 +1,11 @@
 // PIN 입력 창 (숫자 4자리, 큰 숫자 버튼). 아이 모드 → 부모 모드 복귀 확인용 — 담당: 태희
 // PIN 을 잊으면: 부모 아이디·로그인 비밀번호로 대신 확인 (onForgot)
 import { useState } from 'react';
-import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, Text, TextInput, View, useWindowDimensions } from 'react-native';
+import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, View, useWindowDimensions } from 'react-native';
 
 import { checkPin } from '@/lib/pin';
 import { C, R, T } from '@/theme';
+import { Text, TextInput } from '@/components/AppText';
 
 const KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '취소', '0', '⌫'];
 

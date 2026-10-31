@@ -7,8 +7,9 @@
 // 표정(expr): blendshape 로 웃음·놀람·찡그림을 나눔 (기획 1-1 시각 반응 "표정 변화"). 앱에서만 쓰는 값 (서버 landmarks.py 엔 없음)
 import { useCameraPermissions } from 'expo-camera';
 import { memo, useEffect, useMemo, useRef } from 'react';
-import { Pressable, Text, View, type ViewStyle } from 'react-native';
+import { Pressable, View, type ViewStyle } from 'react-native';
 import { WebView } from 'react-native-webview';
+import { Text } from '@/components/AppText';
 
 export type FaceFrame = {
   face: boolean;

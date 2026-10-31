@@ -6,12 +6,13 @@
 //   한 문장 완료 : 체크 표시 "좋아요! 한 문장 더 배웠어요" (학습률 링은 화면의 RingGauge 가 서버값으로 차오름)
 //   인식이 어려움 : 다시 노란색 + 이유 (어두움 / 녹화 중 얼굴 1.5초 넘게 사라짐 / 너무 멀리)
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Text, View, type LayoutChangeEvent, type TextStyle, type ViewStyle } from 'react-native';
+import { View, type LayoutChangeEvent, type TextStyle, type ViewStyle } from 'react-native';
 import Animated, { ZoomIn, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import Svg, { Circle, Ellipse, Path, Polygon } from 'react-native-svg';
 
 import { FaceTracker, type FaceFrame } from '@/components/FaceTracker';
 import { C, R } from '@/theme';
+import { Text } from '@/components/AppText';
 
 export type GuideState = 'searching' | 'found' | 'reading' | 'done' | 'hard';
 type Reason = 'dark' | 'lost' | 'far';

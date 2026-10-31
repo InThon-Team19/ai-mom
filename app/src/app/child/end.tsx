@@ -16,6 +16,7 @@ import { dayOf, ENDING, fill, ITEMS, type ItemId } from '@/content/curriculum';
 import { useSpeak } from '@/hooks/useSpeak';
 import { stopActivityLog } from '@/lib/sense';
 import { useProfile } from '@/lib/store';
+import { AnimatedText } from '@/components/AppText';
 
 const CONFETTI: [number, number, string, number][] = [
   [134, 128, K.red, -35],
@@ -107,9 +108,9 @@ export default function End() {
 
         {/* 오른쪽: 칭찬 · 별 · 바구니 · 실제 부모에게 넘기는 말 · 버튼 */}
         <View style={{ flex: 1, alignItems: 'center' }}>
-          <Animated.Text entering={FadeIn.duration(600)} style={{ fontSize: f(52, 24), fontWeight: '800', color: K.ink, textAlign: 'center' }}>
+          <AnimatedText entering={FadeIn.duration(600)} style={{ fontSize: f(52, 24), fontWeight: '800', color: K.ink, textAlign: 'center' }}>
             {name ? fill('오늘 정말 잘했어, {name}!', { name, me }) : '오늘 정말 잘했어!'}
-          </Animated.Text>
+          </AnimatedText>
           <View style={{ marginTop: u(20, 4) }}>
             <Stars on={3} size={u(54, 24)} gap={u(14, 6)} />
           </View>
@@ -125,9 +126,9 @@ export default function End() {
               </BasketArt>
             </View>
           )}
-          <Animated.Text entering={FadeIn.delay(300).duration(600)} style={{ marginTop: u(24, 4), fontSize: f(28, 15), lineHeight: Math.round(f(28, 15) * 1.5), fontWeight: '800', color: K.ink, textAlign: 'center' }}>
+          <AnimatedText entering={FadeIn.delay(300).duration(600)} style={{ marginTop: u(24, 4), fontSize: f(28, 15), lineHeight: Math.round(f(28, 15) * 1.5), fontWeight: '800', color: K.ink, textAlign: 'center' }}>
             {fill('이따 {me} 오면\n{fav} 이야기 해 줄래?', { name, me, fav })}
-          </Animated.Text>
+          </AnimatedText>
           <View style={{ marginTop: u(26, 6), flexDirection: 'row', gap: u(16, 8) }}>
             {/* 학습 뒤 자유 대화: 엄마 아바타와 일상 이야기 (받은 fav·basket 그대로 넘김) */}
             <ChunkyButton

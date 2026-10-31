@@ -2,7 +2,7 @@
 // 저장 형식은 그대로 (profile.feedback: day · issues · note · review · newWords). 내일 계획 '+ 기타'는 note 에 합쳐 저장, 복습 '+ 기타'는 newWords
 import { router, type Href } from 'expo-router';
 import { useMemo, useState, type ReactNode } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 
@@ -13,6 +13,7 @@ import { useDevice } from '@/lib/layout';
 import { josa, readToday } from '@/lib/progress';
 import { updateProfile, useProfile, type Profile } from '@/lib/store';
 import { C, R } from '@/theme';
+import { Text, TextInput } from '@/components/AppText';
 
 const ISSUES = ['말이 빨라요', '질문이 어려워요', '진동이 세요', '더 기다려 주세요'];
 const PLAN_PREFIX = '내일 해 보고 싶은 것: ';

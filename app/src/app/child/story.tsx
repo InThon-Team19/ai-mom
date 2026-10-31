@@ -2,7 +2,7 @@
 // 보드: 머리줄(닫기 · 책 + 제목 · n / N장 · 부모) · 큰 흰 카드(위 장면 그림 + "읽어 주는 중" · 아래 문장) · 아래 이전 장 / 소리만 듣기 / 다음 장
 import { router, useFocusEffect, useIsFocused, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Text, View } from 'react-native';
+import { View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import Svg, { Circle, Ellipse, Path, Rect } from 'react-native-svg';
 
@@ -15,6 +15,7 @@ import { useSpeak } from '@/hooks/useSpeak';
 import { api } from '@/lib/api';
 import { logEvent } from '@/lib/sense';
 import { useProfile } from '@/lib/store';
+import { AnimatedText, Text } from '@/components/AppText';
 
 export default function Story() {
   const profile = useProfile();
@@ -111,13 +112,13 @@ export default function Story() {
             </Svg>
           )}
           <View style={{ position: 'absolute', inset: 0, alignItems: 'center', justifyContent: 'center' }}>
-            <Animated.Text
+            <AnimatedText
               key={page}
               entering={FadeIn.duration(700)}
               allowFontScaling={false}
               style={{ fontSize: Math.max(48, scene.h * 0.55), lineHeight: Math.max(58, scene.h * 0.68), includeFontPadding: false }}>
               {cur.emoji}
-            </Animated.Text>
+            </AnimatedText>
           </View>
           {/* 읽어 주는 중 (작은 아바타) */}
           <View
@@ -142,14 +143,14 @@ export default function Story() {
           </View>
         </View>
         <View style={{ height: u(156, 64), paddingHorizontal: u(32, 14), alignItems: 'center', justifyContent: 'center' }}>
-          <Animated.Text
+          <AnimatedText
             key={page}
             entering={FadeIn.duration(500)}
             numberOfLines={compact ? 2 : 3}
             adjustsFontSizeToFit
             style={{ fontSize: textFont, lineHeight: Math.round(textFont * 1.5), fontWeight: '800', color: K.ink, textAlign: 'center' }}>
             {cur.text}
-          </Animated.Text>
+          </AnimatedText>
         </View>
       </View>
 

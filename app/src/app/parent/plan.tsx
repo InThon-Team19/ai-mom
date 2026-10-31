@@ -2,7 +2,7 @@
 // 카메라 위 인식 표시(얼굴 틀·입 윤곽·체크)와 상태 문구는 기획 2-4 → components/FaceGuide
 import { router, useIsFocused, type Href } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { FaceGuide, ReadingText, doneSignal, useReadingWord } from '@/components/FaceGuide';
@@ -18,6 +18,7 @@ import { updateProfile, useProfile, type Profile } from '@/lib/store';
 import { C, T } from '@/theme';
 import { useDevice } from '@/lib/layout';
 import { goBack } from '@/lib/nav';
+import { Text } from '@/components/AppText';
 
 const DEFAULT_TIP = '카메라에 얼굴이 잘 보이게 하고, 입모양을 크게 보이며 천천히 읽어 주세요.';
 
