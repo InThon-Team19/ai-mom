@@ -306,7 +306,7 @@ export default function Settings() {
         </Section>
 
         <Section title="부모 PIN">
-          <Text style={T.small}>아이 모드에서 부모 모드로 돌아올 때 입력하는 숫자 4자리예요.</Text>
+          <Text style={T.small}>아이 모드에서 부모 모드로 돌아올 때 입력하는 숫자 4자리예요. 로그인 비밀번호와는 따로예요.</Text>
           <View style={{ flexDirection: 'row', gap: 8 }}>
             <TextInput
               value={newPin}

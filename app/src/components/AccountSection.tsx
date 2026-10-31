@@ -83,7 +83,7 @@ export function AccountSection({ childId }: { childId: string }) {
             {account.pending ? (
               <Button label="다시 등록" variant="outline" style={{ minHeight: 42 }} onPress={() => setMode('create')} />
             ) : (
-              <Button label="비밀번호 변경" variant="outline" style={{ minHeight: 42 }} onPress={() => setMode('password')} />
+              <Button label="로그인 비밀번호 변경" variant="outline" style={{ minHeight: 42 }} onPress={() => setMode('password')} />
             )}
             <Button label="로그아웃" variant="ghost" style={{ minHeight: 42 }} onPress={logout} />
           </View>

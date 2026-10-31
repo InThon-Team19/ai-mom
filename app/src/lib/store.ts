@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 
 import { DEFAULT_AVATAR, type AvatarConfig } from '@/components/Avatar';
 import { api } from '@/lib/api';
+import { dayAdvancePatch } from '@/lib/progress';
 import { setToken } from '@/lib/session';
 import type { DeviceInfo } from '@/lib/types';
 
@@ -107,6 +108,9 @@ export async function refreshProfile() {
   try {
     const remote = (await api.getProfile(p.childId)) as Profile;
     current = { ...p, ...remote };
+    // 기획 2-7: 낭독한 다음날이면 화면에는 바로 다음 일차 (서버 저장은 부모 앱이 함 — 태블릿은 저장 권한 없음)
+    const adv = dayAdvancePatch(current);
+    if (adv) current = { ...current, ...adv };
     listeners.forEach((l) => l(current!));
     await AsyncStorage.setItem(KEY, JSON.stringify(current));
   } catch {}

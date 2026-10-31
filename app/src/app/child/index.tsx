@@ -14,9 +14,9 @@ import { Button } from '@/components/ui';
 import { dayOf, fill, ITEMS } from '@/content/curriculum';
 import { useSpeak } from '@/hooks/useSpeak';
 import { getDeviceId, registerThisDevice } from '@/lib/device';
-import { dayAdvancePatch } from '@/lib/progress';
 import { prefetchDay } from '@/lib/prefetch';
-import { linkTablet, refreshProfile, resetLocal, updateProfile, useProfile } from '@/lib/store';
+import { api } from '@/lib/api';
+import { linkTablet, loadProfile, refreshProfile, resetLocal, useProfile } from '@/lib/store';
 import { C, R, T } from '@/theme';
 
 
@@ -29,10 +29,19 @@ export default function ChildStart() {
   useEffect(() => {
     if (!linked) return;
     (async () => {
-      let p = await refreshProfile();
-      // 기획 2-7: 전날 밤 낭독을 마쳤으면 오늘 처음 켤 때 일차 +1 (안 했으면 같은 일차 복습)
-      const adv = dayAdvancePatch(p);
-      if (adv) p = await updateProfile(adv);
+      // 비밀번호 변경·연결 해제·새 연결 코드로 서버가 이 태블릿 토큰을 끊었으면 연결 화면으로
+      const cur = await loadProfile();
+      try {
+        await api.getProfile(cur.childId);
+      } catch (e) {
+        if (String(e).startsWith('Error: 401') || String(e).startsWith('401')) {
+          await AsyncStorage.removeItem(LINKED_KEY).catch(() => {});
+          await resetLocal();
+          return;
+        }
+      }
+      // 일차 넘김(기획 2-7)은 refreshProfile 이 화면에 반영, 서버 저장은 부모 앱이 함
+      const p = await refreshProfile();
       const me = await getDeviceId();
       let flag: string | null = null;
       try {

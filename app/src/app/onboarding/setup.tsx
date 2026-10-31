@@ -93,7 +93,7 @@ function Form({ initial, code, profile }: { initial: Profile['settings']; code: 
 
 
       <Section label="부모 PIN (숫자 4자리)">
-        <Text style={T.small}>아이 모드에서 부모 모드로 돌아올 때 써요. 아이가 모르게 정해 주세요.</Text>
+        <Text style={T.small}>아이 모드에서 부모 모드로 돌아올 때 써요. 로그인 비밀번호와 다른 숫자 4자리로, 아이가 모르게 정해 주세요.</Text>
         <View style={{ flexDirection: 'row', gap: 8 }}>
           <TextInput value={pin} onChangeText={(t) => setPin(t.replace(/\D/g, '').slice(0, 4))} keyboardType="number-pad" secureTextEntry maxLength={4} placeholder="PIN" placeholderTextColor={C.muted} style={[inputStyle, { flex: 1 }]} />
           <TextInput value={pin2} onChangeText={(t) => setPin2(t.replace(/\D/g, '').slice(0, 4))} keyboardType="number-pad" secureTextEntry maxLength={4} placeholder="PIN 확인" placeholderTextColor={C.muted} style={[inputStyle, { flex: 1 }]} />

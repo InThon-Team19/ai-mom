@@ -84,7 +84,7 @@ export async function changePassword(loginId: string, password: string, newPassw
 
 export async function logoutAccount() {
   const a = await loadAccount();
-  if (a?.token) await req('/auth/logout', { method: 'POST', headers: { Authorization: `Bearer ${a.token}` } });
+  if (a?.token) await req('/auth/logout', { method: 'POST', headers: { Authorization: `Bearer ${a.token}` } }).catch(() => {}); // 이미 끊긴 토큰이어도 로컬은 로그아웃
   await save(null);
 }
 

@@ -1,7 +1,7 @@
 // 아이 화면 → 부모 모드 전환 (기획서 v2 2-5: 화면 구석을 3초 길게 누른 뒤 PIN) — 담당: 태희
 // 아이 화면 어디서든 왼쪽 위 작은 자물쇠. 누르고 있는 동안 링이 차오르고, 3초 다 차면 PIN → 어른 메뉴
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { router } from 'expo-router';
+import { router, type Href } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { Alert, Platform, Pressable, Text, View } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
@@ -10,16 +10,19 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PinPad } from '@/components/PinPad';
 import { api } from '@/lib/api';
 import { getDeviceId } from '@/lib/device';
-import { clearRole, resetLocal, useProfile } from '@/lib/store';
+import { loadAccount } from '@/lib/account';
+import { resetLocal, setRole, useProfile } from '@/lib/store';
 import { C } from '@/theme';
 
 export const CHILD_LINKED_KEY = 'aibom.childLinked'; // 이 태블릿이 등록된 child_id (연결 해제 감지용)
 const HOLD_MS = 3000;
 
 function adultMenu(childId?: string, onDone?: () => void) {
+  // PIN 통과 → 부모 모드. 이 기기에 부모 로그인이 있으면 바로 부모 앱, 없으면(따로 쓰는 태블릿) 비밀번호 로그인
   const toParent = async () => {
-    await clearRole();
-    router.replace('/');
+    const a = await loadAccount();
+    await setRole('parent');
+    router.replace((a?.token ? '/parent' : '/onboarding/login') as Href);
   };
   const unlink = async () => {
     if (childId) await api.removeDevice(childId, await getDeviceId()).catch(() => {});

@@ -5,7 +5,12 @@ import type { ColorValue } from 'react-native';
 import Svg, { Circle, Path, Rect } from 'react-native-svg';
 
 import { registerThisDevice } from '@/lib/device';
-import { loadProfile } from '@/lib/store';
+import { router, type Href } from 'expo-router';
+
+import { logoutAccount } from '@/lib/account';
+import { api } from '@/lib/api';
+import { dayAdvancePatch } from '@/lib/progress';
+import { loadProfile, refreshProfile, updateProfile, type Profile } from '@/lib/store';
 import { C } from '@/theme';
 
 type IconProps = { color: ColorValue; size: number };
@@ -43,9 +48,26 @@ const GearIcon = ({ color, size }: IconProps) => (
 export default function ParentTabs() {
   // 이 기기를 부모 폰으로 등록 (모드를 바꿨다 돌아온 경우·이전에 가입한 기기 포함)
   useEffect(() => {
-    loadProfile().then((p) => {
-      if (p.onboarded) registerThisDevice(p.childId, 'parent');
-    });
+    (async () => {
+      const p = await loadProfile();
+      if (!p.onboarded) return;
+      let remote: Partial<Profile> | null = null;
+      try {
+        remote = (await api.getProfile(p.childId)) as Partial<Profile>;
+      } catch (e) {
+        // 비밀번호를 바꾸는 등으로 서버가 토큰을 끊었으면 다시 로그인
+        if (String(e).includes('401')) {
+          await logoutAccount();
+          router.replace('/onboarding/login' as Href);
+          return;
+        }
+      }
+      registerThisDevice(p.childId, 'parent');
+      // 기획 2-7: 낭독 다음날이면 일차 +1 을 서버에 저장 (태블릿은 저장 권한이 없어 부모 앱이 맡음). 서버 원본 기준으로 판단
+      const adv = remote ? dayAdvancePatch({ ...p, ...remote } as Profile) : null;
+      if (adv) await updateProfile(adv);
+      else refreshProfile();
+    })();
   }, []);
 
   return (
