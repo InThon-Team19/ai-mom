@@ -65,3 +65,12 @@
 | 매일 2-3 | 피드백 | 선택지 + 직접 쓰기 | 필수 | 다음날 복습 계획 |
 | 매일 2-4 | 계획 낭독 | 입모양 보이며 읽기 | 필수 | 입모양·TTS 갱신, 학습률 (초반 매일) |
 | 매일 2-3 | 새로 말한 단어 | 텍스트 | 선택 | 언어 연계 팁 |
+
+## 5. 화면 이미지
+
+`docs/wireframe/` 폴더의 PNG (원본 캔버스를 같은 해상도로 캡처, 입력창 등은 기본 상태).
+
+- 흐름도: ![흐름](wireframe/00-flow.png) · 입력 항목표: ![입력](wireframe/00-input-spec.png)
+- 온보딩: `1-1-start` `1-2-child` `1-3-parent` `1-4-avatar` `1-5-voice` `1-6-mouth` `1-7-setup`
+- 부모 앱: `2-1-home` `2-2-report` `2-3-feedback` `2-4-plan-read`
+- 아이 태블릿: `3-1-start` `3-2-apple` `3-3-banana` `3-4-repeat` `3-5-snack` `3-6-story` `3-7-audio` `3-8-end`
