@@ -1,4 +1,5 @@
 """실제 로컬 HTTP 시연. 서버/데이터는 종료 시 정리하고 운영 데이터는 건드리지 않는다."""
+import base64
 import io
 import math
 import os
@@ -67,7 +68,8 @@ def run():
                     fields = {"persona_id": persona["id"], "purpose": "night_reading" if plan_id else "onboarding", "text": "사과! 함께 해보자."}
                     if plan_id:
                         fields["plan_id"] = plan_id
-                    a = call("POST", f'/children/{child["id"]}/samples/audio', token, 201, data=fields, files={"file": ("demo.wav", audio, "audio/wav")})
+                    a = call("POST", f'/children/{child["id"]}/samples/audio-b64', token, 201,
+                             json={**fields, "audio_b64": base64.b64encode(audio).decode(), "ext": "wav"})
                     m = call("POST", f'/children/{child["id"]}/samples/mouth', token, 201, json={**fields, "track": [{"t": i * .05, "open": .1, "width": .8} for i in range(30)]})
                     return {"audio_sample_id": a["sample"]["id"], "mouth_sample_id": m["sample"]["id"]}
 

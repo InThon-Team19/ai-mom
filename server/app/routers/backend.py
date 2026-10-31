@@ -1,4 +1,7 @@
 """담당: 민주 — /api 영속 백엔드. 기존 입력 처리기는 인증 후에만 호출한다."""
+import base64
+import binascii
+import io
 import secrets
 from datetime import date, timedelta
 from typing import Annotated, Literal
@@ -188,6 +191,27 @@ def audio_sample(child_id: str, token: ParentAuth, db: DB,
     db.commit()
     db.refresh(record)
     return {"sample": record, "analysis": result}
+
+
+def decode_audio(body: S.AudioBase64In):
+    try:
+        raw = base64.b64decode(body.audio_b64, validate=True)
+    except (binascii.Error, ValueError):
+        raise HTTPException(422, "base64 오디오 형식을 확인해 주세요")
+    if not 0 < len(raw) <= 20 * 1024 * 1024:
+        raise HTTPException(413, "녹음 파일은 20MB 이하여야 해요")
+    return UploadFile(file=io.BytesIO(raw), filename="recording." + body.ext)
+
+
+@router.post("/children/{child_id}/samples/audio-b64", status_code=201)
+def audio_sample_b64(child_id: str, body: S.AudioSampleBase64In, token: ParentAuth, db: DB):
+    # 파일 변환 전 소유권/동의를 검사한다. multipart와 동일한 등록 경로를 사용한다.
+    sample_context(db, token, child_id, body.persona_id, body.purpose, body.plan_id)
+    upload = decode_audio(body)
+    try:
+        return audio_sample(child_id, token, db, upload, body.persona_id, body.text, body.purpose, body.plan_id)
+    finally:
+        upload.file.close()
 
 
 @router.post("/children/{child_id}/samples/mouth", status_code=201)
@@ -500,6 +524,16 @@ def stt(session_id: str, token: TabletAuth, db: DB, file: Annotated[UploadFile, 
     return transcribe(file=file, expected=expected, who="child")
 
 
+@router.post("/tablet/sessions/{session_id}/stt-b64")
+def stt_b64(session_id: str, body: S.AudioBase64In, token: TabletAuth, db: DB):
+    svc.session_access(db, token, session_id, active=True)
+    upload = decode_audio(body)
+    try:
+        return stt(session_id, token, db, upload)
+    finally:
+        upload.file.close()
+
+
 @router.post("/tablet/sessions/{session_id}/messages/{message_id}/tts")
 def tts(session_id: str, message_id: str, token: TabletAuth, db: DB):
     from app.routers.voice import TtsIn, tts as synthesize
@@ -508,7 +542,8 @@ def tts(session_id: str, message_id: str, token: TabletAuth, db: DB):
     if not message or message.session_id != session.id:
         raise HTTPException(404, "발화를 찾을 수 없어요")
     # 임의 문장을 받아 합성하지 않고 검사된 서버 발화만 재생한다.
-    return synthesize(TtsIn(child_id=media_id(session.child_id, session.persona_id), text=message.text))
+    return synthesize(TtsIn(child_id=media_id(session.child_id, session.persona_id), text=message.text,
+                            speed=0.8 if session.pacing == "slow" else 0.95))
 
 
 @router.post("/tablet/sessions/{session_id}/turn")
@@ -520,3 +555,13 @@ def voice_turn(session_id: str, token: TabletAuth, db: DB, file: Annotated[Uploa
     result = svc.respond(db, session, transcript.text)
     db.commit()
     return {"heard": True, "reply": result}
+
+
+@router.post("/tablet/sessions/{session_id}/turn-b64")
+def voice_turn_b64(session_id: str, body: S.AudioBase64In, token: TabletAuth, db: DB):
+    svc.session_access(db, token, session_id, active=True)
+    upload = decode_audio(body)
+    try:
+        return voice_turn(session_id, token, db, upload)
+    finally:
+        upload.file.close()

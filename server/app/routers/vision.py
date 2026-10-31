@@ -27,7 +27,7 @@ def _mouth_dir(child_id: str, kind: str) -> Path:
 
 
 def mouth_profiles(child_id: str, kind: str) -> list[dict]:
-    return [json.loads(p.read_text(encoding="utf-8")) for p in sorted(_mouth_dir(child_id, kind).glob("profile_*.json"))]
+    return [json.loads(p.read_text(encoding="utf-8")) for p in sorted(_mouth_dir(child_id, kind).glob("profile_*.json"), key=lambda p: p.stat().st_mtime_ns)]
 
 
 def mouth_gauge(child_id: str) -> Gauge:

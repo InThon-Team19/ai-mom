@@ -39,6 +39,28 @@ export type BackendFeedback = {
   concerns: ('too_fast' | 'too_difficult' | 'haptics_too_strong' | 'voice_unnatural')[];
   new_words: string[]; pacing: 'normal' | 'slow';
 };
+export type BackendReply = {
+  message: BackendMessage; source_ids: string[]; session_status: 'active' | 'ended';
+  engine: 'curriculum' | 'llm_selection' | 'curriculum_fallback';
+};
+export type BackendSample = {
+  id: string; created_at: string; parent_id: string; child_id: string; persona_id: string;
+  kind: 'audio' | 'mouth_track'; purpose: 'onboarding' | 'night_reading'; plan_id: string | null;
+  storage_key: string; sentence_count: number; status: 'submitted';
+};
+export type BackendDevice = {
+  id: string; created_at: string; parent_id: string; child_id: string; persona_id: string;
+  label: string; revoked_at: string | null;
+};
+export type BackendOnboarding = { ready: boolean; checks: Record<string, boolean> };
+export type BackendContext = {
+  device: BackendDevice; child: BackendChild; persona: BackendPersona;
+  onboarding: BackendOnboarding; plan: BackendPlan | null;
+};
+export type BackendHome = {
+  child: BackendChild; onboarding: BackendOnboarding; plan: BackendPlan | null; report: BackendReport;
+  evening_tasks: { reviewed: boolean; feedback_submitted: boolean; next_reading_submitted: boolean };
+};
 // ↓ 입력 파이프라인·리포트 원자료 (태희) — server/app/routers/{voice,vision,activity}.py 응답과 동일
 
 export type SpeechFeatures = {

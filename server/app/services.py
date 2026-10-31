@@ -79,6 +79,11 @@ def plan_out(db, plan):
     return {**plan.model_dump(), "content_ids": [c.id for c in plan_content(db, plan.id)]}
 
 
+def spoken_prompt(content, mode, persona):
+    prompt = f"{content.word}! 함께 말해 볼까?" if mode == "audio_only" else content.prompt
+    return prompt + (f" {content.english_word}." if persona.english_enabled else "")
+
+
 def make_plan(db, child, body):
     persona = owned(db, Persona, body.persona_id, child.parent_id)
     if persona.status != "confirmed":
@@ -158,7 +163,7 @@ def start_session(db, token, body):
     session = ConversationSession(child_id=child.id, plan_id=plan.id, persona_id=persona.id, device_id=device.id, mode=body.mode, pacing=plan.pacing)
     db.add(session)
     db.flush()
-    opening = Message(session_id=session.id, sequence=1, text=f"{child.nickname}야, 안녕! " + plan_content(db, plan.id)[0].prompt)
+    opening = Message(session_id=session.id, sequence=1, text=f"{child.nickname}야, 안녕! " + spoken_prompt(plan_content(db, plan.id)[0], body.mode, persona))
     db.add(opening)
     db.flush()
     db.add(MessageSource(message_id=opening.id, content_id=plan_content(db, plan.id)[0].id))
@@ -185,6 +190,9 @@ def respond(db, session, text):
         status, reply, source = "grounded", "함께 해보자! " + content[0].prompt, content[0].id
     else:
         status, reply = "out_of_scope", "그 이야기는 부모님과 함께 알아보자. 지금은 " + content[0].word + " 놀이를 해볼까?"
+    if source:
+        item = next(c for c in content if c.id == source)
+        reply = reply.replace(item.prompt, spoken_prompt(item, session.mode, db.get(Persona, session.persona_id)))
     sequence = (db.exec(select(func.max(Message.sequence)).where(Message.session_id == session.id)).one() or 0) + 1
     message = Message(session_id=session.id, sequence=sequence, text=reply, safety_status=status)
     db.add(message)

@@ -2,6 +2,8 @@
 
 > 낮에는 부모 아바타가 아이와 청각·시각·촉각 대화를 하고, 밤에는 부모가 피드백과 입모양 낭독으로 다음날을 갱신합니다.
 
+백엔드의 현재 실행 방법은 [server/README.md](server/README.md), API 계약은 [docs/api.md](docs/api.md), 실제 DB 관계는 [docs/backend-erd.md](docs/backend-erd.md)를 참고하세요. `/api`에 가입·인증·기기 연결·계획·활동·리포트·피드백을 구현했고 SQLite에 저장합니다. 기존 앱 화면의 임시 경로는 기본 비활성입니다. 화면 통합 시 `backendApi(token)`을 사용하거나, 격리된 기존 시연에서만 `ALLOW_LEGACY_API=true`로 켭니다.
+
 ## 구조
 기준 문서: **`docs/기획서.md`(최종 v2)**, **`docs/wireframe.md` + `docs/wireframe/*.png`**
 ```
@@ -17,11 +19,14 @@ aibom/
 │     └─ content/curriculum.ts   # 1일차 사과·바나나(+동화), 2일차 과자 — 콘텐츠는 출력 담당이 교체
 ├─ server/                       # FastAPI
 │  └─ app/
+│     ├─ routers/backend.py      # /api 가입·인증·기기·계획·세션·리포트·피드백·인증된 미디어 처리
+│     ├─ models.py db.py         # SQLModel 19개 테이블·SQLite 영속 저장
+│     ├─ auth.py services.py     # 토큰·소유권·동의·상태·시간 제한·집계
 │     ├─ routers/voice.py        # 부모 음성·학습률·특성 분석·코칭, STT, TTS(Fish Audio)
 │     ├─ routers/vision.py       # 입모양 기준값·학습률 (앱이 보낸 수치)
 │     ├─ routers/activity.py     # 아이 반응 기록·하루 요약(세 감각 균형)
 │     ├─ routers/profile.py      # (임시) 프로필·태블릿 연결 — 민주 children API 로 교체 예정
-│     ├─ routers/children·conversation·evening.py  # 민주·충항 자리
+│     ├─ routers/children·conversation·evening.py  # 이전 경로 자리, 새 흐름은 backend.py
 │     ├─ voice/ vision/          # 오디오 특성 · MediaPipe
 │     ├─ agent/  llm.py          # 충항: 에이전트 (LLM = Lablup Token Factory)
 │     └─ tts/fish.py             # Fish Audio 목소리 복제·합성

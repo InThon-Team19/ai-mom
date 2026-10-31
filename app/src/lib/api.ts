@@ -7,6 +7,19 @@ import { getApiUrl } from './config';
 import type {
   ActivityEvent,
   AnalysisOut,
+  BackendChild,
+  BackendContext,
+  BackendDevice,
+  BackendFeedback,
+  BackendHome,
+  BackendOnboarding,
+  BackendPersona,
+  BackendPlan,
+  BackendReply,
+  BackendReport,
+  BackendSample,
+  BackendSession,
+  BackendToken,
   Gauge,
   MouthProfile,
   MouthTrackOut,
@@ -115,3 +128,77 @@ export const api = {
   getProfile: (childId: string) => req<Record<string, unknown>>(`/profile/${childId}`),
   putProfile: (childId: string, body: unknown) => req<Record<string, unknown>>(`/profile/${childId}`, json('PUT', body)),
 };
+
+/** 새 영속 백엔드. 부모/태블릿은 각각 받은 토큰으로 인스턴스를 만든다.
+ * 예: const parent = backendApi(login.access_token). 기존 api는 시연 호환용이다. */
+export function backendApi(token?: string) {
+  const call = <T>(path: string, method = 'GET', body?: unknown) => req<T>(`/api${path}`, {
+    ...(body === undefined ? { method } : json(method, body)),
+    headers: { ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
+      ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+  });
+  const id = encodeURIComponent;
+  const query = (values: Record<string, string>) => Object.entries(values).map(([k, v]) => `${id(k)}=${id(v)}`).join('&');
+  const recording = async (uri: string) => {
+    const ext = (uri.split('?')[0].split('.').pop() || 'm4a').toLowerCase();
+    return { audio_b64: await readBase64(uri), ext };
+  };
+  return {
+    signup: (email: string, password: string, display_name: string) =>
+      call<BackendToken & { parent: { id: string; email: string; display_name: string } }>('/auth/signup', 'POST', { email, password, display_name }),
+    login: (email: string, password: string) => call<BackendToken>('/auth/login', 'POST', { email, password }),
+    logout: () => call<{ ok: boolean }>('/auth/logout', 'POST'),
+    me: () => call<{ id: string; email: string; display_name: string }>('/me'),
+    createChild: (body: Pick<BackendChild, 'nickname' | 'birth_month'> & Partial<Pick<BackendChild, 'speech_level' | 'interests'>>) =>
+      call<BackendChild>('/children', 'POST', body),
+    children: () => call<BackendChild[]>('/children'),
+    createPersona: (body: Partial<Pick<BackendPersona, 'parent_title' | 'speaking_style' | 'english_enabled' | 'education_goals' | 'avatar'>>) =>
+      call<BackendPersona>('/personas', 'POST', body),
+    personas: () => call<BackendPersona[]>('/personas'),
+    confirmPersona: (personaId: string) => call<BackendPersona>(`/personas/${id(personaId)}/confirm`, 'POST'),
+    consent: (childId: string, parent_biometrics: boolean, child_signals: boolean) =>
+      call(`/children/${id(childId)}/consents`, 'PUT', { parent_biometrics, child_signals, policy_version: 'demo-v1' }),
+    settings: (childId: string, body: Pick<BackendChild, 'haptics_enabled' | 'daily_limit_minutes' | 'window_start' | 'window_end'>) =>
+      call<BackendChild>(`/children/${id(childId)}/settings`, 'PUT', body),
+    onboarding: (childId: string, personaId: string) =>
+      call<BackendOnboarding>(`/children/${id(childId)}/onboarding?${query({ persona_id: personaId })}`),
+    audioSample: async (childId: string, personaId: string, uri: string, text: string, planId?: string) =>
+      call<{ sample: BackendSample; analysis: ParentSampleOut }>(`/children/${id(childId)}/samples/audio-b64`, 'POST', {
+        ...await recording(uri), persona_id: personaId, text, purpose: planId ? 'night_reading' : 'onboarding', ...(planId ? { plan_id: planId } : {}),
+      }),
+    mouthSample: (childId: string, personaId: string, track: TrackPoint[], text: string, planId?: string) =>
+      call<{ sample: BackendSample; analysis: MouthTrackOut }>(`/children/${id(childId)}/samples/mouth`, 'POST', {
+        persona_id: personaId, text, track, purpose: planId ? 'night_reading' : 'onboarding', ...(planId ? { plan_id: planId } : {}),
+      }),
+    pairingCode: (childId: string, personaId: string) =>
+      call<{ code: string; expires_at: string }>(`/children/${id(childId)}/pairing-codes`, 'POST', { persona_id: personaId }),
+    pair: (code: string, label = '아이 태블릿') => call<BackendToken & { device: BackendDevice }>('/tablet/pair', 'POST', { code, label }),
+    devices: () => call<BackendDevice[]>('/devices'),
+    revokeDevice: (deviceId: string) => call<{ ok: boolean }>(`/devices/${id(deviceId)}`, 'DELETE'),
+    context: () => call<BackendContext>('/tablet/context'),
+    createPlan: (childId: string, body: Pick<BackendPlan, 'date' | 'persona_id' | 'day_number'> & { feedback_id?: string }) =>
+      call<BackendPlan>(`/children/${id(childId)}/plans`, 'POST', body),
+    plan: (planId: string) => call<BackendPlan>(`/plans/${id(planId)}`),
+    submitReading: (planId: string, audioSampleId: string, mouthSampleId: string) =>
+      call<BackendPlan>(`/plans/${id(planId)}/reading`, 'POST', { audio_sample_id: audioSampleId, mouth_sample_id: mouthSampleId }),
+    start: (planId: string, mode: BackendSession['mode'] = 'multisensory') =>
+      call<{ session: BackendSession; message: BackendReply['message']; source_ids: string[]; haptics_enabled: boolean }>('/tablet/sessions', 'POST', { plan_id: planId, mode }),
+    message: (sessionId: string, text: string) => call<BackendReply>(`/tablet/sessions/${id(sessionId)}/messages`, 'POST', { text }),
+    voiceTurn: async (sessionId: string, uri: string) =>
+      call<{ heard: boolean; reply: BackendReply | null }>(`/tablet/sessions/${id(sessionId)}/turn-b64`, 'POST', await recording(uri)),
+    stt: async (sessionId: string, uri: string) => call<SttOut>(`/tablet/sessions/${id(sessionId)}/stt-b64`, 'POST', await recording(uri)),
+    tts: (sessionId: string, messageId: string) => call<{ url: string }>(`/tablet/sessions/${id(sessionId)}/messages/${id(messageId)}/tts`, 'POST'),
+    mode: (sessionId: string, mode: BackendSession['mode']) =>
+      call<{ session: BackendSession; haptics_enabled: boolean }>(`/tablet/sessions/${id(sessionId)}`, 'PATCH', { mode }),
+    event: (sessionId: string, body: { content_id: string; sense: 'auditory' | 'visual' | 'tactile'; action: 'repeat' | 'listen' | 'gaze' | 'tap' | 'peel' | 'bite' | 'drag' | 'swipe'; reaction_ms?: number }) =>
+      call(`/tablet/sessions/${id(sessionId)}/events`, 'POST', body),
+    end: (sessionId: string) => call<BackendSession>(`/tablet/sessions/${id(sessionId)}/end`, 'POST'),
+    report: (childId: string, date: string, period: 'day' | 'week' = 'day') =>
+      call<BackendReport>(`/children/${id(childId)}/report?${query({ date, period })}`),
+    home: (childId: string, date: string, personaId: string) =>
+      call<BackendHome>(`/children/${id(childId)}/home?${query({ date, persona_id: personaId })}`),
+    eveningReview: (childId: string, date: string) => call(`/children/${id(childId)}/evening-review`, 'POST', { date }),
+    feedback: (childId: string, body: Pick<BackendFeedback, 'for_date'> & Partial<Pick<BackendFeedback, 'concerns' | 'new_words'>>) =>
+      call<BackendFeedback>(`/children/${id(childId)}/feedback`, 'POST', body),
+  };
+}

@@ -10,7 +10,7 @@ from pathlib import Path
 
 import httpx
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app.storage import child_dir, public_dir, public_url, tmp_path
 from app.tts import fish
@@ -65,7 +65,7 @@ def samples(child_id: str, kinds=KINDS) -> list[dict]:
     """[{wav: Path, text, features, quality, kind}] — 민주: TTS 등록은 이 목록의 wav·text 사용."""
     out = []
     for kind in kinds:
-        for meta in sorted(_voice_dir(child_id, kind).glob("sample_*.json")):
+        for meta in sorted(_voice_dir(child_id, kind).glob("sample_*.json"), key=lambda p: p.stat().st_mtime_ns):
             d = json.loads(meta.read_text(encoding="utf-8"))
             d["wav"] = meta.with_suffix(".wav")
             d["kind"] = kind
@@ -332,6 +332,7 @@ def register(child_id: str = Form(...)):
 class TtsIn(BaseModel):
     child_id: str
     text: str
+    speed: float = Field(default=0.95, ge=0.6, le=1.1)
 
 
 class TtsOut(BaseModel):
@@ -348,11 +349,11 @@ def tts(body: TtsIn):
     if not id_file.exists():
         raise HTTPException(400, "목소리 등록을 먼저 해 주세요 (/voice/register)")
     model_id = id_file.read_text(encoding="utf-8").strip()
-    key = hashlib.sha1(f"{model_id}:{body.text}".encode()).hexdigest()[:16]
+    key = hashlib.sha1(f"{model_id}:{body.speed}:{body.text}".encode()).hexdigest()[:16]
     out = public_dir(body.child_id, "tts") / f"{key}.mp3"
     if not out.exists():
         try:
-            fish.synthesize(body.text, model_id, out)
+            fish.synthesize(body.text, model_id, out, speed=body.speed)
         except RuntimeError as e:
             raise HTTPException(503, str(e))
         except httpx.HTTPStatusError as e:

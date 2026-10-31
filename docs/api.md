@@ -20,6 +20,7 @@
 | 부모 | `PUT /children/{id}/settings` | `haptics_enabled`, `daily_limit_minutes`(1~120), `window_start`, `window_end`(HH:mm). 기본값은 OpenAPI 참고 |
 | 부모 | `GET /children/{id}/onboarding?persona_id=` | 가입 체크리스트와 `ready` |
 | 부모 | `POST /children/{id}/samples/audio` | multipart: `file`, `persona_id`, `text`, `purpose?`, `plan_id?`. 20MB 제한, 음성 품질 검사 |
+| 부모 | `POST /children/{id}/samples/audio-b64` | JSON: `audio_b64`, `ext?`, `persona_id`, `text`, `purpose?`, `plan_id?`. 모바일 첨부 호환, 동일한 인증·품질 검사 |
 | 부모 | `POST /children/{id}/samples/mouth` | JSON: `persona_id`, `text?`, `track:[{t,open,width,face?}]`, `purpose?`, `plan_id?`. 영상 대신 수치 저장 |
 | 부모 | `GET /children/{id}/training-progress?persona_id=` | 샘플 등록량. 모델 정확도가 아님 |
 | 부모 | `GET /children/{id}/voice-analysis?persona_id=` | 부모 음성 특성·안내 |
@@ -40,6 +41,7 @@
 | 태블릿 | `POST /tablet/sessions/{id}/end` | 종료. 반복 호출 가능 |
 | 태블릿 | `POST /tablet/sessions/{id}/stt` | multipart `file`; 실제 STT. 임시 파일 삭제 |
 | 태블릿 | `POST /tablet/sessions/{id}/turn` | multipart `file`; STT → 자료 기반 응답. 무음은 `heard:false` |
+| 태블릿 | `POST /tablet/sessions/{id}/stt-b64`, `POST /tablet/sessions/{id}/turn-b64` | JSON: `audio_b64`, `ext?`; multipart와 같은 동작·권한 검사 |
 | 태블릿 | `POST /tablet/sessions/{id}/messages/{message_id}/tts` | 저장된 서버 발화만 TTS 합성. 임의 텍스트 합성 불가 |
 | 태블릿 | `POST /tablet/sessions/{id}/frame` | multipart `file`; 프레임 분석 후 저장하지 않음 |
 | 태블릿 | `GET /tablet/mouth-profile` | 연결한 페르소나의 입모양 기준값 |
@@ -54,12 +56,14 @@
 ### 처리 규칙
 
 - 음성·입모양 등록에는 두 동의가 필요하다. `purpose`는 `onboarding` 또는 `night_reading`; 후자는 `plan_id` 필수다. 낭독 접수는 `required → submitted`이며 모델 학습 완료를 뜻하지 않는다.
+- base64는 엄격히 디코딩하며 원본 20MB 이하, 확장자 `wav/m4a/mp3/webm/ogg/aac`만 허용한다. 앱의 새 호출 함수는 `app/src/lib/api.ts`의 `backendApi(token)`이다. 화면은 반환 토큰을 별도로 관리하고 역할에 맞는 인스턴스를 사용해야 한다.
 - 부모·아이·페르소나·계획·기기·샘플의 소유 범위를 검사한다. 샘플과 TTS 모델은 아이+페르소나 조합으로 분리한다.
 - 태블릿은 전체 가입 체크리스트와 현재 동의를 매 요청 검사한다. 철회/기기 해제 시 진행 세션을 종료한다.
 - 대화 시간대는 서울 시각, 계획 날짜는 서울 날짜다. 같은 날의 시작/종료 시간만 지원하며 하루 상한은 서버가 수락한 세션 경과 시간 합계다. 새 세션/메시지/이벤트에서 제한한다. 단말의 자동 재생 중단은 앱이 담당한다.
 - 아이별 동시 활성 세션은 하나. 계획 `(child_id,date)`, 계획 순서 `(plan_id,position)`, 발화 순서 `(session_id,sequence)`, 저녁 확인 `(child_id,date)`, 피드백 적용은 DB 유일성 제약으로 보호한다.
 - 피드백은 같은 아이의 바로 다음날 계획에 한 번만 적용한다. 계획과 자료 연결은 단일 트랜잭션이다. 다른 피드백 선택지는 기록만 한다.
 - 청각 모드에서 시각·촉각 이벤트를 거부한다. `haptics_enabled:false`는 단말 진동 금지이며 실제 터치 반응 기록 자체는 허용한다.
+- 청각 모드 발화는 터치 지시 대신 함께 말하기 문장을 사용한다. 영어 노출 설정을 발화에도 반영한다. TTS는 세션 `slow`일 때 속도 0.8, 기본 0.95로 합성하며 캐시도 속도별로 분리한다.
 - 아이 발화 원문은 DB에 저장하지 않는다. 범위 밖 질문은 안내·부모 확인 항목을 남긴다. 위험 표현은 가까운 어른에게 연결하는 문구와 함께 세션을 종료한다. 키워드 규칙은 의료/위험 판정 시스템이 아니다.
 - LLM 키가 없으면 자료 기반 결정형 응답. 키가 있으면 LLM은 제공 자료 ID와 허용 칭찬 유형만 고른다. 출력은 서버 문장으로 재구성하며 외부 LLM에 아이 원문을 보내지 않는다. 실패 시 `engine: curriculum_fallback`.
 - 감각 비율은 클라이언트가 보낸 이벤트 개수 비율이고 없으면 null. `practiced_words`는 따라 말하기 이벤트의 자료 단어이며 성공/습득 판정이 아니다. 발달 점수·학습률은 null. 세션 시간은 계획 날짜에 귀속하며 자정으로 나누지 않는다.

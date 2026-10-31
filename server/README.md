@@ -37,7 +37,7 @@ cd server
 6. 태블릿은 오늘 계획으로 세션을 시작한다. 첫 발화 → 메시지/음성 turn → 감각 이벤트 → 종료로 활동한다.
 7. 부모는 홈·리포트·확인 항목을 보고 저녁 확인과 피드백을 남긴다. 피드백 ID를 다음날 계획 생성에 전달하고 낭독한다.
 
-전체 필드/경로는 [API 명세](../docs/api.md)와 `/docs`를 참고한다. 화면과 공유할 타입은 `app/src/lib/types.ts`의 `Backend*` 타입이다. 기존 앱의 임시 `/profile` 연결을 새 인증 흐름으로 바꾸는 화면 통합은 별도 작업이다.
+전체 필드/경로는 [API 명세](../docs/api.md)와 `/docs`, 실제 DB 관계는 [ERD](../docs/backend-erd.md)를 참고한다. 화면과 공유할 타입은 `app/src/lib/types.ts`의 `Backend*` 타입, 새 호출 함수는 `app/src/lib/api.ts`의 `backendApi(token)`이다. 모바일은 인증된 base64 JSON 경로로 음성을 전송할 수 있다. 기존 앱의 임시 `/profile` 연결을 새 인증 흐름으로 바꾸는 화면 통합은 별도 작업이다.
 
 ## AI 및 미디어
 

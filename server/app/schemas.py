@@ -121,3 +121,15 @@ class ReadingIn(Input):
 
 class ReviewIn(Input):
     status: Literal["reviewed"] = "reviewed"
+
+
+class AudioBase64In(Input):
+    audio_b64: str = Field(min_length=1, max_length=27962028)
+    ext: Literal["wav", "m4a", "mp3", "webm", "ogg", "aac"] = "m4a"
+
+
+class AudioSampleBase64In(AudioBase64In):
+    persona_id: str
+    text: str = Field(min_length=1, max_length=2000)
+    purpose: Literal["onboarding", "night_reading"] = "onboarding"
+    plan_id: str | None = None

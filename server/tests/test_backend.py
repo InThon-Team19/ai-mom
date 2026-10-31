@@ -207,6 +207,8 @@ def test_audio_mode_and_session_end(ctx):
     assert not request(client, "PATCH", path, token, json={"mode": "audio_only"})["haptics_enabled"]
     request(client, "POST", path + "/events", token, 409, json={"content_id": "demo-apple", "sense": "visual", "action": "gaze"})
     request(client, "POST", path + "/events", token, 201, json={"content_id": "demo-apple", "sense": "auditory", "action": "repeat"})
+    line = request(client, "POST", path + "/messages", token, json={"text": "사과"})["message"]["text"]
+    assert "함께 말해" in line and "눌러" not in line
     request(client, "POST", path + "/end", token)
     request(client, "POST", path + "/end", token)
     request(client, "POST", path + "/messages", token, 409, json={"text": "사과"})
@@ -299,6 +301,14 @@ def test_voice_turn_and_generated_tts_are_scoped(ctx, monkeypatch):
     request(client, "POST", path + f"/messages/{message_id}/tts", token)
     assert captured[0].text == result["reply"]["message"]["text"]
     assert captured[0].child_id.startswith("media_")
+    _, engine, _ = ctx
+    with Session(engine) as db:
+        record = db.get(ConversationSession, session["id"])
+        record.pacing = "slow"
+        db.add(record)
+        db.commit()
+    request(client, "POST", path + f"/messages/{message_id}/tts", token)
+    assert captured[-1].speed == 0.8
     request(client, "POST", path + "/messages/missing/tts", token, 404)
 
 
@@ -361,3 +371,37 @@ def test_silent_turn_removes_temporary_files(ctx):
     result = request(client, "POST", f'/tablet/sessions/{session["id"]}/turn', tablet["access_token"], files={"file": ("silent.wav", silence.getvalue(), "audio/wav")})
     assert result == {"heard": False, "reply": None}
     assert set((DATA_DIR / "tmp").glob("*")) == before
+
+
+def test_authenticated_base64_audio_and_turn(ctx):
+    import base64
+    client, _, _ = ctx
+    token, child, persona = setup(client, media=False)
+    result = request(client, "POST", f'/children/{child["id"]}/samples/audio-b64', token, 201, json={
+        "persona_id": persona["id"], "text": "사과", "audio_b64": base64.b64encode(wav()).decode(), "ext": "wav"})
+    assert result["analysis"]["quality"]["ok"] and result["sample"]["kind"] == "audio"
+    _, _, _, tablet, _, session = active(client)
+    buffer = io.BytesIO()
+    with wave.open(buffer, "wb") as f:
+        f.setnchannels(1)
+        f.setsampwidth(2)
+        f.setframerate(16000)
+        f.writeframes(bytes(32000))
+    audio = {"audio_b64": base64.b64encode(buffer.getvalue()).decode(), "ext": "wav"}
+    path = f'/tablet/sessions/{session["id"]}'
+    assert request(client, "POST", path + "/stt-b64", tablet["access_token"], json=audio)["text"] == ""
+    assert request(client, "POST", path + "/turn-b64", tablet["access_token"], json=audio) == {"heard": False, "reply": None}
+
+
+def test_base64_validates_role_owner_and_input(ctx):
+    client, _, _ = ctx
+    token, child, persona = setup(client, media=False)
+    body = {"persona_id": persona["id"], "text": "사과", "audio_b64": "not-base64!", "ext": "wav"}
+    path = f'/children/{child["id"]}/samples/audio-b64'
+    request(client, "POST", path, expected=401, json=body)
+    other, _ = parent(client)
+    request(client, "POST", path, other, 404, json=body)
+    request(client, "POST", path, token, 422, json=body)
+    request(client, "POST", path, token, 422, json={**body, "ext": "m3u"})
+    request(client, "POST", path, token, 422, json={**body, "audio_b64": ""})
+    request(client, "POST", "/tablet/sessions/missing/stt-b64", token, 403, json={"audio_b64": "dGVzdA=="})
