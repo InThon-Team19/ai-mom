@@ -8,6 +8,7 @@ import { C, R, T } from '@/theme';
 import { useDevice } from '@/lib/layout';
 import { goBack, prevOf } from '@/lib/nav';
 import { Text } from '@/components/AppText';
+import { FruitSprite } from '@/components/child/FruitSprite';
 
 type BtnProps = {
   label: string;
@@ -231,20 +232,8 @@ export function Art({ name, size = 34 }: { name: ArtName; size?: number }) {
   const line = { stroke: C.text, fill: 'none', strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const };
   switch (name) {
     case 'apple':
-      return (
-        <Svg width={size} height={size} viewBox="0 0 48 48">
-          <Path d="M24 15 C18 9 7 11 7 23 C7 34 15 43 20 43 C22 43 23 42 24 42 C25 42 26 43 28 43 C33 43 41 34 41 23 C41 11 30 9 24 15 Z" fill="#E8584F" />
-          <Path d="M24 15 C24 11 25 8 27 5" stroke="#6B4A2B" strokeWidth={2.5} fill="none" strokeLinecap="round" />
-          <Path d="M26 10 C29 5 35 5 37 7 C34 11 29 11 26 10 Z" fill="#7FB83A" />
-        </Svg>
-      );
     case 'banana':
-      return (
-        <Svg width={size} height={size} viewBox="0 0 48 48">
-          <Path d="M11 13 C12 30 24 41 41 37 C43 36.5 43 33.5 41 33.5 C28 34 18 26 15.5 12.5 C15 10 11.2 10.5 11 13 Z" fill="#FFD54F" stroke="#C99700" strokeWidth={2} strokeLinejoin="round" />
-          <Path d="M11.5 12 L10.5 8" stroke="#6B4A2B" strokeWidth={3} strokeLinecap="round" />
-        </Svg>
-      );
+      return <FruitSprite id={name} size={size} presses={0} reduceMotion />;
     case 'snack':
       return (
         <Svg width={size} height={size} viewBox="0 0 48 48">
@@ -331,11 +320,7 @@ export const artOf = (id?: string | null): ArtName | null => (id === 'apple' || 
 
 /** 디자인 Main 보드의 사과 (아바타가 건네는 장면) */
 export const BigApple = ({ size = 64 }: { size?: number }) => (
-  <Svg width={size} height={size} viewBox="0 0 64 64">
-    <Circle cx={32} cy={36} r={24} fill="#E8584F" />
-    <Path d="M32 14 Q36 6 44 6" stroke="#6b4a2f" strokeWidth={4} fill="none" strokeLinecap="round" />
-    <Ellipse cx={42} cy={14} rx={8} ry={4} fill="#8BC34A" />
-  </Svg>
+  <FruitSprite id="apple" size={size} presses={0} reduceMotion />
 );
 
 /** 켜고 끄기 (디자인: 44×26 둥근 막대, 켜면 연두) */

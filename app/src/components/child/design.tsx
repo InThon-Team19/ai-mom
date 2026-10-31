@@ -10,6 +10,7 @@ import Svg, { Circle, G, Path, Rect } from 'react-native-svg';
 
 import type { ItemId } from '@/content/curriculum';
 import { Text } from '@/components/AppText';
+import { FruitSprite } from '@/components/child/FruitSprite';
 
 // ---------- 보드 색 ----------
 export const K = {
@@ -230,19 +231,11 @@ export function SkipNextIcon({ size = 24, color = K.white }: IconP) {
 export function ItemArt({ id, size, ghost }: { id: ItemId | 'strawberry' | 'grape'; size: number; ghost?: boolean }) {
   // ghost: 바구니 빈자리 (흐린 색 + 점선)
   const dash = ghost ? '3 3' : undefined;
-  if (id === 'banana')
+  if (id === 'apple' || id === 'banana')
     return (
-      <Svg width={size} height={size} viewBox="0 0 64 64">
-        <Path
-          d="M13 14 L21 12 Q24 38 54 46 Q46 54 34 51 Q14 44 13 14 Z"
-          fill={ghost ? '#E8C984' : '#F2D160'}
-          stroke={ghost ? '#B8914A' : '#C9A227'}
-          strokeWidth={ghost ? 2 : 2.5}
-          strokeDasharray={dash}
-          strokeLinejoin="round"
-        />
-        {!ghost && <Path d="M13 14 L12 10" stroke="#6B4426" strokeWidth={3} strokeLinecap="round" />}
-      </Svg>
+      <View style={{ opacity: ghost ? 0.35 : 1 }}>
+        <FruitSprite id={id} size={size} presses={0} reduceMotion />
+      </View>
     );
   if (id === 'snack')
     return (
@@ -279,19 +272,7 @@ export function ItemArt({ id, size, ghost }: { id: ItemId | 'strawberry' | 'grap
         </G>
       </Svg>
     );
-  // 사과 (기본)
-  return (
-    <Svg width={size} height={size} viewBox="0 0 64 64">
-      <Circle cx="32" cy="37" r="21" fill={ghost ? '#E8C984' : '#E06660'} stroke={ghost ? '#B8914A' : '#B5453E'} strokeWidth={ghost ? 2 : 2.5} strokeDasharray={dash} />
-      {!ghost && (
-        <>
-          <Path d="M32 16 Q32 10 37 7" stroke="#6B4426" strokeWidth={3} fill="none" strokeLinecap="round" />
-          <Path d="M34 14 Q41 6 49 10 Q42 16 34 14 Z" fill="#7CC04B" />
-          <Circle cx="24" cy="30" r="4" fill="#fff" opacity={0.45} />
-        </>
-      )}
-    </Svg>
-  );
+  return null;
 }
 
 // ---------- 버튼 ----------

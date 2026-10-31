@@ -3,7 +3,7 @@
 import { router, useFocusEffect, useIsFocused, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { View } from 'react-native';
-import Animated, { FadeIn } from 'react-native-reanimated';
+import { FadeIn } from 'react-native-reanimated';
 import Svg, { Circle, Ellipse, Path, Rect } from 'react-native-svg';
 
 import { Avatar } from '@/components/Avatar';

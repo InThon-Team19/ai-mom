@@ -235,7 +235,11 @@ export function useReadingWord(text: string, recording: boolean) {
   }, [words]);
   const key = `${text}|${recording}`;
   const [st, setSt] = useState({ key: '', word: 0 });
-  const acc = useRef({ key: '', spoken: 0, lastT: 0, lastOpen: 0 });
+  const acc = useRef({ key: '', spoken: 0, lastT: 0, lastOpen: 0, lastWidth: 0, movingUntil: 0 });
+  useEffect(() => {
+    // A new recording of the same sentence must start from its first word.
+    acc.current.key = '';
+  }, [text, recording]);
 
   const feed = useCallback(
     (f: FaceFrame) => {
@@ -247,11 +251,16 @@ export function useReadingWord(text: string, recording: boolean) {
         a.spoken = 0;
         a.lastT = now;
         a.lastOpen = f.open;
+        a.lastWidth = f.width;
+        a.movingUntil = 0;
       }
       const dt = Math.min(0.15, (now - a.lastT) / 1000);
-      const moving = f.face && (f.open > 0.04 || Math.abs(f.open - a.lastOpen) > 0.012);
+      const changed = Math.abs(f.open - a.lastOpen) > 0.006 || Math.abs(f.width - a.lastWidth) > 0.008;
+      if (f.face && changed) a.movingUntil = now + 250;
+      const moving = f.face && (f.open > 0.04 || now < a.movingUntil);
       a.lastT = now;
       a.lastOpen = f.open;
+      a.lastWidth = f.width;
       if (moving) a.spoken += dt;
       const syl = a.spoken * SYL_PER_SEC;
       let i = ends.findIndex((e) => syl < e);

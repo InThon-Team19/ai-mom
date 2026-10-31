@@ -54,31 +54,35 @@ function Form({ initial, code, profile }: { initial: Profile['settings']; code: 
   const [pin2, setPin2] = useState('');
 
   const timeOk = start < end; // "HH:00" 문자열 비교로 충분
-  const pinOk = validPin(pin) && pin === pin2;
-  const ready = consentBio && consentChild && timeOk && pinOk && !saving;
+  const pinOk = (!pin && !pin2 && !!profile.pinHash) || (validPin(pin) && pin === pin2);
+  const validation = !pinOk ? '부모 PIN 숫자 4자리와 PIN 확인을 동일하게 입력해 주세요.'
+    : !consentBio || !consentChild ? '데이터 동의 두 항목을 모두 체크해 주세요.'
+    : !timeOk ? '대화 끝 시간을 시작 시간보다 늦게 선택해 주세요.' : '';
 
   const finish = async () => {
-    if (!ready) return;
+    if (saving) return;
+    if (validation) { setError(validation); return; }
     setSaving(true);
     setError('');
-    const p = await updateProfile({
-      settings: { ...profile.settings, consentBio, consentChild, start, end, dailyLimitMin: limit, vibration },
-      pinHash: await pinHash(code, pin),
-      onboarded: true,
-    });
     try {
+      const settings = { ...profile.settings, consentBio, consentChild, start, end, dailyLimitMin: limit, vibration };
+      const hash = pin ? await pinHash(code, pin) : profile.pinHash;
+      await api.putProfile(profile.childId, { settings, pinHash: hash, onboarded: true });
+      const p = await updateProfile({
+        settings: { ...profile.settings, consentBio, consentChild, start, end, dailyLimitMin: limit, vibration },
+        pinHash: hash,
+        onboarded: true,
+      });
       // 이 화면에서 정한 것만 서버에 확실히 저장 (태블릿 연결은 가입 완료 뒤에만 됨)
-      await api.putProfile(p.childId, { settings: p.settings, pinHash: p.pinHash, onboarded: true });
       const r = await api.reissueLinkCode(p.childId); // 지금 쓸 수 있는 연결 코드 (10분 유효)
       setIssued(r.linkCode);
+      registerThisDevice(p.childId, 'parent');
+      prefetchDay(p, p.day);
     } catch (e) {
       setError(friendlyError(e, '서버에 저장하지 못했어요. 인터넷 연결을 확인하고 다시 눌러 주세요.'));
+    } finally {
       setSaving(false);
-      return;
     }
-    registerThisDevice(p.childId, 'parent');
-    prefetchDay(p, p.day); // 1일차 엄마 목소리 미리 만들기
-    setSaving(false);
   };
 
   const toggleOpen = (k: 'time' | 'limit') => setOpen((o) => (o === k ? null : k));
@@ -94,10 +98,11 @@ function Form({ initial, code, profile }: { initial: Profile['settings']; code: 
         issued ? (
           <Button label="부모 앱으로" onPress={() => router.replace('/parent')} />
         ) : (
-          <Button label={saving ? '저장하는 중…' : '시작하기'} disabled={!ready} onPress={finish} />
+          <Button label={saving ? '저장하는 중…' : '시작하기'} disabled={saving} onPress={finish} />
         )
       }>
       <PersonaCard profile={profile} />
+      {!!validation && <Text style={{ fontSize: 13, color: C.warn }}>{validation}</Text>}
 
       <Section label="부모 PIN (숫자 4자리)">
         <View style={{ flexDirection: 'row', gap: 8 }}>

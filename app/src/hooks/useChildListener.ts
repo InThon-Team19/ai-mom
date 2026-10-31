@@ -124,6 +124,7 @@ export function useChildListener({
   }, []);
 
   useEffect(() => {
+    const waiters = stoppedWaiters.current;
     if (!active) {
       setSt('off');
       return;
@@ -229,7 +230,7 @@ export function useChildListener({
             winStart = Date.now();
             winMeta = cb.current.meta();
           }
-          stoppedWaiters.current.splice(0).forEach((r) => r());
+          waiters.splice(0).forEach((r) => r());
           setSt('paused');
           await sleep(LISTEN.TICK_MS);
           if (!alive) break;
@@ -268,7 +269,7 @@ export function useChildListener({
             await endWindow(keep);
             await releaseMode();
           }
-          stoppedWaiters.current.splice(0).forEach((r) => r());
+          waiters.splice(0).forEach((r) => r());
           setSt('paused');
           level.set(0);
           await sleep(LISTEN.TICK_MS);
@@ -401,7 +402,7 @@ export function useChildListener({
       level.set(0);
       setSpeechLevel(0);
       busyRef.current = false;
-      stoppedWaiters.current.splice(0).forEach((r) => r());
+      waiters.splice(0).forEach((r) => r());
       if (recording.current) {
         recording.current = false;
         recorder

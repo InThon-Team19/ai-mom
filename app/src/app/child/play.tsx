@@ -173,20 +173,21 @@ export default function Play() {
   // ---------- 판마다 아바타가 먼저 말함 ----------
   useEffect(() => {
     if (!ready || !focused) return;
-    const my = ++flowGen.current;
+    const generation = flowGen;
+    const my = ++generation.current;
     moving.current = false;
     stationAt.current = Date.now();
     lastAction.current = Date.now();
     idleStage.current = 0;
     (async () => {
       await sleep(400);
-      if (my !== flowGen.current) return;
+      if (my !== generation.current) return;
       setNod((n) => n + 1);
       feel('smile', 1500);
       await say(fill(INTRO[station], { name, me }), true);
     })();
     return () => {
-      if (my === flowGen.current) flowGen.current++; // 포커스를 잃으면 이 판의 첫 말도 취소
+      if (my === generation.current) generation.current++; // 포커스를 잃으면 이 판의 첫 말도 취소
     };
   }, [station, ready, focused, name, me, say, feel]);
 

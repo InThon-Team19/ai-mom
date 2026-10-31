@@ -82,14 +82,20 @@ export function useReadAloud({
       if (v) setVoice(v.gauge);
       if (m) setMouth(m.gauge);
       setGain({ voice: v?.gained ?? 0, mouth: m?.gained ?? 0 });
-      if (!v) {
+      if (!v && !camera) {
         if (vr.status === 'rejected') reportError('readAloud upload', vr.reason); // 원문은 로그에만
         setMessage(friendlyError(vr.status === 'rejected' ? vr.reason : null, '목소리를 보내지 못했어요. 인터넷 연결을 확인하고 다시 눌러 읽어 주세요.'));
         setDone((d) => ({ ...d, [index]: 'retry' }));
         return;
       }
-      const ok = v.quality.ok && (!m || m.ok);
-      setMessage(!v.quality.ok ? v.quality.message : m && !m.ok ? m.message : '좋아요!');
+      if (camera && !m) {
+        if (mr.status === 'rejected') reportError('readAloud mouth', mr.reason);
+        setMessage('입모양을 저장하지 못했어요. 카메라와 연결을 확인하고 다시 촬영해 주세요.');
+        setDone((d) => ({ ...d, [index]: 'retry' }));
+        return;
+      }
+      const ok = camera ? !!m?.ok : !!v?.quality.ok;
+      setMessage(camera ? m?.message ?? '다시 촬영해 주세요.' : !v?.quality.ok ? v?.quality.message ?? '다시 읽어 주세요.' : '좋아요!');
       setDone((d) => ({ ...d, [index]: ok ? 'done' : 'retry' }));
       // 학습(signup): 끝까지 읽으면 처음으로 — 학습률이 덜 찼으면 이어서 더 읽을 수 있게. 내일 계획 낭독(plan)은 마지막에서 멈춤
       if (ok) setIndex((i) => (kind === 'signup' ? (i + 1) % sentences.length : Math.min(i + 1, sentences.length - 1)));
@@ -117,7 +123,7 @@ export function useReadAloud({
     }
   }, [rec]);
 
-  const statuses: SentenceStatus[] = sentences.map((_, i) => (i === index ? 'now' : done[i] === 'done' ? 'done' : done[i] === 'retry' ? 'retry' : 'todo'));
+  const statuses: SentenceStatus[] = sentences.map((_, i) => (camera ? (done[i] === 'done' ? 'done' : done[i] === 'retry' ? 'retry' : i === index ? 'now' : 'todo') : (i === index ? 'now' : done[i] === 'done' ? 'done' : done[i] === 'retry' ? 'retry' : 'todo')));
   const allDone = sentences.every((_, i) => done[i] === 'done');
 
   return {
