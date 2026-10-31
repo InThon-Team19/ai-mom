@@ -54,7 +54,7 @@ def synthesize(text: str, model_id: str, out: Path, speed: float = 0.95) -> Path
         timeout=60,
     )
     res.raise_for_status()
-    out.write_bytes(res.content)
+    _atomic_write(out, res.content)
     return out
 
 
@@ -73,5 +73,20 @@ def synthesize_inline(text: str, refs: list[tuple[bytes, str]], out: Path, speed
         timeout=90,
     )
     res.raise_for_status()
-    out.write_bytes(res.content)
+    _atomic_write(out, res.content)
     return out
+
+
+def _atomic_write(out: Path, data: bytes) -> None:
+    """임시 파일에 다 쓴 뒤 한 번에 바꿔치기. 같은 문장을 동시에 만들 때
+    재생 중인 mp3 가 덮어써져 "Content-Length 보다 짧음" 오류가 나던 문제 방지"""
+    import uuid
+    tmp = out.with_name(f".{out.stem}.{uuid.uuid4().hex}.part")
+    tmp.write_bytes(data)
+    try:
+        os.replace(tmp, out)
+    except PermissionError:
+        # Windows: 다른 요청이 같은 mp3 를 재생(읽는) 중이면 바꿀 수 없음 → 이미 완성된 파일을 그대로 씀
+        tmp.unlink(missing_ok=True)
+        if not out.exists():
+            raise
