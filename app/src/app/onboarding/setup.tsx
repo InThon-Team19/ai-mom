@@ -1,9 +1,10 @@
 // 온보딩 1-7 동의·설정·연결 — 담당: 태희 (민철 와이어프레임 기준)
-// 데이터 동의 2개(필수), 대화 시간대, 하루 사용 상한, 진동 사용, 태블릿 연결 코드(= profile.childId)
+// 페르소나 확정 카드(기획 2-1-1 ⑦) + 데이터 동의 2개(필수), 대화 시간대, 하루 사용 상한, 진동 사용, 태블릿 연결 코드(= profile.childId)
 import { router } from 'expo-router';
 import { useState, type ReactNode } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
+import { PersonaCard } from '@/components/PersonaCard';
 import { Button, OnboardingScaffold } from '@/components/ui';
 import { updateProfile, useProfile, type Profile } from '@/lib/store';
 import { C, R, T } from '@/theme';
@@ -27,10 +28,10 @@ function ampm(t: string) {
 export default function Setup() {
   const p = useProfile();
   if (!p) return null;
-  return <Form initial={p.settings} code={p.childId} />;
+  return <Form initial={p.settings} code={p.childId} profile={p} />;
 }
 
-function Form({ initial, code }: { initial: Profile['settings']; code: string }) {
+function Form({ initial, code, profile }: { initial: Profile['settings']; code: string; profile: Profile }) {
   const [consentBio, setConsentBio] = useState(initial.consentBio);
   const [consentChild, setConsentChild] = useState(initial.consentChild);
   const [start, setStart] = useState(initial.start);
@@ -54,6 +55,7 @@ function Form({ initial, code }: { initial: Profile['settings']; code: string })
 
   return (
     <OnboardingScaffold step={7} title="마지막으로 정해주세요" footer={<Button label="시작하기" disabled={!ready} onPress={finish} />}>
+      <PersonaCard profile={profile} />
       <Section label="데이터 동의">
         <Check checked={consentBio} onPress={() => setConsentBio((v) => !v)} label="내 목소리와 얼굴 영상으로 아바타를 만드는 데 동의합니다" />
         <Check checked={consentChild} onPress={() => setConsentChild((v) => !v)} label="아이의 음성·영상·터치 반응 수집에 보호자로서 동의합니다" />

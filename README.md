@@ -58,6 +58,7 @@ cp .env.example .env        # EXPO_PUBLIC_API_URL = 노트북 IP:8000 (localhost
 npx expo start              # 폰/태블릿 Expo Go로 QR
 ```
 - 패키지 추가는 `npx expo install <pkg>` (SDK 맞는 버전)
+- **새 파일을 만들었는데 앱이 못 찾거나("Unable to resolve module") 고친 내용이 안 보이면** 개발 서버를 끄고 `npx expo start --clear` 로 다시 시작 (Windows 한글 경로에서 파일 감시가 새 파일을 놓침)
 - 같은 와이파이가 안 되면 `cloudflared tunnel --url http://localhost:8000`
 
 
