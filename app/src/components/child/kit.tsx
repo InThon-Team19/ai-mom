@@ -40,14 +40,14 @@ export function useMouthScale(childId: string | undefined) {
 }
 
 // ---------- 아이콘 (글자 기호는 기기마다 이모지로 바뀌어서 SVG 로 그림) ----------
-export function PlayIcon({ size = 40, color = C.white }: { size?: number; color?: string }) {
+export function PlayIcon({ size = 40, color = C.onPrimary }: { size?: number; color?: string }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24">
       <Path d="M7 4.5 L19.5 12 L7 19.5 Z" fill={color} strokeLinejoin="round" />
     </Svg>
   );
 }
-export function SkipIcon({ size = 28, color = C.white }: { size?: number; color?: string }) {
+export function SkipIcon({ size = 28, color = C.onPrimary }: { size?: number; color?: string }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24">
       <Path d="M5 5 L15.5 12 L5 19 Z" fill={color} />
@@ -55,14 +55,14 @@ export function SkipIcon({ size = 28, color = C.white }: { size?: number; color?
     </Svg>
   );
 }
-export function ChevronIcon({ size = 28, color = C.white, left }: { size?: number; color?: string; left?: boolean }) {
+export function ChevronIcon({ size = 28, color = C.onPrimary, left }: { size?: number; color?: string; left?: boolean }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24">
       <Path d={left ? 'M15 5 L8 12 L15 19' : 'M9 5 L16 12 L9 19'} stroke={color} strokeWidth={2.6} fill="none" strokeLinecap="round" strokeLinejoin="round" />
     </Svg>
   );
 }
-export function MicIcon({ size = 48, color = C.white }: { size?: number; color?: string }) {
+export function MicIcon({ size = 48, color = C.onPrimary }: { size?: number; color?: string }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24">
       <Rect x="9" y="3" width="6" height="11" rx="3" stroke={color} strokeWidth={2} fill="none" />
@@ -80,7 +80,7 @@ export function TargetIcon({ size = 22, color = C.sub }: { size?: number; color?
 }
 
 // ---------- 버튼 ----------
-/** 파란 원형 버튼 (시작 ▶, 다음 ▶|, 이전/다음 ‹ ›). 기본 96px — 아이 손가락 기준 88px 이상 */
+/** 노란 원형 버튼 (아이콘은 진한 갈색) (시작 ▶, 다음 ▶|, 이전/다음 ‹ ›). 기본 96px — 아이 손가락 기준 88px 이상 */
 export function RoundButton({
   onPress,
   children,
@@ -125,7 +125,7 @@ export function PillButton({
   onPress?: () => void;
   selected?: boolean;
   dark?: boolean;
-  primary?: boolean; // 파란 바탕 (3-8 한 번 더 볼래요)
+  primary?: boolean; // 노란 바탕 (3-8 한 번 더 볼래요)
   small?: boolean;
   style?: StyleProp<ViewStyle>;
 }) {
@@ -181,7 +181,9 @@ export function HoldMic({ recording, onPressIn, onPressOut, size = 120, disabled
           width: size,
           height: size,
           borderRadius: size / 2,
-          backgroundColor: recording ? '#1A3FA8' : C.primary,
+          backgroundColor: recording ? C.primaryStrong : C.primary,
+          borderWidth: 3,
+          borderColor: recording ? C.onPrimary : C.primaryStrong,
           alignItems: 'center',
           justifyContent: 'center',
           opacity: disabled ? 0.6 : 1,
@@ -250,7 +252,7 @@ export const FaceSensor = memo(function FaceSensor({ onFrame, style }: { onFrame
 });
 
 /** 소리 파형 막대 (3-7). level 0~1 로 높이 변화, 말 안 할 때는 낮게 숨쉬듯 */
-export function Waveform({ level, color = '#9BB0F2' }: { level: number; color?: string }) {
+export function Waveform({ level, color = C.primary }: { level: number; color?: string }) {
   const base = [0.3, 0.55, 0.9, 0.65, 1, 0.45, 0.85, 0.4, 0.2];
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, height: 130 }}>

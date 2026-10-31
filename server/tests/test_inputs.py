@@ -232,7 +232,7 @@ def test_bad_child_id_rejected():
 
 
 def test_tts_requires_registration():
-    r = client.post("/voice/tts", json={"child_id": "pytest", "text": "안녕"})
+    r = client.post("/voice/tts", json={"child_id": "pyb64", "text": "안녕"})
     assert r.status_code == 400
 
 

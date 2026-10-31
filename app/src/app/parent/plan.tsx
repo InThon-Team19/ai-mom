@@ -12,6 +12,7 @@ import { Button, Card, H1, MicButton, Sub } from '@/components/ui';
 import { DAYS, dayOf, fill, type Day } from '@/content/curriculum';
 import { useReadAloud } from '@/hooks/useReadAloud';
 import { api } from '@/lib/api';
+import { prefetchDay } from '@/lib/prefetch';
 import { readingDonePatch } from '@/lib/progress';
 import { updateProfile, useProfile, type Profile } from '@/lib/store';
 import { C, R, T } from '@/theme';
@@ -72,7 +73,8 @@ function PlanReader({ profile, plan }: { profile: Profile; plan: Day }) {
     setFinishing(true);
     try {
       // 기획 2-7: 낭독 완료만 표시 → 다음날 아이 화면을 처음 켤 때 일차 +1 (설정 탭에 시연용 즉시 넘기기)
-      await updateProfile(readingDonePatch(profile));
+      const done = await updateProfile(readingDonePatch(profile));
+      if (done.readingDone) prefetchDay(done, done.readingDone.forDay); // 다음 일차 엄마 목소리 미리 만들기
       api.registerVoice(profile.childId).catch(() => {}); // 부모 목소리 모델 갱신 (실패해도 계속)
       router.navigate('/parent' as Href);
     } finally {

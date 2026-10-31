@@ -3,6 +3,8 @@
 무료 모델 s2.1-pro-free (fair use, 한국어·목소리 복제 지원). server/.env 에 FISH_API_KEY 필요.
 1) register_voice: 부모 녹음 wav 들 → POST https://api.fish.audio/model (train_mode=fast) → 모델 id
 2) synthesize: 텍스트 + 모델 id → POST https://api.fish.audio/v1/tts → mp3
+3) synthesize_inline: 모델 없이 부모 녹음(참고 음성)을 함께 보내 즉석 복제 → mp3
+   무료 등급은 API 모델 생성 한도가 0이라(403) 이 방식으로 엄마 목소리를 냄 (2026-10-31 실측: 무료 키로 200)
 """
 import os
 from pathlib import Path
@@ -50,6 +52,25 @@ def synthesize(text: str, model_id: str, out: Path, speed: float = 0.95) -> Path
         json={"text": text, "reference_id": model_id, "format": "mp3", "language": "ko",
               "latency": "balanced", "prosody": {"speed": speed}},
         timeout=60,
+    )
+    res.raise_for_status()
+    out.write_bytes(res.content)
+    return out
+
+
+def synthesize_inline(text: str, refs: list[tuple[bytes, str]], out: Path, speed: float = 0.95) -> Path:
+    """모델 생성 없이 참고 음성(wav 바이트, 그 대본) 1~5개로 즉석 복제 → mp3. references 는 MessagePack 필수."""
+    import ormsgpack
+
+    if not refs:
+        raise ValueError("참고 음성이 없음")
+    body = {"text": text, "references": [{"audio": a, "text": t} for a, t in refs[:5]], "format": "mp3",
+            "latency": "balanced", "prosody": {"speed": speed}}
+    res = httpx.post(
+        f"{API}/v1/tts",
+        content=ormsgpack.packb(body),
+        headers={"Authorization": f"Bearer {_key()}", "Content-Type": "application/msgpack", "model": TTS_MODEL},
+        timeout=90,
     )
     res.raise_for_status()
     out.write_bytes(res.content)

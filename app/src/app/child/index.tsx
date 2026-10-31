@@ -1,25 +1,24 @@
-// 아이 태블릿 3-1 아바타가 말 걸기 (+ 처음 한 번 태블릿 연결) — 담당: 태희 (민철 와이어프레임 기준)
-// 글자 최소, 큰 버튼 하나. 아바타가 먼저 말을 검 (기획: 아바타가 먼저 말 걸기)
+// 아이 홈 3-1: 아바타가 먼저 인사, 오늘 만날 친구들, 놀자·동화·소리만 (+ 처음 한 번 태블릿 연결) — 담당: 태희
+// 글자 최소. 들어오자마자 학습이 시작되지 않고 아이가 고름. 부모 모드는 왼쪽 위 자물쇠 3초 + PIN
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { Alert, Platform, Pressable, Text, TextInput, View } from 'react-native';
+import { Pressable, Text, TextInput, View } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Avatar } from '@/components/Avatar';
-import { PlayIcon, RoundButton, who } from '@/components/child/kit';
+import { PillButton, PlayIcon, RoundButton, useMouthScale, who } from '@/components/child/kit';
+import { CHILD_LINKED_KEY as LINKED_KEY, ParentExit } from '@/components/ParentExit';
 import { Button } from '@/components/ui';
-import { dayOf, fill } from '@/content/curriculum';
+import { dayOf, fill, ITEMS } from '@/content/curriculum';
 import { useSpeak } from '@/hooks/useSpeak';
-import { api } from '@/lib/api';
 import { getDeviceId, registerThisDevice } from '@/lib/device';
-import { PinPad } from '@/components/PinPad';
 import { dayAdvancePatch } from '@/lib/progress';
-import { clearRole, linkTablet, refreshProfile, resetLocal, updateProfile, useProfile } from '@/lib/store';
+import { prefetchDay } from '@/lib/prefetch';
+import { linkTablet, refreshProfile, resetLocal, updateProfile, useProfile } from '@/lib/store';
 import { C, R, T } from '@/theme';
 
-const LINKED_KEY = 'aibom.childLinked'; // 이 태블릿이 등록된 child_id (연결 해제 감지용)
 
 export default function ChildStart() {
   const profile = useProfile();
@@ -52,25 +51,28 @@ export default function ChildStart() {
 
   if (!profile) return null;
   if (!linked || relink) return <LinkScreen onDone={() => setRelink(false)} canCancel={linked} />;
-  return <Greeting onRelink={() => setRelink(true)} />;
+  return <Greeting />;
 }
 
-function Greeting({ onRelink }: { onRelink: () => void }) {
+/** 아이 홈: 아바타가 먼저 인사 → 오늘 만날 친구들 → 큰 "놀자" 버튼 (자동으로 학습이 시작되지 않음) */
+function Greeting() {
   const profile = useProfile();
   const insets = useSafeAreaInsets();
   const { speak, stop, mouth } = useSpeak(profile?.childId);
-  const [pinOpen, setPinOpen] = useState(false);
+  const scale = useMouthScale(profile?.childId);
   const { name, me } = who(profile);
+  const day = dayOf(profile?.day ?? 1);
   // 기획 2-7: 첫 인사는 현재 일차 값으로 만듦
-  const line = fill(`{name}야, ${dayOf(profile?.day ?? 1).greeting}`, { name, me });
+  const line = fill(`{name}야, ${day.greeting}`, { name, me });
 
+  const hello = `${fill('안녕 {name}! {me}랑 같이 놀자!', { name, me })} ${line}`;
   const greet = useCallback(() => {
-    speak(`${fill('안녕 {name}! {me}랑 같이 놀자!', { name, me })} ${line}`);
-  }, [speak, name, me, line]);
+    speak(hello);
+  }, [speak, hello]);
 
   useFocusEffect(
     useCallback(() => {
-      const t = setTimeout(greet, 400);
+      const t = setTimeout(greet, 600);
       return () => {
         clearTimeout(t);
         stop();
@@ -78,73 +80,53 @@ function Greeting({ onRelink }: { onRelink: () => void }) {
     }, [greet, stop]),
   );
 
+  // 그날 엄마 목소리 문장을 미리 만들어 둠 (첫 문장은 만드는 데 4~5초 걸림)
+  useEffect(() => {
+    if (profile?.child.name) prefetchDay(profile); // 같은 일차는 한 번만 돎
+  }, [profile]);
+
+  const go = (path: '/child/session' | '/child/story' | '/child/audio') => {
+    stop();
+    router.push(path);
+  };
+
   return (
-    <View style={{ flex: 1, backgroundColor: C.primarySoft, alignItems: 'center', justifyContent: 'center', gap: 28, paddingTop: insets.top, paddingBottom: insets.bottom }}>
-      <Pressable onPress={greet} accessibilityLabel={`${me} 아바타`}>
-        <View style={{ width: 290, height: 290, borderRadius: 145, backgroundColor: C.white, overflow: 'hidden', alignItems: 'center', justifyContent: 'flex-end' }}>
-          <Avatar config={profile?.avatar} mouth={mouth} size={250} />
+    <View style={{ flex: 1, backgroundColor: C.bg, flexDirection: 'row', alignItems: 'center', paddingTop: insets.top, paddingBottom: insets.bottom, paddingHorizontal: 32 + insets.left, gap: 32 }}>
+      {/* 왼쪽: 아바타 (누르면 다시 인사) */}
+      <Pressable onPress={greet} accessibilityLabel={`${me} 아바타`} style={{ flex: 4, alignItems: 'center', gap: 12 }}>
+        <View style={{ width: 280, height: 280, borderRadius: 140, backgroundColor: C.primarySoft, overflow: 'hidden', alignItems: 'center', justifyContent: 'flex-end' }}>
+          <Avatar config={profile?.avatar} mouth={mouth} scale={scale} size={240} expression="smile" />
         </View>
+        <Animated.Text entering={FadeIn.duration(500)} style={{ fontSize: 26, fontWeight: '900', color: C.text, textAlign: 'center' }}>
+          {line}
+        </Animated.Text>
       </Pressable>
-      <Animated.Text entering={FadeIn.duration(500)} style={{ fontSize: 34, fontWeight: '900', color: C.text, textAlign: 'center' }}>
-        {line}
-      </Animated.Text>
-      <RoundButton
-        size={128}
-        label="시작"
-        onPress={() => {
-          stop();
-          router.push('/child/session');
-        }}>
-        <PlayIcon size={56} />
-      </RoundButton>
 
-      {/* 어른용 숨은 메뉴: 왼쪽 위를 3초 길게 누른 뒤 PIN (기획 2-5) → 부모 모드 전환 · 연결 해제 */}
-      <Pressable
-        onLongPress={() => setPinOpen(true)}
-        delayLongPress={3000}
-        accessibilityLabel="어른 메뉴 (3초 길게 누르기)"
-        style={{ position: 'absolute', left: insets.left, top: insets.top, width: 72, height: 72 }}
-      />
-      <PinPad
-        visible={pinOpen}
-        childId={profile?.childId ?? ''}
-        hash={profile?.pinHash}
-        onCancel={() => setPinOpen(false)}
-        onSuccess={() => {
-          setPinOpen(false);
-          adultMenu(profile?.childId);
-        }}
-      />
+      {/* 오른쪽: 오늘 만날 친구들 + 놀자 + 동화·소리만 */}
+      <View style={{ flex: 6, alignItems: 'center', gap: 22 }}>
+        <View style={{ backgroundColor: C.primary, borderRadius: R.pill, paddingHorizontal: 18, paddingVertical: 8 }}>
+          <Text style={{ fontSize: 18, fontWeight: '900', color: C.onPrimary }}>{day.day}일차</Text>
+        </View>
+        <View style={{ flexDirection: 'row', gap: 18 }}>
+          {day.items.map((id) => (
+            <View key={id} style={{ width: 110, height: 110, borderRadius: 55, backgroundColor: C.white, alignItems: 'center', justifyContent: 'center', borderWidth: 3, borderColor: C.green }}>
+              <Text style={{ fontSize: 60 }}>{ITEMS[id].emoji}</Text>
+            </View>
+          ))}
+        </View>
+        <RoundButton size={140} label="놀자" onPress={() => go('/child/session')}>
+          <PlayIcon size={62} />
+        </RoundButton>
+        <View style={{ flexDirection: 'row', gap: 16 }}>
+          {day.story && <PillButton label="📖 동화 듣기" onPress={() => go('/child/story')} />}
+          <PillButton label="🎧 소리만 듣기" onPress={() => go('/child/audio')} />
+        </View>
+      </View>
 
-      <Pressable onPress={onRelink} hitSlop={12} style={{ position: 'absolute', right: 24 + insets.right, bottom: 16 + insets.bottom }}>
-        <Text style={{ fontSize: 13, color: C.muted }}>연결 바꾸기</Text>
-      </Pressable>
+      {/* 부모 모드: 왼쪽 위 자물쇠 3초 + PIN */}
+      <ParentExit />
     </View>
   );
-}
-
-/** 어른 메뉴: 이 기기를 부모 폰으로 바꾸거나, 아이 태블릿 연결을 해제 */
-function adultMenu(childId?: string) {
-  const toParent = async () => {
-    await clearRole();
-    router.replace('/');
-  };
-  const unlink = async () => {
-    if (childId) await api.removeDevice(childId, await getDeviceId()).catch(() => {});
-    await AsyncStorage.removeItem(LINKED_KEY).catch(() => {});
-    await resetLocal();
-    router.replace('/');
-  };
-  if (Platform.OS === 'web') {
-    if (globalThis.confirm?.('부모 폰 모드로 바꿀까요? (취소를 누르면 연결 해제를 물어봐요)')) toParent();
-    else if (globalThis.confirm?.('이 태블릿의 연결을 해제할까요?')) unlink();
-    return;
-  }
-  Alert.alert('어른 메뉴', '이 기기를 어떻게 할까요?', [
-    { text: '부모 폰 모드로 전환', onPress: toParent },
-    { text: '연결 해제', style: 'destructive', onPress: unlink },
-    { text: '취소', style: 'cancel' },
-  ]);
 }
 
 /** 처음 한 번: 부모 폰 1-7 화면의 6자리 연결 코드 입력 (어른이 함) */

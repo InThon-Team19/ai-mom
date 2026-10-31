@@ -1,9 +1,12 @@
-// 아이 태블릿 3-2 · 3-3 · 3-5 누르는 사물 (툭 떨어져 등장, 누르면 사물마다 다른 반응) — 담당: 태희 (민철 와이어프레임 기준)
+// 아이 태블릿 3-2 · 3-3 · 3-5 누르는 사물 — 담당: 태희 (민철 와이어프레임 · 기획 2-3 "사과 한 바퀴의 움직임")
 // 기획 1-1 "아바타가 단어를 말할 때의 연출": 사과 = 베어 문 자국 / 바나나 = 껍질이 한 줄씩 / 과자 = 둘로 부러짐
-// 감각 자극 제한: 깜빡임 없음, 움직임은 0.1~0.6초 부드럽게
-import { useEffect, useState } from 'react';
+// 움직임: 위에서 떨어져 납작하게 닿고 두 번 통통(움직임 줄이기면 한 번) · 기다리면 살짝 흔들림 · 누르면 눌렸다 튀어 오름
+//        · 따라 말하기 중엔 아이 말소리 크기만큼 커짐 · 성공하면 크게 튀며 별 · 넘어갈 때 굴러서 바구니로 쏙
+// 감각 자극 제한: 깜빡임 없음, 움직임 한 번은 1초 안
+import { useEffect, useRef, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import Animated, {
+  Easing,
   useAnimatedStyle,
   useSharedValue,
   withDelay,
@@ -14,9 +17,19 @@ import Animated, {
   type SharedValue,
 } from 'react-native-reanimated';
 
+import { StarBurst } from '@/components/child/stage';
 import type { ItemId } from '@/content/curriculum';
+import { playSfx } from '@/lib/sense';
 
 const GENTLE = { damping: 14, stiffness: 120 };
+const out = Easing.out(Easing.quad);
+const inn = Easing.in(Easing.quad);
+
+/** 떨어지는 시간(ms)과 튀는 구간 — 소리 타이밍도 여기서 계산 */
+const FALL = 340;
+const SQUASH = 80;
+export const dropDuration = (reduceMotion?: boolean) => FALL + SQUASH + 300 + (reduceMotion ? 0 : 200);
+const LEAVE = 720;
 
 function Glyph({ emoji, size }: { emoji: string; size: number }) {
   return (
@@ -57,8 +70,8 @@ function PeelStrip({ index, peeled, size }: { index: number; peeled: boolean; si
   const op = useSharedValue(0);
   useEffect(() => {
     if (peeled) {
-      op.value = withTiming(1, { duration: 120 });
-      rot.value = withTiming(angle, { duration: 600 });
+      op.set(withTiming(1, { duration: 120 }));
+      rot.set(withTiming(angle, { duration: 600 }));
     }
   }, [peeled, angle, op, rot]);
   const st = useAnimatedStyle(() => ({ opacity: op.value, transform: [{ rotate: `${rot.value}deg` }] }));
@@ -101,54 +114,191 @@ function Half({ emoji, size, side, apart }: { emoji: string; size: number; side:
   );
 }
 
-export function ItemToy({ id, emoji, size, bg, onPress }: { id: ItemId; emoji: string; size: number; bg: string; onPress: () => void }) {
+export type ToyLeave = { dx: number; dy: number };
+
+export function ItemToy({
+  id,
+  emoji,
+  size,
+  bg,
+  onPress,
+  drop,
+  reduceMotion,
+  wiggle = 0,
+  voice = 0,
+  success = 0,
+  leave = null,
+  onLeft,
+  interactive = true,
+}: {
+  id: ItemId;
+  emoji: string;
+  size: number;
+  bg: string; // 무대 바탕색 (사과 베어 문 자국 색)
+  onPress: () => void;
+  drop: boolean; // true 가 되는 순간 위에서 떨어짐 (그 전엔 안 보임)
+  reduceMotion?: boolean; // 설정 '움직임 줄이기': 튀는 횟수 1번
+  wiggle?: number; // 바뀔 때마다 살짝 흔들림 (눌러주길 기다림)
+  voice?: number; // 0~1 아이 말소리 크기 → 1.0~1.3배
+  success?: number; // 바뀔 때마다 크게 튀고 별이 퍼짐
+  leave?: ToyLeave | null; // 값이 생기면 그만큼 굴러가서 바구니로 쏙
+  onLeft?: () => void;
+  interactive?: boolean;
+}) {
   const [presses, setPresses] = useState(0);
-  const drop = useSharedValue(-size * 1.4);
-  const fade = useSharedValue(0);
-  const scale = useSharedValue(1);
+  const ty = useSharedValue(0);
+  const tx = useSharedValue(0);
+  const op = useSharedValue(0);
+  const sq = useSharedValue(1); // 닿을 때 납작 (세로 비율)
+  const press = useSharedValue(1); // 손가락 아래 눌림 (세로 비율)
+  const pop = useSharedValue(1); // 성공 때 크게
+  const vol = useSharedValue(1); // 말소리 크기
+  const away = useSharedValue(1); // 바구니로 들어가며 작아짐
+  const rot = useSharedValue(0);
   const apart = useSharedValue(0);
-
-  // 등장: 위에서 툭 떨어짐
+  const leftCb = useRef(onLeft);
   useEffect(() => {
-    drop.value = withDelay(350, withSpring(0, GENTLE));
-    fade.value = withDelay(350, withTiming(1, { duration: 250 }));
-  }, [drop, fade]);
+    leftCb.current = onLeft;
+  }, [onLeft]);
 
-  const st = useAnimatedStyle(() => ({ opacity: fade.value, transform: [{ translateY: drop.value }, { scale: scale.value }] }));
+  // 등장: 위에서 떨어짐 → 납작하게 닿음 → 통, 통 (움직임 줄이기면 통 한 번)
+  const dropped = useRef(false);
+  useEffect(() => {
+    if (!drop || dropped.current) return;
+    dropped.current = true;
+    const h1 = size * 0.2;
+    const h2 = size * 0.08;
+    ty.set(-size * 1.7);
+    op.set(withTiming(1, { duration: 120 }));
+    const bounces = [withDelay(SQUASH, withTiming(-h1, { duration: 150, easing: out })), withTiming(0, { duration: 150, easing: inn })];
+    if (!reduceMotion) bounces.push(withTiming(-h2, { duration: 100, easing: out }), withTiming(0, { duration: 100, easing: inn }));
+    ty.set(withSequence(withTiming(0, { duration: FALL, easing: inn }), ...bounces));
+    sq.set(withSequence(
+      withDelay(FALL, withTiming(0.72, { duration: 40 })),
+      withTiming(1, { duration: 70 }),
+      withDelay(SQUASH + 300 - 110, withTiming(0.88, { duration: 40 })),
+      withTiming(1, { duration: 60 }),
+    ));
+    // 통, 통 (닿을 때 · 첫 번째 튐이 내려올 때). 화면을 떠나도 소리만 짧게 남는 정도라 취소하지 않음
+    setTimeout(() => playSfx('tong'), FALL);
+    setTimeout(() => playSfx('tong'), FALL + SQUASH + 300);
+  }, [drop, reduceMotion, size, ty, op, sq]);
 
-  const press = () => {
+  // 기다림: 살짝 흔들림 (0.5초)
+  useEffect(() => {
+    if (!wiggle) return;
+    const a = reduceMotion ? 5 : 8;
+    rot.set(withSequence(
+      withTiming(-a, { duration: 90 }),
+      withTiming(a, { duration: 140 }),
+      withTiming(-a * 0.6, { duration: 120 }),
+      withTiming(a * 0.4, { duration: 100 }),
+      withTiming(0, { duration: 90 }),
+    ));
+  }, [wiggle, reduceMotion, rot]);
+
+  // 따라 말하기: 아이 말소리 크기에 맞춰 커졌다 작아짐
+  useEffect(() => {
+    vol.set(withTiming(1 + 0.3 * Math.max(0, Math.min(1, voice)), { duration: 110 }));
+  }, [voice, vol]);
+
+  // 성공: 크게 튐 (별은 아래 StarBurst)
+  useEffect(() => {
+    if (!success) return;
+    const hops = [withTiming(-size * 0.38, { duration: 260, easing: out }), withTiming(0, { duration: 240, easing: inn })];
+    if (!reduceMotion) hops.push(withTiming(-size * 0.1, { duration: 130, easing: out }), withTiming(0, { duration: 130, easing: inn }));
+    ty.set(withSequence(...hops));
+    pop.set(withSequence(withTiming(1.2, { duration: 260, easing: out }), withSpring(1, GENTLE)));
+  }, [success, reduceMotion, size, ty, pop]);
+
+  // 넘어감: 통통 굴러서 바구니로 쏙 (0.7초)
+  useEffect(() => {
+    if (!leave) return;
+    const { dx, dy } = leave;
+    tx.set(withTiming(dx, { duration: LEAVE, easing: Easing.inOut(Easing.quad) }));
+    const hop = Math.min(size * 0.25, 60);
+    ty.set(withSequence(
+      withTiming(-hop, { duration: 160, easing: out }),
+      withTiming(0, { duration: 160, easing: inn }),
+      withTiming(dy, { duration: LEAVE - 320, easing: inn }),
+    ));
+    rot.set(withTiming(dx >= 0 ? 360 : -360, { duration: LEAVE, easing: Easing.inOut(Easing.quad) }));
+    away.set(withTiming(0.28, { duration: LEAVE, easing: inn }));
+    op.set(withDelay(LEAVE - 100, withTiming(0, { duration: 120 })));
+    const a = setTimeout(() => playSfx('ssok'), LEAVE - 60);
+    const b = setTimeout(() => leftCb.current?.(), LEAVE + 40);
+    return () => {
+      clearTimeout(a);
+      clearTimeout(b);
+    };
+  }, [leave, size, tx, ty, rot, away, op]);
+
+  const st = useAnimatedStyle(() => {
+    const squashY = sq.value * press.value;
+    const squashX = (1 + (1 - sq.value) * 0.8) * (1 + (1 - press.value) * 0.5);
+    const k = pop.value * vol.value * away.value;
+    return {
+      opacity: op.value,
+      transform: [
+        { translateX: tx.value },
+        // 납작해질 때 바닥에 붙어 있도록 아래로 보정
+        { translateY: ty.value + (size * (1 - squashY)) / 2 },
+        { rotate: `${rot.value}deg` },
+        { scaleX: squashX * k },
+        { scaleY: squashY * k },
+      ],
+    };
+  });
+
+  // 누름: 손가락 아래로 눌렸다가 (pressIn) 통 튀어 오름 (pressOut)
+  const onIn = () => {
+    press.set(withTiming(0.82, { duration: 70 }));
+  };
+  const onOut = () => {
+    press.set(withSpring(1, { damping: 6, stiffness: 260, mass: 0.6 }));
+  };
+  const onTap = () => {
     setPresses((n) => n + 1);
-    scale.set(withSequence(withTiming(0.92, { duration: 90 }), withSpring(1, GENTLE)));
     if (id === 'snack') apart.set(withSequence(withSpring(1, GENTLE), withDelay(1300, withSpring(0, GENTLE))));
     onPress();
   };
 
   return (
-    <Pressable accessibilityRole="button" accessibilityLabel="눌러봐" onPress={press} hitSlop={20}>
-      <Animated.View style={[{ width: size, height: size }, st]}>
-        {id === 'snack' ? (
-          <View style={{ flexDirection: 'row' }}>
-            <Half emoji={emoji} size={size} side="left" apart={apart} />
-            <Half emoji={emoji} size={size} side="right" apart={apart} />
-          </View>
-        ) : (
-          <Glyph emoji={emoji} size={size} />
-        )}
-        {id === 'apple' && <Bites count={Math.min(3, presses)} size={size} bg={bg} />}
-        {id === 'banana' && [0, 1, 2].map((i) => <PeelStrip key={i} index={i} peeled={presses > i} size={size} />)}
-      </Animated.View>
-    </Pressable>
+    <View style={{ width: size, height: size }}>
+      <StarBurst trigger={success} radius={size * 0.85} />
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="눌러봐"
+        disabled={!interactive || !drop || !!leave}
+        onPressIn={onIn}
+        onPressOut={onOut}
+        onPress={onTap}
+        hitSlop={24}>
+        <Animated.View style={[{ width: size, height: size }, st]}>
+          {id === 'snack' ? (
+            <View style={{ flexDirection: 'row' }}>
+              <Half emoji={emoji} size={size} side="left" apart={apart} />
+              <Half emoji={emoji} size={size} side="right" apart={apart} />
+            </View>
+          ) : (
+            <Glyph emoji={emoji} size={size} />
+          )}
+          {id === 'apple' && <Bites count={Math.min(3, presses)} size={size} bg={bg} />}
+          {id === 'banana' && [0, 1, 2].map((i) => <PeelStrip key={i} index={i} peeled={presses > i} size={size} />)}
+        </Animated.View>
+      </Pressable>
+    </View>
   );
 }
 
-/** 3-4 따라 말하기 성공(또는 시도) 때 그림이 톡 튐. trigger 가 바뀔 때마다 한 번 */
+/** 그림이 톡 튐. trigger 가 바뀔 때마다 한 번 (예전 3-4 화면용, 지금은 ItemToy success 로 대신) */
 export function PopEmoji({ emoji, size, trigger }: { emoji: string; size: number; trigger: number }) {
   const y = useSharedValue(0);
   const s = useSharedValue(1);
   useEffect(() => {
     if (!trigger) return;
-    y.value = withSequence(withTiming(-size * 0.22, { duration: 180 }), withSpring(0, { damping: 8, stiffness: 140 }));
-    s.value = withSequence(withTiming(1.18, { duration: 180 }), withSpring(1, { damping: 8, stiffness: 140 }));
+    y.set(withSequence(withTiming(-size * 0.22, { duration: 180 }), withSpring(0, { damping: 8, stiffness: 140 })));
+    s.set(withSequence(withTiming(1.18, { duration: 180 }), withSpring(1, { damping: 8, stiffness: 140 })));
   }, [trigger, size, y, s]);
   const st = useAnimatedStyle(() => ({ transform: [{ translateY: y.value }, { scale: s.value }] }));
   return (

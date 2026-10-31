@@ -8,6 +8,7 @@ import { PersonaCard } from '@/components/PersonaCard';
 import { Button, OnboardingScaffold } from '@/components/ui';
 import { signup } from '@/lib/account';
 import { pinHash, validPin } from '@/lib/pin';
+import { prefetchDay } from '@/lib/prefetch';
 import { registerThisDevice } from '@/lib/device';
 import { updateProfile, useProfile, type Profile } from '@/lib/store';
 import { C, R, T } from '@/theme';
@@ -73,7 +74,10 @@ function Form({ initial, code, profile }: { initial: Profile['settings']; code: 
       pinHash: await pinHash(code, pin),
       onboarded: true,
     });
-    setTimeout(() => registerThisDevice(p.childId, 'parent'), 800); // 프로필 저장(PUT)이 먼저 끝나게
+    setTimeout(() => {
+      registerThisDevice(p.childId, 'parent'); // 프로필 저장(PUT)이 먼저 끝나게
+      prefetchDay(p, p.day); // 1일차 엄마 목소리 미리 만들기
+    }, 800);
     router.replace('/parent');
   };
 

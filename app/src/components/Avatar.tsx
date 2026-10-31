@@ -1,13 +1,15 @@
-// 부모 아바타 (실제 얼굴 X — 기획 4장: 아이가 AI를 실제 부모로 오인하지 않게). 담당: 태희
-import type { ReactNode } from 'react';
+// 부모 아바타 — 아이에게 친근한 둥근 캐릭터 (실제 얼굴 X, 기획 2-3 "아이에게 친근한 아바타"). 담당: 태희
+// 둥근 얼굴 · 큰 눈 · 또렷한 입. 사람과 너무 닮지 않게 (아이가 낯설어하거나 실제 부모로 오인하지 않도록)
 // 부모가 1-4에서 고른 얼굴형·머리·눈·옷·색으로 그리고, 입은 mouth(0~1)로 움직임.
 // mouth 크기는 부모 입모양 기준값(open_p90)에 맞춰 scale 로 조절 → "부모 입모양이 반영된 아바타"
+// 표정 5종(expression): 기본·웃음·놀람·기다림·칭찬. look='right' 면 오른쪽 사물을 바라봄
+import type { ReactNode } from 'react';
 import Svg, { Circle, Ellipse, G, Path, Rect } from 'react-native-svg';
 
 export type AvatarConfig = { face: number; hair: number; eyes: number; outfit: number; color: number };
 export const DEFAULT_AVATAR: AvatarConfig = { face: 0, hair: 0, eyes: 0, outfit: 0, color: 0 };
 
-// 1-4 카테고리별 선택지 (8개씩 — 와이어프레임 4x2 그리드)
+// 1-4 카테고리별 선택지 (8개씩 — 와이어프레임 4x2 그리드). 어떤 선택을 해도 둥근 얼굴·큰 눈·또렷한 입은 유지
 export const AVATAR_OPTIONS = {
   face: ['동그란', '달걀형', '각진', '하트형', '넓은', '갸름한', '통통한', '작은'],
   hair: ['단발', '긴 머리', '묶음', '곱슬', '짧은 머리', '앞머리', '올림머리', '모자'],
@@ -17,15 +19,31 @@ export const AVATAR_OPTIONS = {
 } as const;
 export type AvatarCategory = keyof typeof AVATAR_OPTIONS;
 
-const HAIR_COLORS = ['#2B2118', '#4A3426', '#6B4A2F', '#1F1F1F', '#7A5A3A', '#3A2A20', '#5C3D2E', '#2E2E3A'];
-const OUTFIT_COLORS = ['#F2B705', '#E07A5F', '#81B29A', '#F2CC8F', '#9B5DE5', '#EF476F', '#118AB2', '#3D405B'];
+/** 기본 · 웃음 · 놀람 · 기다림 · 칭찬 */
+export type AvatarExpression = 'neutral' | 'smile' | 'surprise' | 'wait' | 'praise';
+export type AvatarLook = 'center' | 'right';
 
-function faceShape(i: number) {
-  const shapes: [number, number, number][] = [
-    [50, 50, 40], [44, 52, 40], [46, 46, 14], [48, 50, 30], [54, 48, 34], [42, 52, 36], [52, 52, 46], [40, 44, 40],
-  ];
-  return shapes[i % shapes.length]; // rx, ry, corner
-}
+const HAIR_COLORS = ['#3B2A1E', '#5A3E2B', '#7A5536', '#2E2522', '#8A6440', '#4A3428', '#6B4433', '#3A3340'];
+const OUTFIT_COLORS = ['#FFD54F', '#FFB26B', '#B5D96B', '#7FC8A9', '#C3A6E8', '#F59AB0', '#8FCDE0', '#8C7B6B'];
+const INK = '#3A2A20'; // 눈동자·눈썹 선 (진한 갈색 — 검정보다 부드럽게)
+const MOUTH = '#8A3B32';
+const TONGUE = '#F28C8C';
+const CHEEK = '#FF9E8F';
+
+// 얼굴은 모두 둥글게: [가로 반지름, 세로 반지름, 모서리] (모서리가 반지름 이상이면 타원)
+const FACES: [number, number, number][] = [
+  [66, 64, 99], // 동그란
+  [60, 68, 99], // 달걀형
+  [63, 60, 38], // 각진 → 모서리 둥근 네모
+  [66, 62, 99], // 하트형
+  [72, 60, 99], // 넓은
+  [58, 66, 99], // 갸름한
+  [70, 67, 99], // 통통한
+  [58, 58, 99], // 작은
+];
+
+const CX = 100;
+const CY = 100;
 
 export function Avatar({
   config = DEFAULT_AVATAR,
@@ -33,139 +51,307 @@ export function Avatar({
   scale = 1,
   size = 160,
   close = false,
+  expression = 'neutral',
+  look = 'center',
 }: {
   config?: AvatarConfig;
   mouth?: number; // 0 닫힘 ~ 1 크게 벌림 (TTS 음량 등)
   scale?: number; // 부모 입모양 크기 반영 (기본 1)
   size?: number;
-  close?: boolean; // 입모양 확대 (3-4 따라 말하기)
+  close?: boolean; // 입모양 확대 (따라 말하기)
+  expression?: AvatarExpression;
+  look?: AvatarLook;
 }) {
   const skin = AVATAR_OPTIONS.color[config.color % 8];
   const hairC = HAIR_COLORS[config.hair % 8];
   const outfitC = OUTFIT_COLORS[config.outfit % 8];
-  const [rx, ry] = faceShape(config.face);
+  const [rx, ry, corner] = FACES[config.face % 8];
   const m = Math.max(0, Math.min(1, mouth)) * Math.max(0.6, Math.min(1.6, scale));
-  const mouthW = 16 + m * 4;
-  const mouthH = 2 + m * 14;
-  const vb = close ? '50 105 100 75' : '0 0 200 220';
+  const vb = close ? '56 117 88 66' : '0 0 200 220';
+  const hairI = config.hair % 8;
+  const cheekOp = { neutral: 0.4, smile: 0.6, surprise: 0.35, wait: 0.4, praise: 0.75 }[expression];
 
   return (
     <Svg width={size} height={close ? size * 0.75 : size * 1.1} viewBox={vb}>
-      {/* 몸·옷 */}
-      <G>
-        <Path d="M30 220 Q30 165 100 160 Q170 165 170 220 Z" fill={outfitC} />
-        {config.outfit % 8 === 5 && <Rect x="75" y="170" width="50" height="50" rx="6" fill="#fff" opacity={0.9} />}
-        {config.outfit % 8 === 1 && <Path d="M88 162 L100 182 L112 162" stroke="#fff" strokeWidth="4" fill="none" />}
-      </G>
+      {/* 몸·옷 (작고 둥글게) */}
+      <Outfit i={config.outfit % 8} c={outfitC} />
       {/* 뒷머리 */}
-      {[1, 2, 6].includes(config.hair % 8) && <Ellipse cx="100" cy="110" rx={rx + 10} ry={ry + 18} fill={hairC} />}
-      {/* 목 */}
-      <Rect x="88" y="135" width="24" height="30" fill={skin} />
+      <HairBack i={hairI} rx={rx} ry={ry} c={hairC} />
+      {/* 귀 */}
+      <Circle cx={CX - rx + 2} cy={CY + 8} r="11" fill={skin} />
+      <Circle cx={CX + rx - 2} cy={CY + 8} r="11" fill={skin} />
       {/* 얼굴 */}
-      <Rect x={100 - rx} y={100 - ry} width={rx * 2} height={ry * 2} rx={faceShape(config.face)[2]} fill={skin} />
-      {/* 앞머리 */}
-      <HairFront i={config.hair % 8} rx={rx} ry={ry} c={hairC} />
-      {/* 눈 */}
-      <Eyes i={config.eyes % 8} />
-      {/* 볼 */}
-      <Circle cx="70" cy="122" r="7" fill="#F28B82" opacity={0.35} />
-      <Circle cx="130" cy="122" r="7" fill="#F28B82" opacity={0.35} />
-      {/* 입: m 에 따라 벌어짐 */}
-      {m < 0.08 ? (
-        <Path d={`M${100 - mouthW / 2} 130 Q100 ${136} ${100 + mouthW / 2} 130`} stroke="#9C3D3D" strokeWidth="3" fill="none" strokeLinecap="round" />
+      {corner >= rx ? (
+        <Ellipse cx={CX} cy={CY} rx={rx} ry={ry} fill={skin} />
       ) : (
-        <G>
-          <Ellipse cx="100" cy={131 + mouthH / 4} rx={mouthW / 2} ry={mouthH / 2} fill="#7A2E2E" />
-          <Ellipse cx="100" cy={131 + mouthH / 2} rx={mouthW / 3} ry={mouthH / 5} fill="#E57373" />
-        </G>
+        <Rect x={CX - rx} y={CY - ry} width={rx * 2} height={ry * 2} rx={corner} ry={corner} fill={skin} />
       )}
+      {/* 앞머리 */}
+      <HairFront i={hairI} rx={rx} ry={ry} c={hairC} />
+      {/* 볼 */}
+      <Ellipse cx={CX - 38} cy={CY + 24} rx="11" ry="8" fill={CHEEK} opacity={cheekOp} />
+      <Ellipse cx={CX + 38} cy={CY + 24} rx="11" ry="8" fill={CHEEK} opacity={cheekOp} />
+      {/* 눈썹 */}
+      <Brows expression={expression} c={hairI === 7 ? INK : hairC} />
+      {/* 눈 */}
+      <Eyes i={config.eyes % 8} expression={expression} look={look} skin={skin} />
+      {/* 입 */}
+      <Mouth m={m} expression={expression} />
     </Svg>
   );
 }
 
-function HairFront({ i, rx, ry, c }: { i: number; rx: number; ry: number; c: string }) {
-  const top = 100 - ry;
-  switch (i) {
-    case 4: // 짧은 머리
-      return <Path d={`M${100 - rx} ${top + 20} Q100 ${top - 14} ${100 + rx} ${top + 20} L${100 + rx} ${top + 8} Q100 ${top - 22} ${100 - rx} ${top + 8} Z`} fill={c} />;
-    case 5: // 앞머리
-      return <Path d={`M${100 - rx} ${top + 30} Q100 ${top - 20} ${100 + rx} ${top + 30} L${100 + rx - 6} ${top + 34} L${100 - rx + 6} ${top + 34} Z`} fill={c} />;
-    case 3: // 곱슬
-      return (
-        <G>
-          {[-36, -18, 0, 18, 36].map((dx) => (
-            <Circle key={dx} cx={100 + dx} cy={top + 6} r="14" fill={c} />
-          ))}
-        </G>
-      );
-    case 6: // 올림머리
-      return (
-        <G>
-          <Circle cx="100" cy={top - 14} r="16" fill={c} />
-          <Path d={`M${100 - rx} ${top + 22} Q100 ${top - 16} ${100 + rx} ${top + 22}`} fill={c} />
-        </G>
-      );
-    case 7: // 모자
-      return (
-        <G>
-          <Path d={`M${100 - rx - 6} ${top + 18} Q100 ${top - 30} ${100 + rx + 6} ${top + 18} Z`} fill="#E07A5F" />
-          <Rect x={100 - rx - 12} y={top + 12} width={(rx + 12) * 2} height="8" rx="4" fill="#C0583F" />
-        </G>
-      );
-    default: // 단발·긴 머리·묶음
-      return <Path d={`M${100 - rx - 4} ${top + 34} Q${100 - rx} ${top - 12} 100 ${top - 8} Q${100 + rx} ${top - 12} ${100 + rx + 4} ${top + 34} Q100 ${top + 6} ${100 - rx - 4} ${top + 34} Z`} fill={c} />;
+// ---------- 입 ----------
+function Mouth({ m, expression }: { m: number; expression: AvatarExpression }) {
+  const y = CY + 32;
+  // 말하는 중: 음량만큼 크게 벌어짐 (또렷하게 보이도록 크게)
+  if (m >= 0.08) {
+    const w = 20 + m * 10 + (expression === 'praise' || expression === 'smile' ? 6 : 0);
+    const h = 5 + m * 20;
+    if (expression === 'praise' || expression === 'smile') return <DMouth w={w} h={h} y={y - 2} />;
+    return (
+      <G>
+        <Ellipse cx={CX} cy={y + h / 2 - 2} rx={w / 2} ry={h / 2} fill={MOUTH} />
+        {h > 9 && <Ellipse cx={CX} cy={y + h * 0.72 - 2} rx={w / 3.2} ry={h / 5} fill={TONGUE} />}
+      </G>
+    );
+  }
+  switch (expression) {
+    case 'praise':
+      return <DMouth w={30} h={17} y={y - 3} />;
+    case 'surprise':
+      return <Ellipse cx={CX} cy={y + 3} rx="6.5" ry="8" fill={MOUTH} />;
+    case 'smile':
+      return <Path d={`M${CX - 14} ${y - 1} Q${CX} ${y + 14} ${CX + 14} ${y - 1}`} stroke={MOUTH} strokeWidth="4" fill="none" strokeLinecap="round" />;
+    case 'wait':
+      return <Path d={`M${CX - 7} ${y + 1} Q${CX} ${y + 6} ${CX + 7} ${y + 1}`} stroke={MOUTH} strokeWidth="4" fill="none" strokeLinecap="round" />;
+    default:
+      return <Path d={`M${CX - 10} ${y} Q${CX} ${y + 9} ${CX + 10} ${y}`} stroke={MOUTH} strokeWidth="4" fill="none" strokeLinecap="round" />;
   }
 }
 
-function Eyes({ i }: { i: number }) {
-  const y = 104;
-  const pair = (render: (x: number) => ReactNode) => (
+/** 활짝 웃는 입 (위는 평평, 아래는 둥글게) + 혀 */
+function DMouth({ w, h, y }: { w: number; h: number; y: number }) {
+  const l = CX - w / 2;
+  const r = CX + w / 2;
+  return (
     <G>
-      {render(78)}
-      {render(122)}
+      <Path d={`M${l} ${y} Q${CX} ${y - 2} ${r} ${y} Q${r} ${y + h * 1.25} ${CX} ${y + h} Q${l} ${y + h * 1.25} ${l} ${y} Z`} fill={MOUTH} />
+      <Ellipse cx={CX} cy={y + h * 0.78} rx={w / 3.6} ry={h / 4.5} fill={TONGUE} />
     </G>
   );
-  switch (i) {
-    case 1: // 웃는 눈
-      return pair((x) => <Path key={x} d={`M${x - 7} ${y + 2} Q${x} ${y - 6} ${x + 7} ${y + 2}`} stroke="#222" strokeWidth="3" fill="none" strokeLinecap="round" />);
-    case 2: // 큰 눈
-      return pair((x) => (
-        <G key={x}>
-          <Circle cx={x} cy={y} r="8" fill="#222" />
-          <Circle cx={x + 2.5} cy={y - 2.5} r="2.5" fill="#fff" />
-        </G>
-      ));
-    case 3: // 반달
-      return pair((x) => <Path key={x} d={`M${x - 7} ${y - 2} Q${x} ${y + 6} ${x + 7} ${y - 2}`} stroke="#222" strokeWidth="3" fill="none" strokeLinecap="round" />);
-    case 5: // 졸린 눈
-      return pair((x) => <Path key={x} d={`M${x - 7} ${y} L${x + 7} ${y}`} stroke="#222" strokeWidth="3" strokeLinecap="round" />);
-    case 6: // 안경
-      return (
-        <G>
-          {pair((x) => (
-            <G key={x}>
-              <Circle cx={x} cy={y} r="4" fill="#222" />
-              <Circle cx={x} cy={y} r="12" stroke="#333" strokeWidth="2.5" fill="none" />
-            </G>
-          ))}
-          <Path d={`M90 ${y} L110 ${y}`} stroke="#333" strokeWidth="2.5" />
-        </G>
-      );
-    case 7: // 윙크
-      return (
-        <G>
-          <Circle cx={78} cy={y} r="5" fill="#222" />
-          <Path d={`M115 ${y + 2} Q122 ${y - 6} 129 ${y + 2}`} stroke="#222" strokeWidth="3" fill="none" strokeLinecap="round" />
-        </G>
-      );
-    case 4: // 또렷
-      return pair((x) => (
-        <G key={x}>
-          <Ellipse cx={x} cy={y} rx="6" ry="7" fill="#222" />
-          <Path d={`M${x - 8} ${y - 10} L${x + 6} ${y - 12}`} stroke="#222" strokeWidth="2.5" strokeLinecap="round" />
-        </G>
-      ));
-    default: // 동글
-      return pair((x) => <Circle key={x} cx={x} cy={y} r="5" fill="#222" />);
+}
+
+// ---------- 눈썹 ----------
+function Brows({ expression, c }: { expression: AvatarExpression; c: string }) {
+  const lift = { neutral: 0, smile: -1, surprise: -7, wait: -3, praise: -3 }[expression];
+  const y = CY - 22 + lift;
+  const arch = expression === 'surprise' ? 5 : 3;
+  // 기다림: 한쪽(오른쪽)을 살짝 더 올림 → "어때?" 하는 얼굴
+  const tilt = expression === 'wait' ? -3 : 0;
+  return (
+    <G>
+      <Path d={`M${CX - 35} ${y + 2} Q${CX - 27} ${y - arch} ${CX - 18} ${y + 1}`} stroke={c} strokeWidth="4.5" fill="none" strokeLinecap="round" />
+      <Path d={`M${CX + 18} ${y + 1 + tilt} Q${CX + 27} ${y - arch + tilt} ${CX + 35} ${y + 2 + tilt}`} stroke={c} strokeWidth="4.5" fill="none" strokeLinecap="round" />
+    </G>
+  );
+}
+
+// ---------- 눈 ----------
+const EYE_Y = CY + 2;
+const EYE_DX = 27;
+
+/** 웃는 눈 ^^ */
+const happyEye = (x: number, w = 9) => (
+  <Path key={x} d={`M${x - w} ${EYE_Y + 3} Q${x} ${EYE_Y - 9} ${x + w} ${EYE_Y + 3}`} stroke={INK} strokeWidth="4.5" fill="none" strokeLinecap="round" />
+);
+
+/** 둥근 큰 눈: 흰자 + 큰 눈동자 + 반짝이 두 개. dx 로 바라보는 쪽 */
+function RoundEye({ x, r = 13, pupil = 9, dx = 0, lashes = false }: { x: number; r?: number; pupil?: number; dx?: number; lashes?: boolean }) {
+  return (
+    <G>
+      <Ellipse cx={x} cy={EYE_Y} rx={r} ry={r * 1.08} fill="#FFFFFF" stroke={INK} strokeWidth="1.5" />
+      <Circle cx={x + dx} cy={EYE_Y + 1} r={pupil} fill={INK} />
+      <Circle cx={x + dx + pupil * 0.38} cy={EYE_Y - pupil * 0.35} r={pupil * 0.36} fill="#FFFFFF" />
+      <Circle cx={x + dx - pupil * 0.35} cy={EYE_Y + pupil * 0.45} r={pupil * 0.16} fill="#FFFFFF" />
+      {lashes && <Path d={`M${x + r * 0.7} ${EYE_Y - r * 0.8} l5 -4 M${x + r * 0.95} ${EYE_Y - r * 0.35} l6 -2`} stroke={INK} strokeWidth="2.5" strokeLinecap="round" />}
+    </G>
+  );
+}
+
+function Eyes({ i, expression, look, skin }: { i: number; expression: AvatarExpression; look: AvatarLook; skin: string }) {
+  const dx = look === 'right' ? 3.5 : 0;
+  const L = CX - EYE_DX;
+  const Rr = CX + EYE_DX;
+  const pair = (render: (x: number) => ReactNode) => (
+    <G>
+      {render(L)}
+      {render(Rr)}
+    </G>
+  );
+  const glasses = i === 6 && (
+    <G>
+      <Circle cx={L} cy={EYE_Y} r="17" stroke={INK} strokeWidth="2.5" fill="none" />
+      <Circle cx={Rr} cy={EYE_Y} r="17" stroke={INK} strokeWidth="2.5" fill="none" />
+      <Path d={`M${L + 17} ${EYE_Y - 2} Q${CX} ${EYE_Y - 7} ${Rr - 17} ${EYE_Y - 2}`} stroke={INK} strokeWidth="2.5" fill="none" />
+    </G>
+  );
+
+  // 칭찬: 어떤 눈을 골라도 활짝 웃는 ^^
+  if (expression === 'praise') {
+    return (
+      <G>
+        {pair((x) => happyEye(x, 10))}
+        {glasses}
+      </G>
+    );
   }
+  // 놀람: 눈이 더 커지고 눈동자는 작게
+  if (expression === 'surprise') {
+    return (
+      <G>
+        {pair((x) => <RoundEye key={x} x={x} r={14} pupil={7} dx={dx} />)}
+        {glasses}
+      </G>
+    );
+  }
+
+  let eyes: ReactNode;
+  switch (i) {
+    case 1: // 웃는 눈 (늘 웃는 ^^)
+      eyes = pair((x) => happyEye(x));
+      break;
+    case 2: // 큰 눈
+      eyes = pair((x) => <RoundEye key={x} x={x} r={14} pupil={10} dx={dx} />);
+      break;
+    case 3: // 반달: 눈동자 아래쪽만 둥글게
+      eyes = pair((x) => <Path key={x} d={`M${x - 11} ${EYE_Y - 2} Q${x} ${EYE_Y - 4} ${x + 11} ${EYE_Y - 2} Q${x + 10} ${EYE_Y + 12} ${x} ${EYE_Y + 12} Q${x - 10} ${EYE_Y + 12} ${x - 11} ${EYE_Y - 2} Z`} fill={INK} />);
+      break;
+    case 4: // 또렷 (속눈썹)
+      eyes = pair((x) => <RoundEye key={x} x={x} dx={dx} lashes />);
+      break;
+    case 5: // 졸린 눈: 윗눈꺼풀이 살짝 덮음 (그래도 눈동자는 크게)
+      eyes = pair((x) => (
+        <G key={x}>
+          <RoundEye x={x} dx={dx} />
+          <Path d={`M${x - 14} ${EYE_Y - 2} Q${x} ${EYE_Y - 18} ${x + 14} ${EYE_Y - 2} Z`} fill={skin} />
+          <Path d={`M${x - 12} ${EYE_Y - 3} Q${x} ${EYE_Y - 6} ${x + 12} ${EYE_Y - 3}`} stroke={INK} strokeWidth="2" fill="none" strokeLinecap="round" />
+        </G>
+      ));
+      break;
+    case 7: // 윙크
+      eyes = (
+        <G>
+          <RoundEye x={L} dx={dx} />
+          {happyEye(Rr)}
+        </G>
+      );
+      break;
+    default: // 동글 · 안경
+      eyes = pair((x) => <RoundEye key={x} x={x} dx={dx} />);
+  }
+
+  // 웃음: 아래 눈꺼풀이 올라가 눈웃음 (눈 모양은 그대로)
+  const smileLids =
+    expression === 'smile' &&
+    i !== 1 &&
+    i !== 3 &&
+    pair((x) => <Ellipse key={x} cx={x} cy={EYE_Y + 15} rx="16" ry="8" fill={skin} />);
+
+  return (
+    <G>
+      {eyes}
+      {smileLids}
+      {glasses}
+    </G>
+  );
+}
+
+// ---------- 머리 ----------
+/** 정수리를 덮는 머리 모양. edgeY = 앞머리 끝이 이마에서 내려오는 높이, sway = 가르마 쪽으로 쏠림 */
+function cap(rx: number, ry: number, edgeY: number, sway = 0, grow = 4) {
+  const sideY = CY - ry * 0.05;
+  const ctrlY = 2 * edgeY - sideY;
+  return `M${CX - rx - grow} ${sideY} A${rx + grow} ${ry + grow} 0 0 1 ${CX + rx + grow} ${sideY} Q${CX + sway} ${ctrlY} ${CX - rx - grow} ${sideY} Z`;
+}
+
+function HairBack({ i, rx, ry, c }: { i: number; rx: number; ry: number; c: string }) {
+  switch (i) {
+    case 0: // 단발: 턱선까지 둥글게
+      return <Rect x={CX - rx - 8} y={CY - ry - 6} width={(rx + 8) * 2} height={ry * 2 + 4} rx={rx} fill={c} />;
+    case 1: // 긴 머리: 어깨 아래까지
+      return <Rect x={CX - rx - 9} y={CY - ry - 6} width={(rx + 9) * 2} height={ry * 2 + 52} rx={rx * 0.9} fill={c} />;
+    case 2: // 묶음: 양쪽 동그란 방울
+      return (
+        <G>
+          <Circle cx={CX - rx - 10} cy={CY - 18} r="17" fill={c} />
+          <Circle cx={CX + rx + 10} cy={CY - 18} r="17" fill={c} />
+        </G>
+      );
+    case 6: // 올림머리: 위에 동그란 똥머리
+      return <Circle cx={CX} cy={CY - ry - 12} r="20" fill={c} />;
+    default:
+      return null;
+  }
+}
+
+function HairFront({ i, rx, ry, c }: { i: number; rx: number; ry: number; c: string }) {
+  const top = CY - ry;
+  switch (i) {
+    case 3: // 곱슬: 동글동글
+      return (
+        <G>
+          <Path d={cap(rx, ry, top + 26, 0, 2)} fill={c} />
+          {[-0.85, -0.5, -0.15, 0.2, 0.55, 0.88].map((k) => (
+            <Circle key={k} cx={CX + k * rx} cy={top + 14 + Math.abs(k) * 22} r="14" fill={c} />
+          ))}
+        </G>
+      );
+    case 4: // 짧은 머리: 이마가 드러나게 짧게
+      return <Path d={cap(rx, ry, top + 16, 0, 3)} fill={c} />;
+    case 5: // 앞머리: 일자로 내려옴
+      return <Path d={`M${CX - rx - 4} ${CY - 4} A${rx + 4} ${ry + 4} 0 0 1 ${CX + rx + 4} ${CY - 4} L${CX + rx - 4} ${top + 38} L${CX - rx + 4} ${top + 38} Z`} fill={c} />;
+    case 7: // 모자 (둥근 비니)
+      return (
+        <G>
+          <Path d={cap(rx, ry, top + 30, 0, 6)} fill="#FFB26B" />
+          <Rect x={CX - rx - 6} y={top + 20} width={(rx + 6) * 2} height="12" rx="6" fill="#F2994A" />
+          <Circle cx={CX} cy={top - 6} r="9" fill="#FFD54F" />
+        </G>
+      );
+    case 6: // 올림머리
+      return <Path d={cap(rx, ry, top + 22, 0, 3)} fill={c} />;
+    case 2: // 묶음
+      return <Path d={cap(rx, ry, top + 28, 14)} fill={c} />;
+    default: // 단발 · 긴 머리: 옆으로 넘긴 앞머리
+      return <Path d={cap(rx, ry, top + 30, -22)} fill={c} />;
+  }
+}
+
+// ---------- 옷 ----------
+function Outfit({ i, c }: { i: number; c: string }) {
+  const body = `M${CX - 54} 222 Q${CX - 56} 168 ${CX} 164 Q${CX + 56} 168 ${CX + 54} 222 Z`;
+  return (
+    <G>
+      <Path d={body} fill={c} />
+      {i === 1 && <Path d={`M${CX - 16} 166 L${CX} 184 L${CX + 16} 166`} stroke="#FFFFFF" strokeWidth="5" fill="none" strokeLinejoin="round" />}
+      {i === 2 &&
+        [184, 200].map((y) => <Path key={y} d={`M${CX - 50} ${y} Q${CX} ${y - 6} ${CX + 50} ${y}`} stroke="#FFFFFF" strokeWidth="4" opacity={0.6} fill="none" />)}
+      {i === 3 && [-28, 0, 28].map((dx) => <Circle key={dx} cx={CX + dx} cy={196 + (dx === 0 ? 8 : 0)} r="4" fill="#FFFFFF" opacity={0.8} />)}
+      {i === 4 && <Path d={`M${CX - 30} 168 Q${CX} 196 ${CX + 30} 168`} stroke="#FFFFFF" strokeWidth="5" opacity={0.55} fill="none" />}
+      {i === 5 && <Rect x={CX - 24} y={178} width="48" height="44" rx="10" fill="#FFFFFF" opacity={0.9} />}
+      {i === 6 && (
+        <G>
+          <Path d={`M${CX} 168 L${CX} 222`} stroke="#FFFFFF" strokeWidth="3" opacity={0.7} />
+          {[186, 204].map((y) => <Circle key={y} cx={CX + 7} cy={y} r="3" fill="#FFFFFF" />)}
+        </G>
+      )}
+      {i === 7 && (
+        <G>
+          <Path d={`M${CX - 16} 166 L${CX} 186 L${CX + 16} 166 Z`} fill="#FFFFFF" />
+          <Path d={`M${CX - 5} 176 L${CX + 5} 176 L${CX + 4} 196 L${CX} 200 L${CX - 4} 196 Z`} fill="#FFB26B" />
+        </G>
+      )}
+    </G>
+  );
 }
