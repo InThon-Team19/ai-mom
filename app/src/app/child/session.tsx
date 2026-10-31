@@ -10,35 +10,52 @@
 //   - 주의 흐트러짐(distracted): 화면을 거의 안 보고 8초 넘게 반응 없음 → 이름 부르기 + 사물이 크게 튐 + 짧은 소리
 //   - 손 놀이에 빠짐(engaged-touch): 터치 많음 → "한 번 더 눌러볼까?" / 말 놀이에 빠짐(engaged-voice): 말소리 2번 이상 → 단어를 천천히 한 번 더
 // 녹음 버튼 없음: useChildListener 가 아바타가 말하지 않는 동안 계속 듣고, 말소리 토막을 서버에 저장 (부모가 나중에 들음)
-// 폰(가로 약 800x360)과 태블릿 모두: 크기는 화면 크기에서 계산 (폰은 여백·글자·버튼을 줄여 겹치지 않게)
+// 폰(가로 약 800x360)과 태블릿 모두: 크기는 보드(1180x820) 비율로 계산 (useKid). 화면 모양은 민철 Design 보드 KidPlay(사물) · KidRepeat(따라 말하기)
 import { router, useIsFocused } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Text, View, useWindowDimensions, type HostInstance } from 'react-native';
 import Animated, { FadeIn, FadeOut, ZoomIn } from 'react-native-reanimated';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Avatar, type AvatarExpression, type AvatarLook } from '@/components/Avatar';
 import type { FaceExpr, FaceFrame } from '@/components/FaceTracker';
-import { ParentExit, parentExitZone } from '@/components/ParentExit';
+import { ParentExit } from '@/components/ParentExit';
+import {
+  AvatarCircle,
+  AvatarPanel,
+  CheckIcon,
+  ChunkyButton,
+  CloseButton,
+  HandIcon,
+  ItemArt,
+  K,
+  KidScreen,
+  ListeningMic,
+  MicIcon,
+  SOFT,
+  SoftPill,
+  SpeakerIcon,
+  Stars,
+  TopBar,
+  useKid,
+  WhiteCard,
+} from '@/components/child/design';
 import { dropDuration, ItemToy, type ToyLeave } from '@/components/child/ItemToy';
-import { EarListener, FaceSensor, PillButton, RoundButton, SkipIcon, sleep, useDailyLimit, useMouthScale, who } from '@/components/child/kit';
+import { FaceSensor, sleep, useDailyLimit, useMouthScale, who } from '@/components/child/kit';
 import { Basket, NodBox } from '@/components/child/stage';
 import { dayOf, fill, ITEMS, type Day, type ItemId } from '@/content/curriculum';
 import { useChildListener, type ClipResult } from '@/hooks/useChildListener';
 import { useSpeak } from '@/hooks/useSpeak';
 import { agentSay, type TurnIn } from '@/lib/agent';
-import { useDevice } from '@/lib/layout';
 import { haptic, logEvent, playSfx, setVibration, startActivityLog } from '@/lib/sense';
 import { loadProfile, refreshProfile, useProfile } from '@/lib/store';
 import type { ChildClipOut } from '@/lib/types';
-import { C, R } from '@/theme';
 
 type Phase = 'object' | 'repeat';
 /** 앱이 추정한 아이 상태 (사물마다) */
 type Mood = 'calm' | 'overloaded' | 'distracted' | 'engaged-touch' | 'engaged-voice';
 type Signals = NonNullable<TurnIn['signals']>;
 
-const STAGE = C.greenSoft; // 오른쪽 사물 무대 바탕 — 사과 베어 문 자국도 이 색
+const STAGE = K.white; // 사물 카드 바탕 (보드 KidPlay 흰 카드) — 사과 베어 문 자국도 이 색
 const WAIT_MS = 2000; // 눌러주길 기다리는 시간 (2-3 초안)
 const AUTO_REPEAT_MS = 3000; // 마지막으로 누른 뒤 이만큼 지나면 따라 말하기로
 const REPEAT_WAIT_MS = 7000; // 따라 말하기: 아이 말을 기다리는 시간 (말하는 중·올리는 중이면 최대 10초 더)
@@ -104,9 +121,8 @@ const newSig = (): ObjSig => ({
 
 export default function Session() {
   const profile = useProfile();
-  const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();
-  const { isTablet } = useDevice();
+  const kid = useKid();
   const focused = useIsFocused();
   const { speak, stop, mouth, setSlow } = useSpeak(profile?.childId);
   const stopRef = useRef(stop); // 끼어들기 때 아바타 말 멈추기용 (듣기 hook 보다 먼저 만들어짐)
@@ -137,6 +153,8 @@ export default function Session() {
   const [childExpr, setChildExpr] = useState<FaceExpr>('neutral');
   const [calm, setCalm] = useState(false); // 무리 뒤: 움직임·진동 줄임
   const [rest, setRest] = useState(false); // 쉬기 권하기 (소리만 듣기 큰 버튼)
+  const [line, setLine] = useState(''); // 아바타가 지금 하는 말 (보드: 위 카드 작은 글자 · 왼쪽 말풍선)
+  const [cardBox, setCardBox] = useState({ w: 0, h: 0 }); // 지금 사물 카드 크기
 
   const run = useRef(0); // 진행 중인 말하기 흐름 취소용
   const shownAt = useRef(0);
@@ -201,7 +219,10 @@ export default function Session() {
       await hold();
       try {
         // 녹음을 멈추는 사이(최대 0.8초) 흐름이 바뀌었으면(누름·다음 등) 지난 문장은 말하지 않음 (두 문장이 겹쳐 들리던 문제)
-        if (r === run.current) await speak(text);
+        if (r === run.current) {
+          setLine(text);
+          await speak(text);
+        }
       } finally {
         release();
       }
@@ -859,169 +880,294 @@ export default function Session() {
     setKick((k) => k + 1);
   };
 
-  if (!plan || !item) return <View style={{ flex: 1, backgroundColor: C.bg }} />;
+  if (!plan || !item) return <View style={{ flex: 1, backgroundColor: K.bg }} />;
 
-  // ---------- 크기: 폰(가로 약 800x360)은 줄이고 태블릿은 크게 ----------
-  const compact = !isTablet || height < 520;
-  const gap = compact ? 8 : 14;
-  const pad = {
-    paddingTop: (compact ? 6 : 12) + insets.top,
-    paddingBottom: (compact ? 6 : 14) + insets.bottom,
-    paddingLeft: (compact ? 14 : 28) + insets.left,
-    paddingRight: (compact ? 14 : 28) + insets.right,
-  };
-  const headerH = compact ? 40 : 52;
-  const basketH = compact ? Math.max(52, Math.min(64, height * 0.16)) : Math.max(88, Math.min(110, height * 0.13));
-  const mainH = Math.max(140, height - pad.paddingTop - pad.paddingBottom - headerH - basketH - gap * 2);
-  const avatarSize = Math.max(80, Math.min(mainH / 1.18, width * 0.34));
-  const sfxH = compact ? 32 : 52;
-  const sfxFont = compact ? 24 : 34;
-  const wordFont = compact ? 26 : 34;
-  const repeatFont = compact ? 30 : 40;
-  const earSize = compact ? Math.max(38, Math.min(52, mainH * 0.2)) : Math.max(64, Math.min(88, mainH * 0.16));
-  const rowH = Math.max(earSize * 1.45, compact ? 48 : 88);
-  const toySize = Math.max(64, Math.min(mainH - sfxH - rowH - 24, mainH * 0.45, width * 0.22, 240));
-  const nextSize = compact ? 60 : 92;
-  const smallPill = compact ? { minHeight: 40 } : undefined;
+  // ---------- 크기: 보드(1180x820) 비율. 폰(가로 약 800x360)은 줄이되 누르는 곳은 최소 크기 유지 ----------
+  const { u, f, compact } = kid;
+  const repeat = phase === 'repeat';
   const motionLow = reduceMotion || calm;
   const expression: AvatarExpression =
     mood ?? (listener.status === 'hearing' ? 'wait' : childExpr === 'smile' ? 'smile' : childExpr === 'surprise' ? 'surprise' : 'neutral');
+  const wordFont = f(56, 24);
+  const sfxFont = f(34, 18);
+  // 사물 카드 안의 누르는 사물 크기 (카드 크기에서)
+  const toySize = Math.round(Math.max(56, Math.min(cardBox.w * 0.62, (cardBox.h - sfxFont * 1.6) * 0.78, u(240, 56))));
+  const art = Math.round(Math.max(40, Math.min(cardBox.w * 0.55, cardBox.h * 0.6, u(140, 40))));
+  const badge = u(52, 30);
+  const replay = () => {
+    // 다시 들려준 뒤에도 따라 말하기면 아이 말을 기다림 (예전엔 흐름만 끊겨 따라 말해도 반응이 없었음)
+    const t = ++run.current;
+    stop();
+    (async () => {
+      await talk(say(item));
+      if (t !== run.current) return;
+      if (phase !== 'repeat') {
+        // 사물 놀이 중: 이미 눌러 봤으면 잠시 뒤 따라 말하기로 (누를 때와 같은 흐름)
+        if (pressCount.current > 0) {
+          await sleep(AUTO_REPEAT_MS);
+          if (t === run.current) setPhase('repeat');
+        }
+        return;
+      }
+      const r = await waitUtterance(t, REPEAT_WAIT_MS);
+      if (t !== run.current) return;
+      if (r) await respondRef.current(t, r);
+      else setKick((k) => k + 1);
+    })();
+  };
 
   return (
-    <View style={[{ flex: 1, backgroundColor: C.bg, gap }, pad]}>
-      <ParentExit home />
-      {/* 상단: 일차 · 소리만 듣기 */}
-      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: headerH }}>
-        {/* 왼쪽 위 자물쇠·홈 버튼 자리를 비움 (예전엔 일차 표시가 자물쇠 밑에 가려졌음) */}
-        <View style={{ marginLeft: parentExitZone(isTablet) + 8 - (compact ? 14 : 28), backgroundColor: C.primary, borderRadius: R.pill, paddingHorizontal: compact ? 14 : 18, paddingVertical: compact ? 6 : 10 }}>
-          <Text style={{ color: C.onPrimary, fontSize: compact ? 15 : 18, fontWeight: '800' }}>{plan.day}일차</Text>
-        </View>
-        <PillButton
-          small
-          label="소리만 듣기"
-          style={smallPill}
-          onPress={() => {
-            stop();
-            router.push('/child/audio');
-          }}
-        />
-      </View>
-
-      <View style={{ flex: 1, flexDirection: 'row', gap: compact ? 10 : 16 }}>
-        {/* 왼쪽 약 40%: 부모 아바타 (입모양이 잘 보이게 크게) */}
-        <View style={{ flex: 40, backgroundColor: C.white, borderRadius: R.lg, borderWidth: 2, borderColor: C.border, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-          <NodBox nod={nod} reduceMotion={motionLow}>
-            <Avatar config={profile?.avatar} mouth={mouth} scale={scale} size={avatarSize} expression={expression} look={look} />
-          </NodBox>
-        </View>
-
-        {/* 오른쪽 약 60%: 사물 무대 (한 번에 하나) */}
-        <View style={{ flex: 60, backgroundColor: STAGE, borderRadius: R.lg, borderWidth: 2, borderColor: C.green, alignItems: 'center', justifyContent: 'center', gap: 4 }}>
-          {/* 듣고 있는 귀 (사물 놀이 중엔 구석에 작게) */}
-          {phase === 'object' && (
-            <View style={{ position: 'absolute', top: 4, right: 4 }}>
-              <EarListener status={listener.status} level={listener.level} onPress={onEar} size={compact ? 34 : 50} />
-            </View>
-          )}
-          {/* 의성어 (누를 때마다 톡) */}
-          <View style={{ height: sfxH, alignItems: 'center', justifyContent: 'flex-end' }}>
-            {phase === 'object' && presses > 0 && (
-              <Animated.Text key={presses} entering={ZoomIn.duration(220)} style={{ fontSize: sfxFont, fontWeight: '900', color: C.text }}>
-                {item.sfxWord}
-              </Animated.Text>
-            )}
-          </View>
-          <View ref={toyRef} collapsable={false} style={{ alignItems: 'center' }}>
-            <ItemToy
-              key={idx}
-              id={item.id}
-              emoji={item.emoji}
-              size={toySize}
-              bg={STAGE}
-              onPress={onToy}
-              drop={dropped}
-              reduceMotion={motionLow}
-              wiggle={wiggle}
-              attention={attention}
-              voice={listener.speechLevel}
-              success={success}
-              leave={leave}
-              onLeft={onLeft}
-              interactive // 따라 말하기 중에도 만지면 반응
+    <KidScreen gap={repeat ? 20 : 22}>
+      {/* 머리줄 (보드 KidPlay · KidRepeat): 닫기 · 제목+진행 · 부모 · 소리만 · 천천히 */}
+      <TopBar
+        left={
+          <>
+            <CloseButton
+              onBefore={() => {
+                run.current++;
+                stop();
+              }}
             />
-            {/* 바닥 그림자 — 떨어져 닿는 자리 */}
-            <View style={{ width: toySize * 0.6, height: 12, borderRadius: 6, backgroundColor: C.green, opacity: dropped && !leave ? 0.45 : 0, marginTop: -6 }} />
-          </View>
+            {/* 아이 얼굴 센서: 작고 흐리게 (기기 안에서만 처리, 영상은 저장·전송 안 함) */}
+            {focused && (
+              <View pointerEvents="box-none" style={{ opacity: 0.45 }}>
+                <FaceSensor onFrame={onFrame} style={{ width: compact ? 52 : 72, height: compact ? 38 : 54, borderRadius: 12 }} />
+              </View>
+            )}
+          </>
+        }
+        title={repeat ? '따라 말하기' : compact ? '보고·듣고·만지기' : '보고 · 듣고 · 만지기'}
+        icon={repeat ? <MicIcon size={u(24, 16)} /> : <HandIcon size={u(26, 18)} />}
+        steps={repeat ? 2 : 1}
+        right={
+          <>
+            <ParentExit />
+            <SoftPill
+              a11y="소리만 듣기"
+              label={compact ? undefined : '소리만'}
+              icon={<SpeakerIcon size={u(20, 15)} color={K.teal} />}
+              onPress={() => {
+                stop();
+                router.push('/child/audio');
+              }}
+            />
+            <SoftPill label="천천히" active={slow} onPress={toggleSlow} />
+          </>
+        }
+      />
 
-          {phase === 'object' ? (
-            <View style={{ minHeight: rowH, alignItems: 'center', justifyContent: 'center' }}>
-              {dropped && (
-                <Animated.Text key={`w${idx}`} entering={FadeIn.duration(300)} style={{ fontSize: wordFont, fontWeight: '900', color: C.text }}>
-                  {item.ko}!{english && <Text style={{ color: C.sub, fontWeight: '800' }}> {item.en}</Text>}
+      {!repeat ? (
+        <View style={{ flex: 1, minHeight: 0, gap: u(22, 8), zIndex: 2 }}>
+          {/* 위 카드: 작은 아바타 · 아바타가 하는 말 · 큰 단어 · 듣는 표시 · 다시 듣기 */}
+          <View
+            style={{
+              height: u(144, 64),
+              paddingLeft: u(22, 8),
+              paddingRight: u(26, 10),
+              borderRadius: u(30, 16),
+              backgroundColor: K.white,
+              boxShadow: SOFT,
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: u(22, 8),
+            }}>
+            <NodBox nod={nod} reduceMotion={motionLow}>
+              <AvatarCircle size={u(108, 52)} border={u(4, 3)} borderColor={K.teal} shadow={false}>
+                <Avatar config={profile?.avatar} mouth={mouth} scale={scale} size={Math.round(u(108, 52) * 0.9)} expression={expression} look={look} />
+              </AvatarCircle>
+            </NodBox>
+            <View style={{ flex: 1, minWidth: 0, gap: u(4, 0) }}>
+              <Text numberOfLines={1} style={{ fontSize: f(18, 12), fontWeight: '700', color: K.sub }}>
+                {line || ' '}
+              </Text>
+              {dropped ? (
+                <Animated.Text key={`w${idx}`} entering={FadeIn.duration(300)} numberOfLines={1} style={{ fontSize: wordFont, lineHeight: Math.round(wordFont * 1.15), fontWeight: '800', color: K.ink }}>
+                  {item.ko}
+                  {english && <Text style={{ fontSize: Math.round(wordFont * 0.5), color: K.sub }}> {item.en}</Text>}
                 </Animated.Text>
+              ) : (
+                <View style={{ height: Math.round(wordFont * 1.15) }} />
               )}
             </View>
-          ) : (
-            <Animated.View entering={FadeIn.duration(300)} style={{ flexDirection: 'row', alignItems: 'center', gap: compact ? 8 : 14, minHeight: rowH }}>
-              <Text style={{ fontSize: repeatFont, fontWeight: '900', color: C.text }}>{item.ko}</Text>
-              {/* 녹음 버튼 대신 듣고 있는 귀: 누르지 않아도 들음. 누르면 지금 바로 들음 */}
-              <EarListener status={listener.status} level={listener.level} onPress={onEar} size={earSize} />
-              <PillButton
-                small
-                label="다시 들려줘"
-                style={smallPill}
-                onPress={() => {
-                  // 다시 들려준 뒤에도 아이 말을 기다림 (예전엔 흐름만 끊겨 따라 말해도 반응이 없었음)
-                  const t = ++run.current;
-                  stop();
-                  (async () => {
-                    await talk(say(item));
-                    if (t !== run.current) return;
-                    const r = await waitUtterance(t, REPEAT_WAIT_MS);
-                    if (t !== run.current) return;
-                    if (r) await respondRef.current(t, r);
-                    else setKick((k) => k + 1);
-                  })();
-                }}
-              />
-            </Animated.View>
-          )}
+            <ListeningMic status={listener.status} level={listener.level} onPress={onEar} size={u(64, 36)} bars={false} />
+            <ChunkyButton
+              a11y="다시 듣기"
+              icon={<SpeakerIcon size={u(36, 20)} />}
+              onPress={replay}
+              color={K.teal}
+              deep={K.tealDeep}
+              height={u(84, 44)}
+              width={u(84, 44)}
+              fontSize={f(20)}
+              d={u(6, 3)}
+            />
+          </View>
+
+          {/* 사물 카드: 오늘 사물을 차례로 (지금 사물만 누를 수 있음 · 만진 사물은 초록 테두리 + 체크) */}
+          <View style={{ flex: 1, minHeight: 0, flexDirection: 'row', gap: u(24, 10) }}>
+            {plan.items.map((id, i) => {
+              const cur = i === idx;
+              const done = i < idx;
+              const touched = done || (cur && presses > 0);
+              return (
+                <View
+                  key={id}
+                  onLayout={cur ? (e) => setCardBox({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height }) : undefined}
+                  style={{
+                    flex: 1,
+                    borderRadius: u(30, 16),
+                    borderWidth: u(6, 3),
+                    borderColor: touched ? K.green : K.white,
+                    backgroundColor: K.white,
+                    boxShadow: SOFT,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: cur ? 2 : 1,
+                  }}>
+                  {cur ? (
+                    <>
+                      {/* 의성어 (누를 때마다 톡) */}
+                      <View style={{ position: 'absolute', top: u(10, 2), left: 0, right: 0, height: sfxFont * 1.4, alignItems: 'center' }}>
+                        {presses > 0 && (
+                          <Animated.Text key={presses} entering={ZoomIn.duration(220)} style={{ fontSize: sfxFont, fontWeight: '800', color: K.ink }}>
+                            {item.sfxWord}
+                          </Animated.Text>
+                        )}
+                      </View>
+                      <View ref={toyRef} collapsable={false} style={{ alignItems: 'center', marginTop: sfxFont * 0.8 }}>
+                        <ItemToy
+                          key={idx}
+                          id={item.id}
+                          size={toySize}
+                          bg={STAGE}
+                          onPress={onToy}
+                          drop={dropped}
+                          reduceMotion={motionLow}
+                          wiggle={wiggle}
+                          attention={attention}
+                          voice={listener.speechLevel}
+                          success={success}
+                          leave={leave}
+                          onLeft={onLeft}
+                          interactive
+                        />
+                        {/* 바닥 그림자 — 떨어져 닿는 자리 */}
+                        <View style={{ width: toySize * 0.6, height: u(12, 6), borderRadius: 6, backgroundColor: K.line, opacity: dropped && !leave ? 0.8 : 0, marginTop: -4 }} />
+                      </View>
+                    </>
+                  ) : (
+                    <View style={{ opacity: done ? 1 : 0.3 }}>
+                      <ItemArt id={id} size={art} />
+                    </View>
+                  )}
+                  {touched && (
+                    <View
+                      style={{
+                        position: 'absolute',
+                        top: -badge * 0.27,
+                        right: -badge * 0.27,
+                        width: badge,
+                        height: badge,
+                        borderRadius: badge / 2,
+                        borderWidth: u(4, 3),
+                        borderColor: K.bg,
+                        backgroundColor: K.green,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}>
+                      <CheckIcon size={badge * 0.46} />
+                    </View>
+                  )}
+                </View>
+              );
+            })}
+          </View>
         </View>
-      </View>
-
-      {/* 아래: 오늘 모은 사물 바구니 · 천천히 · 다음 */}
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: compact ? 10 : 16, height: Math.max(basketH, nextSize) }}>
-        <Basket emojis={basket.map((b) => ITEMS[b].emoji)} height={basketH} nextRef={slotRef} />
-        <PillButton label="천천히" small={compact} selected={slow} onPress={toggleSlow} />
-        <RoundButton label="다음" size={nextSize} onPress={next}>
-          <SkipIcon size={compact ? 24 : 34} />
-        </RoundButton>
-      </View>
-
-      {/* 아이 얼굴 센서: 작고 흐리게 (기기 안에서만 처리, 영상은 저장·전송 안 함) */}
-      {focused && (
-        <View
-          pointerEvents="box-none"
-          style={{ position: 'absolute', top: pad.paddingTop, left: width / 2 - (compact ? 28 : 36), opacity: 0.45 }}>
-          <FaceSensor onFrame={onFrame} style={{ width: compact ? 56 : 72, height: compact ? 42 : 54, borderRadius: 12 }} />
+      ) : (
+        <View style={{ flex: 1, minHeight: 0, flexDirection: 'row', gap: u(24, 10), zIndex: 2 }}>
+          {/* 왼쪽: 큰 아바타 판 + 말풍선 (입모양이 잘 보이게) */}
+          <AvatarPanel
+            line={line}
+            avatar={(w, h) => (
+              <NodBox nod={nod} reduceMotion={motionLow}>
+                <Avatar config={profile?.avatar} mouth={mouth} scale={scale} size={Math.round(Math.min(w * 0.8, (h * 0.72) / 1.1))} expression={expression} look={look} />
+              </NodBox>
+            )}
+          />
+          {/* 오른쪽: 사물 · 큰 단어 · 듣고 있는 마이크 · 별 */}
+          <WhiteCard style={{ alignItems: 'center', justifyContent: 'center', gap: u(14, 4) }}>
+            <View ref={toyRef} collapsable={false}>
+              <ItemToy
+                key={`r${idx}`}
+                id={item.id}
+                size={u(110, 44)}
+                bg={K.white}
+                onPress={onToy}
+                drop
+                instant
+                reduceMotion={motionLow}
+                wiggle={wiggle}
+                attention={attention}
+                voice={listener.speechLevel}
+                success={success}
+                leave={leave}
+                onLeft={onLeft}
+                interactive // 따라 말하기 중에도 만지면 반응
+              />
+            </View>
+            <Text numberOfLines={1} style={{ fontSize: f(100, 34), lineHeight: Math.round(f(100, 34) * 1.05), fontWeight: '800', color: K.ink }}>
+              {item.ko}
+              {english && <Text style={{ fontSize: f(40, 16), color: K.sub }}> {item.en}</Text>}
+            </Text>
+            {/* 녹음 버튼 대신 듣고 있는 마이크: 누르지 않아도 들음. 누르면 지금 바로 들음 */}
+            <ListeningMic status={listener.status} level={listener.level} onPress={onEar} size={u(184, 64)} />
+            {!compact && <Text style={{ fontSize: f(19), fontWeight: '700', color: K.sub }}>버튼 없이 말하면 바로 들어요</Text>}
+            <Stars on={Math.min(3, success)} size={u(42, 20)} gap={u(12, 6)} />
+            {/* 다시 들려줘 (보드엔 없지만 예전 기능 유지 — 카드 오른쪽 위 작은 버튼) */}
+            <View style={{ position: 'absolute', top: u(20, 8), right: u(20, 8) }}>
+              <ChunkyButton
+                a11y="다시 들려줘"
+                icon={<SpeakerIcon size={u(30, 18)} />}
+                onPress={replay}
+                color={K.teal}
+                deep={K.tealDeep}
+                height={u(68, 40)}
+                width={u(68, 40)}
+                fontSize={f(18)}
+                d={u(5, 3)}
+              />
+            </View>
+          </WhiteCard>
         </View>
       )}
+
+      {/* 아래: 오늘 모은 바구니 · 다음 */}
+      <View style={{ height: u(86, 46), flexDirection: 'row', alignItems: 'center', gap: u(22, 10), zIndex: 1 }}>
+        <Basket items={basket} height={u(80, 42)} fontSize={f(20, 13)} nextRef={slotRef} />
+        <ChunkyButton label="다음" onPress={next} height={u(80, 42)} width={u(234, 110)} fontSize={f(36, 18)} d={u(6, 3)} />
+      </View>
 
       {/* 무리일 때: 쉬기 권하기 — 큰 버튼으로 소리만 듣기 (엄마 목소리) */}
       {rest && (
         <Animated.View
           entering={FadeIn.duration(400)}
           exiting={FadeOut.duration(300)}
-          style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(255,248,235,0.88)', alignItems: 'center', justifyContent: 'center', gap: compact ? 10 : 20 }}>
-          <RoundButton label={`${me} 목소리 듣기`} size={compact ? Math.min(130, height * 0.4) : 190} onPress={goRest}>
-            <Text allowFontScaling={false} style={{ fontSize: compact ? 48 : 72, includeFontPadding: false }}>
-              🎧
-            </Text>
-          </RoundButton>
-          <Text style={{ fontSize: compact ? 20 : 26, fontWeight: '900', color: C.text }}>{me} 목소리</Text>
-          <PillButton small label="계속 놀기" style={smallPill} onPress={keepPlaying} />
+          style={{ position: 'absolute', inset: 0, zIndex: 10, backgroundColor: 'rgba(252,244,232,0.92)', alignItems: 'center', justifyContent: 'center', gap: u(20, 10) }}>
+          <ChunkyButton
+            a11y={`${me} 목소리 듣기`}
+            icon={<SpeakerIcon size={u(80, 44)} />}
+            onPress={goRest}
+            color={K.teal}
+            deep={K.tealDeep}
+            height={u(190, 110)}
+            width={u(190, 110)}
+            fontSize={f(20)}
+            d={u(8, 4)}
+          />
+          <Text style={{ fontSize: f(30, 18), fontWeight: '800', color: K.ink }}>{me} 목소리</Text>
+          <SoftPill label="계속 놀기" onPress={keepPlaying} />
         </Animated.View>
       )}
-    </View>
+    </KidScreen>
   );
 }

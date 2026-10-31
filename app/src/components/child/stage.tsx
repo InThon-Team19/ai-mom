@@ -5,7 +5,8 @@ import { Text, View, type HostInstance } from 'react-native';
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withSequence, withTiming, ZoomIn, type SharedValue } from 'react-native-reanimated';
 import Svg, { Path } from 'react-native-svg';
 
-import { C, R } from '@/theme';
+import { ItemArt, K } from '@/components/child/design';
+import type { ItemId } from '@/content/curriculum';
 
 /** 아바타가 단어를 말할 때 고개를 끄덕임. nod 가 바뀔 때마다 두 번 (움직임 줄이기면 한 번) */
 export function NodBox({ nod, reduceMotion, children }: { nod: number; reduceMotion?: boolean; children: ReactNode }) {
@@ -21,7 +22,7 @@ export function NodBox({ nod, reduceMotion, children }: { nod: number; reduceMot
 }
 
 // ---------- 성공 때 작은 별이 퍼짐 ----------
-const STAR_COLORS = [C.primaryStrong, C.accent, C.green];
+const STAR_COLORS = [K.star, K.red, K.green];
 
 function StarShape({ size, color }: { size: number; color: string }) {
   return (
@@ -76,33 +77,32 @@ export function BasketIcon({ size }: { size: number }) {
 }
 
 /**
- * 바구니: 모은 사물 이모지를 차례로 담음. 새로 들어온 것은 톡 커지며 나타남.
+ * 바구니 (보드 KidPlay 아래 줄): 점선 테두리 알약 + "바구니" + 모은 사물 그림. 새로 들어온 것은 톡 커지며 나타남.
  * nextRef 는 다음 사물이 들어갈 빈 자리 — 굴러가는 사물의 도착점으로 씀
  */
-export function Basket({ emojis, height = 96, nextRef }: { emojis: string[]; height?: number; nextRef?: Ref<HostInstance> }) {
-  const slot = height * 0.62;
+export function Basket({ items, height = 80, label = '바구니', fontSize = 20, nextRef }: { items: ItemId[]; height?: number; label?: string; fontSize?: number; nextRef?: Ref<HostInstance> }) {
+  const slot = height * 0.5;
   return (
     <View
       accessibilityLabel="오늘 모은 바구니"
       style={{
         flex: 1,
-        minHeight: height,
+        height,
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 10,
-        paddingHorizontal: 16,
-        backgroundColor: C.card,
-        borderRadius: R.lg,
-        borderWidth: 2,
-        borderColor: C.border,
+        gap: height * 0.17,
+        paddingHorizontal: height * 0.35,
+        backgroundColor: K.basket,
+        borderRadius: height / 2,
+        borderWidth: 3,
+        borderStyle: 'dashed',
+        borderColor: K.line,
         overflow: 'hidden',
       }}>
-      <BasketIcon size={height * 0.6} />
-      {emojis.map((e, i) => (
+      <Text style={{ fontSize, fontWeight: '800', color: K.ink }}>{label}</Text>
+      {items.map((id, i) => (
         <Animated.View key={i} entering={ZoomIn.duration(260)} style={{ width: slot, height: slot, alignItems: 'center', justifyContent: 'center' }}>
-          <Text allowFontScaling={false} style={{ fontSize: slot * 0.8, lineHeight: slot, includeFontPadding: false }}>
-            {e}
-          </Text>
+          <ItemArt id={id} size={slot} />
         </Animated.View>
       ))}
       <View ref={nextRef} collapsable={false} style={{ width: slot, height: slot }} />

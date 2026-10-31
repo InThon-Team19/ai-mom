@@ -6,21 +6,19 @@
 // 흐름: 마무리(end) "엄마랑 더 이야기하기" 또는 아이 홈 "이야기하기" → 여기 → 마무리(end). params: fav · basket (받은 그대로 넘김)
 import { router, useIsFocused, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Text, View, useWindowDimensions } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Text, View } from 'react-native';
 
 import { Avatar, type AvatarExpression } from '@/components/Avatar';
 import { ParentExit } from '@/components/ParentExit';
-import { EarListener, PillButton, sleep, useDailyLimit, useMouthScale, who } from '@/components/child/kit';
+import { AvatarPanel, ChatIcon, ChunkyButton, CloseButton, K, KidScreen, ListeningMic, TopBar, useKid, WhiteCard } from '@/components/child/design';
+import { sleep, useDailyLimit, useMouthScale, who } from '@/components/child/kit';
 import { NodBox } from '@/components/child/stage';
 import { dayOf, fill } from '@/content/curriculum';
 import { useChildListener, type ClipResult } from '@/hooks/useChildListener';
 import { useSpeak } from '@/hooks/useSpeak';
 import { agentSay, type TurnIn } from '@/lib/agent';
-import { useDevice } from '@/lib/layout';
 import { logEvent, setVibration, startActivityLog } from '@/lib/sense';
 import { loadProfile, refreshProfile, useProfile } from '@/lib/store';
-import { C, R } from '@/theme';
 
 type Turn = NonNullable<TurnIn['history']>[number];
 
@@ -40,9 +38,7 @@ const REPLY_FALLBACK = ['우와, 정말? 또 이야기해 줘!', '{name} 이야�
 
 export default function Chat() {
   const profile = useProfile();
-  const insets = useSafeAreaInsets();
-  const { width, height } = useWindowDimensions();
-  const { isTablet } = useDevice();
+  const kid = useKid();
   const focused = useIsFocused();
   const { fav, basket } = useLocalSearchParams<{
     fav?: string;
@@ -61,6 +57,7 @@ export default function Chat() {
   const [ending, setEnding] = useState(false);
   const [mood, setMood] = useState<AvatarExpression | null>(null);
   const [nod, setNod] = useState(0);
+  const [line, setLine] = useState(''); // 아바타가 지금 하는 말 (왼쪽 말풍선)
 
   const run = useRef(0); // 진행 중인 말하기 흐름 취소용
   const busy = useRef(false); // 아바타가 생각하거나 말하는 중
@@ -113,6 +110,7 @@ export default function Chat() {
     async (text: string) => {
       await hold();
       try {
+        setLine(text);
         await speak(text);
       } finally {
         release();
@@ -341,77 +339,59 @@ export default function Chat() {
     return () => clearInterval(id);
   }, [ready, focused]);
 
-  if (!ready) return <View style={{ flex: 1, backgroundColor: C.bg }} />;
+  if (!ready) return <View style={{ flex: 1, backgroundColor: K.bg }} />;
 
-  // ---------- 크기: 폰은 줄이고 태블릿은 크게. 가로가 기본, 세로 화면이면 위아래로 ----------
-  const compact = !isTablet || height < 520;
-  const landscape = width > height;
-  const pad = {
-    paddingTop: (compact ? 10 : 20) + insets.top,
-    paddingBottom: (compact ? 10 : 20) + insets.bottom,
-    paddingLeft: (compact ? 16 : 32) + insets.left,
-    paddingRight: (compact ? 16 : 32) + insets.right,
-  };
-  const innerW = width - pad.paddingLeft - pad.paddingRight;
-  const innerH = height - pad.paddingTop - pad.paddingBottom;
-  const sideW = landscape ? Math.max(compact ? 150 : 220, innerW * 0.28) : innerW;
-  const cardW = landscape ? innerW - sideW - (compact ? 12 : 24) : innerW;
-  const cardH = landscape ? innerH : innerH * 0.62;
-  const avatarSize = Math.max(100, Math.min(cardH / 1.15, cardW * 0.8, 420));
-  const earSize = compact ? 64 : 104;
+  // ---------- 크기: 보드(1180x820) 비율. 폰 가로에선 안내 상자를 숨김 ----------
+  const { u, f, compact } = kid;
   const expression: AvatarExpression = mood ?? (listener.status === 'hearing' ? 'wait' : 'smile');
 
   return (
-    <View
-      style={[
-        {
-          flex: 1,
-          backgroundColor: C.bg,
-          flexDirection: landscape ? 'row' : 'column',
-          gap: compact ? 12 : 24,
-        },
-        pad,
-      ]}>
-      <ParentExit home />
+    <KidScreen gap={20}>
+      {/* 머리줄 (보드 Chat): 닫기 · {엄마}랑 이야기 · 부모 */}
+      <TopBar
+        left={
+          <CloseButton
+            onBefore={() => {
+              cancel();
+              stop();
+            }}
+          />
+        }
+        title={`${me}랑 이야기`}
+        icon={<ChatIcon size={u(24, 16)} />}
+        right={<ParentExit />}
+      />
 
-      {/* 큰 아바타 (입모양이 잘 보이게) */}
-      <View
-        style={{
-          width: cardW,
-          height: cardH,
-          backgroundColor: C.white,
-          borderRadius: R.lg,
-          borderWidth: 2,
-          borderColor: C.border,
-          alignItems: 'center',
-          justifyContent: 'center',
-          overflow: 'hidden',
-        }}>
-        <NodBox nod={nod} reduceMotion={reduceMotion}>
-          <Avatar config={profile?.avatar} mouth={mouth} scale={scale} size={avatarSize} expression={expression} />
-        </NodBox>
+      <View style={{ flex: 1, minHeight: 0, flexDirection: 'row', gap: u(24, 10) }}>
+        {/* 왼쪽: 큰 아바타 판 + 말풍선 (입모양이 잘 보이게) */}
+        <AvatarPanel
+          line={line}
+          avatar={(w, h) => (
+            <NodBox nod={nod} reduceMotion={reduceMotion}>
+              <Avatar config={profile?.avatar} mouth={mouth} scale={scale} size={Math.round(Math.min(w * 0.8, (h * 0.72) / 1.1))} expression={expression} />
+            </NodBox>
+          )}
+        />
+        {/* 오른쪽: 듣고 있는 마이크 (누르면 지금 바로 들음) · 안내 */}
+        <WhiteCard style={{ alignItems: 'center', justifyContent: 'center', gap: u(18, 8) }}>
+          <ListeningMic status={listener.status} level={listener.level} onPress={() => !ending && listener.force()} size={u(184, 80)} />
+          <Text style={{ fontSize: f(22, 14), fontWeight: '700', color: K.sub, textAlign: 'center' }}>버튼 없이 말하면 {me}가 들어요</Text>
+          {!compact && (
+            <View style={{ width: '86%', maxWidth: u(480, 300), paddingVertical: u(18, 8), paddingHorizontal: u(22, 10), borderRadius: u(22, 12), borderWidth: 3, borderStyle: 'dashed', borderColor: K.line, backgroundColor: K.cream }}>
+              <Text style={{ fontSize: f(17, 12), lineHeight: Math.round(f(17, 12) * 1.75), color: K.sub }}>
+                {`기분·놀이·좋아하는 것·오늘 한 일로 이야기해요\n모르는 질문은 "이따 ${me}랑 알아보자"\n끝나면 "이따 ${me} 오면 또 이야기해 줘!"`}
+              </Text>
+            </View>
+          )}
+        </WhiteCard>
       </View>
 
-      {/* 듣고 있는 귀 (누르면 지금 바로 들음) · 그만할래 */}
-      <View
-        style={{
-          flex: 1,
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: compact ? 12 : 24,
-        }}>
-        <EarListener status={listener.status} level={listener.level} onPress={() => !ending && listener.force()} size={earSize} />
-        <Text
-          style={{
-            fontSize: compact ? 18 : 24,
-            fontWeight: '900',
-            color: C.text,
-            textAlign: 'center',
-          }}>
-          {me}랑 이야기
-        </Text>
-        {!ending && <PillButton small={compact} label="그만할래" onPress={() => wrapUp()} />}
+      {/* 아래: 그만할래 */}
+      <View style={{ height: u(86, 46), flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end' }}>
+        {!ending && (
+          <ChunkyButton label="그만할래" onPress={() => wrapUp()} color={K.white} deep={K.whiteDeep} height={u(80, 42)} width={u(234, 120)} fontSize={f(30, 16)} d={u(6, 3)} />
+        )}
       </View>
-    </View>
+    </KidScreen>
   );
 }

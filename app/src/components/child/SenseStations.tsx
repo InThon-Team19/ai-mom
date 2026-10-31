@@ -5,15 +5,17 @@
 //   - 끌어서 옮기기: 바구니 제자리에 놓으면 착 맞춰짐 · 짧은 진동 · 엄마 목소리 "잘했어!" / 밖에 놓으면 살며시 제자리로 (실패음·틀림 표시 없음)
 // 감각 자극 제한: 깜빡임 없음, 움직임 한 번은 1초 안, 움직임 줄이기면 튐·퍼짐을 작게, 진동은 lib/sense haptic() 으로만
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 import { GestureDetector, usePanGesture } from 'react-native-gesture-handler';
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withSequence, withSpring, withTiming, ZoomIn } from 'react-native-reanimated';
 
+import Svg, { Ellipse, Path, Rect } from 'react-native-svg';
+
 import type { AvatarExpression } from '@/components/Avatar';
-import { BasketIcon, StarBurst } from '@/components/child/stage';
+import { BasketArt, HandIcon, ItemArt, K } from '@/components/child/design';
+import { StarBurst } from '@/components/child/stage';
 import { ITEMS, type ItemId } from '@/content/curriculum';
 import { haptic, logEvent, playSfx } from '@/lib/sense';
-import { C, R } from '@/theme';
 
 const out = Easing.out(Easing.quad);
 const SNAP = { damping: 13, stiffness: 220 };
@@ -29,16 +31,6 @@ export type StationProps = {
   feel: (e: AvatarExpression, ms?: number) => void; // 아바타 표정 잠깐 바꾸기
   onDone: () => void; // 이 판이 끝남
 };
-
-function Glyph({ emoji, size }: { emoji: string; size: number }) {
-  return (
-    <Text
-      allowFontScaling={false}
-      style={{ width: size, height: size, fontSize: size * 0.78, lineHeight: size, textAlign: 'center', includeFontPadding: false }}>
-      {emoji}
-    </Text>
-  );
-}
 
 /** 놀잇감 살짝 흔들기 (0.5초) */
 function useWiggle(wiggle: number, reduceMotion: boolean) {
@@ -72,14 +64,14 @@ function useAlive() {
 // =====================================================================
 // 1) 쓸어내기 — 그림 드러내기
 // =====================================================================
-const COLS = 8;
-const ROWS = 8;
+const COLS = 6; // 보드 PlaySwipe: 6x6 둥근 가림막 칸
+const ROWS = 6;
 const TOTAL = COLS * ROWS;
 const REVEAL_AT = 0.7; // 이만큼 지우면 그림이 드러남
 const SWISH_GAP_MS = 240; // 쓸리는 소리 간격
 
-/** 가림막 한 칸: 지워지면 0.22초 동안 작아지며 사라짐 (깜빡임 없음) */
-const Tile = memo(function Tile({ x, y, size, cleared, light, reduceMotion }: { x: number; y: number; size: number; cleared: boolean; light: boolean; reduceMotion: boolean }) {
+/** 가림막 한 칸 (보드: 베이지 둥근 네모, 칸 사이 3px): 지워지면 0.22초 동안 작아지며 사라짐 (깜빡임 없음) */
+const Tile = memo(function Tile({ x, y, size, radius, cleared, reduceMotion }: { x: number; y: number; size: number; radius: number; cleared: boolean; reduceMotion: boolean }) {
   const op = useSharedValue(1);
   const sc = useSharedValue(1);
   useEffect(() => {
@@ -95,7 +87,7 @@ const Tile = memo(function Tile({ x, y, size, cleared, light, reduceMotion }: { 
   return (
     <Animated.View
       pointerEvents="none"
-      style={[{ position: 'absolute', left: x, top: y, width: size + 0.5, height: size + 0.5, backgroundColor: light ? '#FFE48A' : C.primary }, st]}
+      style={[{ position: 'absolute', left: x, top: y, width: size, height: size, borderRadius: radius, backgroundColor: K.line }, st]}
     />
   );
 });
@@ -106,9 +98,11 @@ export function RevealStation({ items, w, h, reduceMotion, wiggle, english, onAc
   const [cleared, setCleared] = useState<boolean[]>(() => Array(TOTAL).fill(false));
   const [revealed, setRevealed] = useState(false);
   const [pop, setPop] = useState(0);
+  const [touched, setTouched] = useState(false); // 처음 쓸기 전엔 손 모양 힌트
   const item = ITEMS[items[idx] ?? items[0]];
-  const box = Math.round(Math.max(120, Math.min(w * 0.72, h * 0.8, 440)));
+  const box = Math.round(Math.max(120, Math.min(w * 0.8, h * 0.82, 440)));
   const cell = box / COLS;
+  const k = box / 384; // 보드 크기 대비
   // 손가락 처리용 최신 값 (빠르게 들어오므로 ref)
   const st = useRef({ cleared: Array<boolean>(TOTAL).fill(false), count: 0, last: null as { x: number; y: number } | null, tickAt: null as { x: number; y: number } | null, revealed: false, lastSwish: 0, stroke: 0 });
 
@@ -151,6 +145,7 @@ export function RevealStation({ items, w, h, reduceMotion, wiggle, english, onAc
     const s = st.current;
     if (s.revealed) return;
     onActivity();
+    if (!touched) setTouched(true);
     const pts: { x: number; y: number }[] = [];
     if (s.last) {
       const dx = x - s.last.x;
@@ -164,7 +159,7 @@ export function RevealStation({ items, w, h, reduceMotion, wiggle, english, onAc
       s.tickAt = { x, y };
       haptic('tick');
     }
-    const r = cell * 1.05;
+    const r = cell * 0.85;
     let added = 0;
     for (const p of pts) {
       const c0 = Math.max(0, Math.floor((p.x - r) / cell));
@@ -226,34 +221,40 @@ export function RevealStation({ items, w, h, reduceMotion, wiggle, english, onAc
     <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 6 }}>
       <Animated.View style={wiggleStyle}>
         <GestureDetector gesture={pan}>
-          <View
-            accessibilityLabel="손으로 쓱쓱 문질러 봐"
-            style={{ width: box, height: box, borderRadius: R.lg, overflow: 'hidden', backgroundColor: C.white, borderWidth: 3, borderColor: C.primaryStrong }}>
+          <View accessibilityLabel="손으로 쓱쓱 문질러 봐" style={{ width: box, height: box }}>
             {/* 가림막 아래 숨은 그림 */}
             <View style={{ position: 'absolute', inset: 0, alignItems: 'center', justifyContent: 'center' }}>
               <StarBurst trigger={pop} radius={box * 0.42} />
               <Animated.View style={picStyle}>
-                <Glyph emoji={item.emoji} size={box * 0.66} />
+                <ItemArt id={item.id} size={box * 0.7} />
               </Animated.View>
             </View>
             {/* 가림막: 손가락이 지나간 칸만 사라짐 */}
             {cleared.map((c, i) => (
               <Tile
                 key={i}
-                x={(i % COLS) * cell}
-                y={Math.floor(i / COLS) * cell}
-                size={cell}
+                x={(i % COLS) * cell + 1.5}
+                y={Math.floor(i / COLS) * cell + 1.5}
+                size={cell - 3}
+                radius={10 * k}
                 cleared={c}
-                light={(Math.floor(i / COLS) + (i % COLS)) % 2 === 0}
                 reduceMotion={reduceMotion}
               />
             ))}
+            {/* 손 모양 힌트 (보드: 흰 원 + 손) — 처음 쓸면 사라짐 */}
+            {!touched && (
+              <View
+                pointerEvents="none"
+                style={{ position: 'absolute', left: 236 * k, top: 246 * k, width: 72 * k, height: 72 * k, borderRadius: 36 * k, backgroundColor: K.white, boxShadow: '0px 4px 14px rgba(58,54,78,0.18)', alignItems: 'center', justifyContent: 'center' }}>
+                <HandIcon size={40 * k} />
+              </View>
+            )}
           </View>
         </GestureDetector>
       </Animated.View>
       <View style={{ height: 40, justifyContent: 'center' }}>
         {revealed && (
-          <Animated.Text key={idx} entering={ZoomIn.duration(220)} style={{ fontSize: 28, fontWeight: '900', color: C.text }}>
+          <Animated.Text key={idx} entering={ZoomIn.duration(220)} style={{ fontSize: 28, fontWeight: '800', color: K.ink }}>
             {item.ko}!
           </Animated.Text>
         )}
@@ -270,33 +271,34 @@ const LEVEL_NAME = ['soft', 'medium', 'strong'] as const;
 const DRUM_HITS_DONE = 20; // 이만큼 치거나
 const DRUM_TIME_DONE_MS = 28000; // 처음 친 뒤 이만큼 지나면 이 판 끝
 
-/** 파동: 북을 칠 때마다 테두리 원이 퍼지며 사라짐. 셀수록 더 크게·더 굵게 (0.7초 한 번) */
-function Ring({ level, size, reduceMotion }: { level: number; size: number; reduceMotion: boolean }) {
+/** 파동 (보드: 노란 원): 북을 칠 때마다 테두리 원이 퍼지며 사라짐. 셀수록 더 크게·더 굵게 (0.7초 한 번) */
+function Ring({ level, size, cx, cy, reduceMotion }: { level: number; size: number; cx: number; cy: number; reduceMotion: boolean }) {
   const p = useSharedValue(0);
   useEffect(() => {
     p.set(withTiming(1, { duration: 700, easing: Easing.out(Easing.cubic) }));
   }, [p]);
   const spread = (0.3 + level * 0.25) * (reduceMotion ? 0.6 : 1);
-  const st = useAnimatedStyle(() => ({ opacity: 0.6 * (1 - p.value), transform: [{ scale: 1 + p.value * spread }] }));
+  const st = useAnimatedStyle(() => ({ opacity: 0.8 * (1 - p.value), transform: [{ scale: 0.75 + p.value * spread }] }));
   return (
     <Animated.View
       pointerEvents="none"
-      style={[
-        { position: 'absolute', left: 0, top: 0, width: size, height: size, borderRadius: size / 2, borderWidth: 4 + level * 3, borderColor: level === 2 ? C.accent : C.primaryStrong },
-        st,
-      ]}
+      style={[{ position: 'absolute', left: cx - size / 2, top: cy - size / 2, width: size, height: size, borderRadius: size / 2, borderWidth: 4 + level * 2, borderColor: K.yellow }, st]}
     />
   );
 }
 
 export function DrumStation({ w, h, reduceMotion, wiggle, onActivity, say, feel, onDone }: StationProps) {
   const alive = useAlive();
-  const size = Math.round(Math.max(120, Math.min(h * 0.6, w * 0.45, 300)));
+  // 보드 PlayDrum: 옆에서 본 북 그림 (viewBox 520x420) + 아래 세기 칩
+  const chipH = Math.max(32, Math.min(44, h * 0.1));
+  const dw = Math.round(Math.max(160, Math.min(w * 0.85, ((h - chipH - 16) * 520) / 420, 480)));
+  const dh = Math.round((dw * 420) / 520);
+  const k = dw / 520;
   const [rings, setRings] = useState<{ id: number; level: number }[]>([]);
   const [word, setWord] = useState<{ id: number; level: number } | null>(null);
   const st = useRef({ times: [] as number[], hits: 0, firstAt: 0, lastLine: 0, softStreak: 0, strongStreak: 0, done: false, id: 0 });
   const head = useSharedValue(1);
-  const headStyle = useAnimatedStyle(() => ({ transform: [{ scale: head.value }] }));
+  const headStyle = useAnimatedStyle(() => ({ transform: [{ scaleY: head.value }] }));
   const wiggleStyle = useWiggle(wiggle, reduceMotion);
 
   const hit = () => {
@@ -348,35 +350,63 @@ export function DrumStation({ w, h, reduceMotion, wiggle, onActivity, say, feel,
     }
   };
 
-  const wordSize = 30;
+  const wordSize = Math.max(28, 72 * k);
+  const levels = ['살살', '보통', '세게'];
   return (
-    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-      <View style={{ height: wordSize * 1.8, justifyContent: 'flex-end' }}>
-        {word && (
-          <Animated.Text key={word.id} entering={ZoomIn.duration(180)} style={{ fontSize: wordSize * (1 + word.level * 0.25), fontWeight: '900', color: C.text }}>
-            둥!
-          </Animated.Text>
-        )}
-      </View>
-      <Animated.View style={[{ width: size, height: size }, wiggleStyle]}>
+    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 10 }}>
+      <Animated.View style={[{ width: dw, height: dh }, wiggleStyle]}>
         {rings.map((r) => (
-          <Ring key={r.id} level={r.level} size={size} reduceMotion={reduceMotion} />
+          <Ring key={r.id} level={r.level} size={316 * k} cx={260 * k} cy={236 * k} reduceMotion={reduceMotion} />
         ))}
-        <Pressable accessibilityRole="button" accessibilityLabel="북 두드리기" onPressIn={hit} hitSlop={20} style={{ width: size, height: size }}>
-          {/* 북 몸통 */}
-          <View
-            style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: '#E8775A', borderWidth: 6, borderColor: '#B9513A', alignItems: 'center', justifyContent: 'center' }}>
-            {/* 북 가죽: 칠 때 움푹 */}
-            <Animated.View
-              style={[
-                { width: size * 0.78, height: size * 0.78, borderRadius: size, backgroundColor: '#FFF3D6', borderWidth: 3, borderColor: '#E3C79A', alignItems: 'center', justifyContent: 'center' },
-                headStyle,
-              ]}>
-              <View style={{ width: size * 0.22, height: size * 0.22, borderRadius: size, backgroundColor: '#F4E2BC' }} />
-            </Animated.View>
-          </View>
+        {/* 둥! (칠 때마다 톡) */}
+        <View pointerEvents="none" style={{ position: 'absolute', left: 0, right: 0, top: 30 * k, height: wordSize * 1.6, alignItems: 'center', justifyContent: 'flex-end' }}>
+          {word && (
+            <Animated.Text key={word.id} entering={ZoomIn.duration(180)} style={{ fontSize: wordSize * (0.8 + word.level * 0.15), fontWeight: '800', color: K.ink }}>
+              둥!
+            </Animated.Text>
+          )}
+        </View>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="북 두드리기"
+          onPressIn={hit}
+          hitSlop={20}
+          style={{ position: 'absolute', left: 120 * k, top: 170 * k, width: 280 * k, height: 190 * k }}>
+          <Animated.View style={[{ width: 280 * k, height: 190 * k, transformOrigin: 'bottom' }, headStyle]}>
+            <Svg width={280 * k} height={190 * k} viewBox="120 170 280 190">
+              <Ellipse cx="260" cy="300" rx="130" ry="42" fill={K.redDeep} />
+              <Rect x="130" y="228" width="260" height="72" fill={K.red} />
+              <Path d="M140 240 L175 288 L210 240 L245 288 L280 240 L315 288 L350 240 L380 284" stroke={K.cream} strokeWidth={4} fill="none" strokeLinejoin="round" />
+              <Ellipse cx="260" cy="228" rx="130" ry="42" fill={K.cream} stroke="#8B5E3C" strokeWidth={6} />
+              <Ellipse cx="260" cy="232" rx="56" ry="17" fill={K.confetti} />
+            </Svg>
+          </Animated.View>
         </Pressable>
       </Animated.View>
+      {/* 세기: 살살 · 보통 · 세게 (마지막으로 친 세기만 빨강) */}
+      <View accessibilityLabel={word ? `세기: ${levels[word.level]}` : '세기'} style={{ flexDirection: 'row', gap: 10 }}>
+        {levels.map((l, i) => {
+          const on = word?.level === i;
+          const dot = 10 + i * 4;
+          return (
+            <View
+              key={l}
+              style={{
+                height: chipH,
+                paddingHorizontal: chipH * 0.4,
+                borderRadius: chipH / 2,
+                backgroundColor: on ? K.red : K.cream,
+                boxShadow: on ? `0px 4px 0px ${K.redDeep}` : undefined,
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 8,
+              }}>
+              <View style={{ width: dot, height: dot, borderRadius: dot / 2, backgroundColor: on ? K.white : K.line }} />
+              <Animated.Text style={{ fontSize: Math.max(13, chipH * 0.41), fontWeight: '800', color: on ? K.white : K.sub }}>{l}</Animated.Text>
+            </View>
+          );
+        })}
+      </View>
     </View>
   );
 }
@@ -388,7 +418,7 @@ type Pt = { x: number; y: number };
 
 /** 끌 수 있는 사물 하나. 놓으면 onDrop 이 바구니 자리(가운데 좌표)를 주면 착 맞춰지고, 없으면 살며시 제자리로 */
 function Piece({
-  emoji,
+  id,
   size,
   home,
   placed,
@@ -398,7 +428,7 @@ function Piece({
   onPick,
   onDrop,
 }: {
-  emoji: string;
+  id: ItemId;
   size: number;
   home: Pt; // 처음 자리 (가운데 좌표)
   placed: boolean;
@@ -471,7 +501,7 @@ function Piece({
       <Animated.View
         accessibilityLabel="바구니로 옮겨 봐"
         style={[{ position: 'absolute', left: home.x - size / 2, top: home.y - size / 2, width: size, height: size, zIndex: front ? 20 : placed ? 1 : 10 }, st]}>
-        <Glyph emoji={emoji} size={size} />
+        <ItemArt id={id} size={size} />
       </Animated.View>
     </GestureDetector>
   );
@@ -482,26 +512,31 @@ export function SortStation({ items, w, h, reduceMotion, wiggle, onActivity, say
   // 사물이 하나뿐인 날(2일차 과자)은 두 개를 정리
   const pieces = useMemo<ItemId[]>(() => (items.length >= 2 ? items.slice(0, 4) : [items[0], items[0]]), [items]);
   const n = pieces.length;
-  const basketH = Math.max(70, h * 0.36);
-  const iconW = basketH * 0.6;
-  const slot = Math.round(Math.max(52, Math.min(basketH * 0.78, ((w - iconW - 48) / n) * 0.8, 130)));
-  const piece = Math.round(slot * 0.86);
+  // 보드 PlaySort: 아래 큰 바구니 그림(472x200) 안에 사물 모양 점선 자리 · 위에서 끌어 옴 · 사이에 점선 화살표
+  const bw = Math.round(Math.max(200, Math.min(w * 0.9, (h * 0.5 * 472) / 200, 520)));
+  const bh = Math.round((bw * 200) / 472);
+  const basketTop = h - bh - 8;
+  const bk = bw / 472;
+  const gapX = 56 * bk;
+  const slot = Math.round(Math.max(44, Math.min(116 * bk, (bw * 0.82 - gapX * (n - 1)) / n)));
+  const piece = Math.round(slot * 0.9);
   // 바구니 자리: 사물 순서를 뒤집어서 바로 아래가 아니게
   const slotItems = useMemo(() => [...pieces].reverse(), [pieces]);
   const slots = useMemo<Pt[]>(() => {
-    const startX = 8 + 16 + iconW + 10;
-    const avail = w - startX - 24;
-    return slotItems.map((_, i) => ({ x: startX + (avail / n) * (i + 0.5), y: h - basketH / 2 - 6 }));
-  }, [slotItems, w, h, n, iconW, basketH]);
-  // 처음 자리: 위쪽에 흩어 놓음
+    const total = slot * n + gapX * (n - 1);
+    const x0 = w / 2 - total / 2 + slot / 2;
+    return slotItems.map((_, i) => ({ x: x0 + i * (slot + gapX), y: basketTop + 118 * bk }));
+  }, [slotItems, w, n, slot, gapX, basketTop, bk]);
+  // 처음 자리: 바구니 위쪽에 흩어 놓음
   const homes = useMemo<Pt[]>(() => {
-    const topH = h - basketH - 12;
+    const topH = basketTop - 10;
     return pieces.map((_, i) => {
       const x = (w / n) * (i + 0.5) + (i % 2 ? 1 : -1) * w * 0.04;
-      const y = topH * (i % 2 ? 0.62 : 0.4);
+      const y = topH * (i % 2 ? 0.58 : 0.42);
       return { x: Math.max(piece / 2 + 6, Math.min(w - piece / 2 - 6, x)), y: Math.max(piece / 2 + 4, Math.min(topH - piece / 2, y)) };
     });
-  }, [pieces, w, h, n, basketH, piece]);
+  }, [pieces, w, n, basketTop, piece]);
+  const basketH = bh; // 바구니 안으로 들어왔는지 판단용
 
   const [filled, setFilled] = useState<boolean[]>(() => Array(n).fill(false));
   const [placed, setPlaced] = useState<boolean[]>(() => Array(n).fill(false));
@@ -525,7 +560,7 @@ export function SortStation({ items, w, h, reduceMotion, wiggle, onActivity, say
           best = j;
         }
       });
-      const inBasket = c.y > h - basketH - piece * 0.3;
+      const inBasket = c.y > basketTop + basketH * 0.12;
       if (best < 0 || (bestD > slot * 1.1 && !inBasket)) {
         if (moved > 10) {
           // 바구니 밖: 실패음 없이 살며시 제자리로 + 아주 가벼운 톡
@@ -551,17 +586,24 @@ export function SortStation({ items, w, h, reduceMotion, wiggle, onActivity, say
       })();
       return slots[best];
     },
-    [pieces, slots, slotItems, h, basketH, piece, slot, n, onActivity, feel, say, onDone, alive],
+    [pieces, slots, slotItems, basketTop, basketH, slot, n, onActivity, feel, say, onDone, alive],
   );
 
   return (
     <View style={{ width: w, height: h }}>
-      {/* 아래: 바구니와 사물 모양 자리 (점선) */}
-      <View
-        accessibilityLabel="바구니"
-        style={{ position: 'absolute', left: 8, right: 8, bottom: 6, height: basketH, borderRadius: R.lg, backgroundColor: C.card, borderWidth: 2, borderColor: C.border, paddingLeft: 16, justifyContent: 'center' }}>
-        <BasketIcon size={iconW} />
+      {/* 위에서 아래로 점선 화살표 (다 넣으면 사라짐) */}
+      {placed.some((p) => !p) && (
+        <View pointerEvents="none" style={{ position: 'absolute', left: w / 2 - 20 * bk, top: Math.max(0, basketTop - 66 * bk) }}>
+          <Svg width={40 * bk} height={62 * bk} viewBox="0 0 40 62">
+            <Path d="M20 4 V48 M8 38 L20 54 L32 38" stroke="#C9B392" strokeWidth={5} fill="none" strokeLinecap="round" strokeLinejoin="round" strokeDasharray="2 10" />
+          </Svg>
+        </View>
+      )}
+      {/* 아래: 바구니 그림 */}
+      <View accessibilityLabel="바구니" pointerEvents="none" style={{ position: 'absolute', left: w / 2 - bw / 2, top: basketTop }}>
+        <BasketArt width={bw} tall />
       </View>
+      {/* 사물 모양 자리 (점선 원 + 흐린 점선 그림). 들어가면 점선이 사라지고 사물이 그 자리에 */}
       {slots.map((p, j) => (
         <View
           key={j}
@@ -573,24 +615,20 @@ export function SortStation({ items, w, h, reduceMotion, wiggle, onActivity, say
             width: slot,
             height: slot,
             borderRadius: slot / 2,
-            borderWidth: 3,
+            borderWidth: 4 * Math.max(0.6, bk),
             borderStyle: 'dashed',
-            borderColor: filled[j] ? C.green : C.primaryStrong,
-            backgroundColor: filled[j] ? C.greenSoft : C.white,
+            borderColor: filled[j] ? 'transparent' : '#8B5E3C',
             alignItems: 'center',
             justifyContent: 'center',
           }}>
-          {/* 어떤 사물이 들어갈 자리인지 흐린 그림으로 */}
-          <View style={{ opacity: filled[j] ? 0 : 0.22 }}>
-            <Glyph emoji={ITEMS[slotItems[j]].emoji} size={slot * 0.7} />
-          </View>
+          {!filled[j] && <ItemArt id={slotItems[j]} size={slot * 0.69} ghost />}
           {star.slot === j && <StarBurst key={star.n} trigger={star.n} radius={slot * 0.8} />}
         </View>
       ))}
       {pieces.map((id, i) => (
         <Piece
           key={i}
-          emoji={ITEMS[id].emoji}
+          id={id}
           size={piece}
           home={homes[i]}
           placed={placed[i]}

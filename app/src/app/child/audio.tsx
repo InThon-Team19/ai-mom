@@ -1,25 +1,28 @@
-// 아이 태블릿 3-7 청각 집중 모드 (화면을 어둡게 하고 부모 목소리로만 이어서 들려줌 — 스크린 타임 대응) — 담당: 태희 (민철 와이어프레임 기준)
+// 아이 태블릿 3-7 청각 집중 모드 (화면을 어둡게 하고 부모 목소리로만 이어서 들려줌 — 스크린 타임 대응) — 담당: 태희 (민철 Design 보드 KidAudio)
+// 보드: 밤하늘(별·달·언덕) · 부모/홈 · "엄마 목소리만 들어요" · 동그라미 속 아바타 · 소리 막대 · 지금 문장 · 화면 켜기
+// 감각 자극 제한: 깜빡임 없음 — 원·막대는 목소리 크기만큼 부드럽게만 움직임
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useMemo, useRef, useState } from 'react';
-import { Text, View, useWindowDimensions } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Text, View } from 'react-native';
+import Svg, { Circle, Ellipse, G } from 'react-native-svg';
 
-import { PillButton, RoundButton, SkipIcon, Waveform, sleep, who } from '@/components/child/kit';
+import { Avatar } from '@/components/Avatar';
+import { ChunkyButton, HomePill, K, KidScreen, MonitorIcon, SkipNextIcon, useKid } from '@/components/child/design';
+import { sleep, useMouthScale, who } from '@/components/child/kit';
+import { ParentExit } from '@/components/ParentExit';
 import { dayOf, fill, ITEMS } from '@/content/curriculum';
 import { useSpeak } from '@/hooks/useSpeak';
 import { logEvent } from '@/lib/sense';
 import { useProfile } from '@/lib/store';
-import { ParentExit } from '@/components/ParentExit';
-
-const BG = '#2A2219'; // 어둡게 (스크린 타임 대응) — 따뜻한 진한 갈색
 
 export default function AudioOnly() {
   const profile = useProfile();
-  const insets = useSafeAreaInsets();
-  const compact = useWindowDimensions().height < 520;
+  const { u, f, width, height, compact } = useKid();
   const { speak, stop, mouth } = useSpeak(profile?.childId);
+  const scale = useMouthScale(profile?.childId);
   const { name, me, english } = who(profile);
   const [from, setFrom] = useState({ at: 0 }); // "다음" 누를 때마다 새 객체 → 흐름을 그 문장부터 다시 시작
+  const [now, setNow] = useState(''); // 지금 들려주는 문장
   const pos = useRef(0);
   const run = useRef(0);
 
@@ -50,6 +53,7 @@ export default function AudioOnly() {
         for (let i = from.at; i < lines.length; i++) {
           if (t !== run.current) return;
           pos.current = i;
+          setNow(lines[i].text);
           const t0 = Date.now();
           await speak(lines[i].text);
           if (t !== run.current) return;
@@ -70,26 +74,79 @@ export default function AudioOnly() {
     setFrom({ at: n < lines.length ? n : 0 });
   };
 
+  const ring = u(366, 150);
+  const av = Math.round(ring * (186 / 366));
+  const k = Math.max(0, Math.min(1, mouth));
+  const bars = [18, 32, 46, 56, 42, 30, 44];
+
   return (
-    // 폰 가로(높이 약 360)에선 간격을 줄여 '다음' 버튼이 아래에 붙거나 잘리지 않게
-    <View style={{ flex: 1, backgroundColor: BG, alignItems: 'center', justifyContent: 'center', gap: compact ? 16 : 36, paddingTop: insets.top, paddingBottom: insets.bottom }}>
-      <ParentExit dark home />
-      <Waveform level={mouth} />
-      <Text style={{ fontSize: compact ? 26 : 32, fontWeight: '800', color: '#FFFFFF', textAlign: 'center' }}>{me} 목소리를 들어봐요</Text>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 24 }}>
-        <PillButton
-          dark
-          label="화면 켜기"
-          onPress={() => {
-            stop();
-            if (router.canGoBack()) router.back();
-            else router.replace('/child');
-          }}
-        />
-        <RoundButton label="다음" size={88} onPress={() => skip()}>
-          <SkipIcon size={30} color={BG} />
-        </RoundButton>
+    <KidScreen dark gap={0} style={{ alignItems: 'center' }}>
+      {/* 밤하늘: 별 · 초승달 · 언덕 */}
+      <Svg width={width} height={height} viewBox="0 0 1180 820" preserveAspectRatio="xMidYMid slice" style={{ position: 'absolute', left: 0, top: 0 }}>
+        <G fill={K.moon}>
+          <Circle cx="310" cy="88" r="3" />
+          <Circle cx="160" cy="140" r="3" />
+          <Circle cx="528" cy="160" r="3" />
+          <Circle cx="766" cy="96" r="3" />
+          <Circle cx="1092" cy="88" r="3" />
+          <Circle cx="100" cy="425" r="3" />
+          <Circle cx="1100" cy="465" r="3" />
+          <Circle cx="252" cy="640" r="3" />
+          <Circle cx="905" cy="300" r="2.5" />
+          <Circle cx="260" cy="330" r="2.5" />
+        </G>
+        <Circle cx="1018" cy="138" r="60" fill={K.moon} />
+        <Circle cx="1044" cy="114" r="54" fill={K.night} />
+        <Ellipse cx="182" cy="702" rx="172" ry="58" fill={K.nightSoft} />
+        <Ellipse cx="1008" cy="730" rx="178" ry="68" fill={K.nightSoft} />
+      </Svg>
+
+      <View style={{ alignSelf: 'stretch', flexDirection: 'row', gap: u(10, 6) }}>
+        <ParentExit dark />
+        <HomePill dark onBefore={stop} />
       </View>
-    </View>
+
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: u(18, 4) }}>
+        <Text style={{ fontSize: f(32, 18), fontWeight: '800', color: K.white }}>{me} 목소리만 들어요</Text>
+        {/* 동그라미 속 아바타 (목소리 크기만큼 안쪽 원이 살짝 커짐) */}
+        <View style={{ width: ring, height: ring, alignItems: 'center', justifyContent: 'center' }}>
+          <Svg width={ring} height={ring} viewBox="0 0 366 366" style={{ position: 'absolute' }}>
+            <Circle cx="183" cy="183" r={181} stroke={K.nightRing} strokeWidth={2.5} fill="none" />
+            <Circle cx="183" cy="183" r={148 + k * 8} stroke={K.nightRing} strokeWidth={3} fill="none" />
+            <Circle cx="183" cy="183" r={116 + k * 6} stroke={K.nightRing2} strokeWidth={4} fill="none" />
+          </Svg>
+          <View style={{ width: av, height: av, borderRadius: av / 2, borderWidth: u(6, 3), borderColor: K.bg, backgroundColor: K.peach, overflow: 'hidden', alignItems: 'center', justifyContent: 'flex-end' }}>
+            <Avatar config={profile?.avatar} mouth={mouth} scale={scale} size={Math.round(av * 0.86)} expression="smile" />
+          </View>
+        </View>
+        {/* 소리 막대 */}
+        <View accessibilityElementsHidden style={{ flexDirection: 'row', alignItems: 'flex-end', gap: u(9, 5), height: u(56, 26), marginTop: u(16, 2) }}>
+          {bars.map((b, i) => (
+            <View key={i} style={{ width: u(10, 6), borderRadius: u(5, 3), backgroundColor: K.mint, height: Math.max(u(10, 6), u(b, 6) * (0.35 + 0.65 * k)) }} />
+          ))}
+        </View>
+        {!compact && !!now && (
+          <Text numberOfLines={2} style={{ maxWidth: '86%', fontSize: f(38, 18), fontWeight: '800', color: K.white, textAlign: 'center' }}>
+            &quot;{now}&quot;
+          </Text>
+        )}
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: u(18, 10), marginTop: u(4, 2) }}>
+          <ChunkyButton
+            label="화면 켜기"
+            icon={<MonitorIcon size={u(26, 18)} />}
+            onPress={() => {
+              stop();
+              if (router.canGoBack()) router.back();
+              else router.replace('/child');
+            }}
+            height={u(78, 44)}
+            width={u(355, 180)}
+            fontSize={f(28, 16)}
+            d={u(6, 3)}
+          />
+          <ChunkyButton a11y="다음 문장" icon={<SkipNextIcon size={u(28, 18)} />} onPress={skip} color={K.nightSoft} deep="#1E1940" height={u(78, 44)} width={u(78, 44)} fontSize={f(20)} d={u(6, 3)} />
+        </View>
+      </View>
+    </KidScreen>
   );
 }

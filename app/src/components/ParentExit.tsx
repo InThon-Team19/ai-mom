@@ -1,11 +1,10 @@
 // 아이 화면 → 부모 모드 전환 (기획서 v2 2-5: 화면 구석을 3초 길게 누른 뒤 PIN) — 담당: 태희
-// 아이 화면 어디서든 왼쪽 위 작은 자물쇠. 누르고 있는 동안 링이 차오르고, 3초 다 차면 PIN → 어른 메뉴
+// 아이 화면 머리줄의 "부모" 알약 (민철 Design 보드). 누르고 있는 동안 알약이 차오르고, 3초 다 차면 PIN → 어른 메뉴
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router, type Href } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { Alert, Platform, Pressable, Text, View } from 'react-native';
-import Svg, { Circle } from 'react-native-svg';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Svg, { Path, Rect } from 'react-native-svg';
 
 import { PinPad } from '@/components/PinPad';
 import { useDevice } from '@/lib/layout';
@@ -13,15 +12,9 @@ import { api } from '@/lib/api';
 import { getDeviceId } from '@/lib/device';
 import { authMessage, loadAccount, login, parentEntry } from '@/lib/account';
 import { resetLocal, setRole, useProfile } from '@/lib/store';
-import { C } from '@/theme';
 
 export const CHILD_LINKED_KEY = 'aibom.childLinked'; // 이 태블릿이 등록된 child_id (연결 해제 감지용)
 const HOLD_MS = 3000;
-
-/** 자물쇠(+홈 버튼)가 차지하는 왼쪽 위 폭 (insets.left 제외). 아이 화면 머리줄 왼쪽 내용은 이만큼 비워 둠 */
-export function parentExitZone(isTablet: boolean, home = true) {
-  return 10 + 52 + (home ? 14 + (isTablet ? 64 : 48) : 0);
-}
 
 function adultMenu(childId?: string, onDone?: () => void) {
   // PIN 통과 → 부모 모드. 이 기기에 부모 로그인이 있으면 바로 부모 앱, 없으면(따로 쓰는 태블릿) 비밀번호 로그인
@@ -56,12 +49,13 @@ function adultMenu(childId?: string, onDone?: () => void) {
   ]);
 }
 
-/** home: 아이 홈으로 돌아가는 버튼도 같이 (학습·동화·소리만·마무리 화면) */
-export function ParentExit({ dark = false, home = false }: { dark?: boolean; home?: boolean }) {
+/**
+ * 부모 알약 (보드: 흰 알약 "부모" / 홈은 "부모 · 3초 꾹"). 머리줄 안에 놓임.
+ * 누르고 있는 동안 알약 안이 노랗게 차오르고, 3초 다 차면 PIN → 어른 메뉴. dark: 소리만 듣기(밤 화면)
+ */
+export function ParentExit({ dark = false, label = '부모' }: { dark?: boolean; label?: string; home?: boolean }) {
   const profile = useProfile();
-  const insets = useSafeAreaInsets();
   const { isTablet } = useDevice();
-  const homeSize = isTablet ? 64 : 48; // 폰 가로(높이 360)에선 작게 — 머리줄(40)보다 크게 내려와 아바타 칸을 가리지 않게
   const [progress, setProgress] = useState(0);
   const [pinOpen, setPinOpen] = useState(false);
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -86,46 +80,35 @@ export function ParentExit({ dark = false, home = false }: { dark?: boolean; hom
     }, 50);
   };
 
-  const size = 52;
-  const r = 23;
-  const len = 2 * Math.PI * r;
+  const h = isTablet ? 48 : 36;
+  const ink = dark ? '#FFFFFF' : '#3A364E';
   return (
     <>
       <Pressable
         onPressIn={start}
         onPressOut={stop}
+        accessibilityRole="button"
         accessibilityLabel="부모 모드 (3초 길게 누르기)"
         hitSlop={8}
-        style={{ position: 'absolute', left: 10 + insets.left, top: 10 + insets.top, width: size, height: size + 16, zIndex: 50, alignItems: 'center', opacity: progress > 0 ? 1 : 0.85 }}>
-        <Svg width={size} height={size} style={{ position: 'absolute' }}>
-          <Circle cx={size / 2} cy={size / 2} r={r} stroke={dark ? '#ffffff55' : C.border} strokeWidth={3} fill={dark ? 'transparent' : C.white} />
-          {progress > 0 && (
-            <Circle
-              cx={size / 2}
-              cy={size / 2}
-              r={r}
-              stroke={C.primaryStrong}
-              strokeWidth={4}
-              fill="none"
-              strokeDasharray={`${len * progress} ${len}`}
-              transform={`rotate(-90 ${size / 2} ${size / 2})`}
-            />
-          )}
+        style={{
+          height: h,
+          paddingHorizontal: isTablet ? 18 : 12,
+          borderRadius: h / 2,
+          backgroundColor: dark ? '#3D3470' : '#FFFFFF',
+          boxShadow: dark ? undefined : '0px 3px 10px rgba(58,54,78,0.08)',
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: isTablet ? 8 : 5,
+          overflow: 'hidden',
+        }}>
+        {/* 3초 누르는 동안 왼쪽부터 노랗게 차오름 (깜빡임 없음) */}
+        {progress > 0 && <View pointerEvents="none" style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: `${Math.round(progress * 100)}%`, backgroundColor: '#EFCA5A' }} />}
+        <Svg width={isTablet ? 14 : 11} height={isTablet ? 16 : 13} viewBox="0 0 14 16">
+          <Rect x="1" y="7" width="12" height="8" rx="2" fill={progress > 0 ? '#3A364E' : ink} />
+          <Path d="M4 7V5a3 3 0 0 1 6 0v2" stroke={progress > 0 ? '#3A364E' : ink} strokeWidth={2} fill="none" />
         </Svg>
-        <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
-          <Text style={{ fontSize: 20 }}>🔒</Text>
-        </View>
-        <Text style={{ fontSize: 11, fontWeight: '800', color: dark ? '#ffffffcc' : C.sub }}>{progress > 0 ? '꾹…' : '부모'}</Text>
+        <Text style={{ fontSize: isTablet ? 17 : 13, fontWeight: '800', color: progress > 0 ? '#3A364E' : ink }}>{label}</Text>
       </Pressable>
-      {home && (
-        <Pressable
-          onPress={() => router.dismissTo('/child')} // 쌓인 아이 화면을 닫고 홈으로 (replace 는 홈이 겹겹이 쌓임)
-          accessibilityLabel="아이 홈으로"
-          hitSlop={8}
-          style={{ position: 'absolute', left: 10 + insets.left + size + 14, top: 10 + insets.top, width: homeSize, height: homeSize, borderRadius: homeSize / 2, zIndex: 50, alignItems: 'center', justifyContent: 'center', backgroundColor: dark ? '#ffffff22' : C.primary }}>
-          <Text style={{ fontSize: isTablet ? 30 : 24 }}>🏠</Text>
-        </Pressable>
-      )}
       <PinPad
         visible={pinOpen}
         childId={profile?.childId ?? ''}

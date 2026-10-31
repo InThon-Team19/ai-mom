@@ -19,6 +19,7 @@ import Animated, {
 
 import Svg, { Path } from 'react-native-svg';
 
+import { ItemArt } from '@/components/child/design';
 import { StarBurst } from '@/components/child/stage';
 import type { ItemId } from '@/content/curriculum';
 import { playSfx } from '@/lib/sense';
@@ -102,7 +103,7 @@ function PeelStrip({ index, peeled, size }: { index: number; peeled: boolean; si
 }
 
 /** 과자: 반쪽 두 개를 따로 그려서 누르면 벌어졌다가 다시 붙음 */
-function Half({ emoji, size, side, apart }: { emoji: string; size: number; side: 'left' | 'right'; apart: SharedValue<number> }) {
+function Half({ id, size, side, apart }: { id: ItemId; size: number; side: 'left' | 'right'; apart: SharedValue<number> }) {
   const sign = side === 'left' ? -1 : 1;
   const st = useAnimatedStyle(() => ({
     transform: [{ translateX: sign * apart.value * size * 0.14 }, { rotate: `${sign * apart.value * 14}deg` }],
@@ -110,7 +111,7 @@ function Half({ emoji, size, side, apart }: { emoji: string; size: number; side:
   return (
     <Animated.View style={[{ width: size / 2, height: size, overflow: 'hidden' }, st]}>
       <View style={{ position: 'absolute', left: side === 'left' ? 0 : -size / 2 }}>
-        <Glyph emoji={emoji} size={size} />
+        <ItemArt id={id} size={size} />
       </View>
     </Animated.View>
   );
@@ -173,7 +174,6 @@ export type ToyLeave = { dx: number; dy: number };
 
 export function ItemToy({
   id,
-  emoji,
   size,
   bg,
   onPress,
@@ -186,9 +186,10 @@ export function ItemToy({
   leave = null,
   onLeft,
   interactive = true,
+  instant = false,
 }: {
   id: ItemId;
-  emoji: string;
+  emoji?: string; // 예전 이모지 (지금은 보드 SVG 그림 ItemArt 로 그림)
   size: number;
   bg: string; // 무대 바탕색 (사과 베어 문 자국 색)
   onPress: () => void;
@@ -201,6 +202,7 @@ export function ItemToy({
   leave?: ToyLeave | null; // 값이 생기면 그만큼 굴러가서 바구니로 쏙
   onLeft?: () => void;
   interactive?: boolean;
+  instant?: boolean; // 떨어지는 움직임·소리 없이 바로 보임 (따라 말하기 화면으로 넘어올 때 — 이미 떨어진 사물)
 }) {
   const [presses, setPresses] = useState(0);
   const ty = useSharedValue(0);
@@ -223,6 +225,10 @@ export function ItemToy({
   useEffect(() => {
     if (!drop || dropped.current) return;
     dropped.current = true;
+    if (instant) {
+      op.set(1);
+      return;
+    }
     const h1 = size * 0.2;
     const h2 = size * 0.08;
     ty.set(-size * 1.7);
@@ -239,7 +245,7 @@ export function ItemToy({
     // 통, 통 (닿을 때 · 첫 번째 튐이 내려올 때). 화면을 떠나도 소리만 짧게 남는 정도라 취소하지 않음
     setTimeout(() => playSfx('tong'), FALL);
     setTimeout(() => playSfx('tong'), FALL + SQUASH + 300);
-  }, [drop, reduceMotion, size, ty, op, sq]);
+  }, [drop, instant, reduceMotion, size, ty, op, sq]);
 
   // 기다림: 살짝 흔들림 (0.5초)
   useEffect(() => {
@@ -353,11 +359,11 @@ export function ItemToy({
         <Animated.View style={[{ width: size, height: size }, st]}>
           {id === 'snack' ? (
             <View style={{ flexDirection: 'row' }}>
-              <Half emoji={emoji} size={size} side="left" apart={apart} />
-              <Half emoji={emoji} size={size} side="right" apart={apart} />
+              <Half id={id} size={size} side="left" apart={apart} />
+              <Half id={id} size={size} side="right" apart={apart} />
             </View>
           ) : (
-            <Glyph emoji={emoji} size={size} />
+            <ItemArt id={id} size={size} />
           )}
           {id === 'apple' && <Bites count={Math.min(3, presses)} size={size} bg={bg} />}
           {id === 'banana' && [0, 1, 2].map((i) => <PeelStrip key={i} index={i} peeled={presses > i} size={size} />)}

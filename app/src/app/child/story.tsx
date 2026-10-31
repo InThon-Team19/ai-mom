@@ -1,27 +1,25 @@
-// 아이 태블릿 3-6 전래동화 (아바타가 읽어주고 장면 그림이 넘어감) — 담당: 태희 (민철 와이어프레임 기준)
+// 아이 태블릿 3-6 전래동화 (아바타가 읽어주고 장면 그림이 넘어감) — 담당: 태희 (민철 Design 보드 Story)
+// 보드: 머리줄(닫기 · 책 + 제목 · n / N장 · 부모) · 큰 흰 카드(위 장면 그림 + "읽어 주는 중" · 아래 문장) · 아래 이전 장 / 소리만 듣기 / 다음 장
 import { router, useFocusEffect, useIsFocused, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Text, View, useWindowDimensions } from 'react-native';
+import { Text, View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Svg, { Circle, Ellipse, Path, Rect } from 'react-native-svg';
 
 import { Avatar } from '@/components/Avatar';
-import { ChevronIcon, PillButton, RoundButton, sleep, useDailyLimit, useMouthScale, who } from '@/components/child/kit';
+import { BookIcon, ChevIcon, ChunkyButton, CloseButton, K, KidScreen, SOFT2, SpeakerIcon, TopBar, useKid } from '@/components/child/design';
+import { sleep, useDailyLimit, useMouthScale, who } from '@/components/child/kit';
+import { ParentExit } from '@/components/ParentExit';
 import { dayOf, fill } from '@/content/curriculum';
 import { useSpeak } from '@/hooks/useSpeak';
 import { api } from '@/lib/api';
 import { logEvent } from '@/lib/sense';
 import { useProfile } from '@/lib/store';
-import { C, R } from '@/theme';
-import { ParentExit, parentExitZone } from '@/components/ParentExit';
-import { useDevice } from '@/lib/layout';
 
 export default function Story() {
   const profile = useProfile();
   const { fav, basket } = useLocalSearchParams<{ fav?: string; basket?: string }>();
-  const insets = useSafeAreaInsets();
-  const { width, height } = useWindowDimensions();
-  const { isTablet } = useDevice();
+  const { u, f, compact } = useKid();
   const focused = useIsFocused();
   const { speak, stop, mouth, speaking } = useSpeak(profile?.childId);
   const scale = useMouthScale(profile?.childId);
@@ -29,6 +27,7 @@ export default function Story() {
   const story = dayOf(profile?.day ?? 1).story;
   const childId = profile?.childId;
   const [page, setPage] = useState(0);
+  const [scene, setScene] = useState({ w: 0, h: 0 });
   const run = useRef(0);
   const introDone = useRef(false);
 
@@ -77,85 +76,122 @@ export default function Story() {
     }, [story, page, speak, stop, me, name, toEnd, childId]),
   );
 
-  if (!story) return <View style={{ flex: 1, backgroundColor: C.bg }} />;
+  if (!story) return <View style={{ flex: 1, backgroundColor: K.bg }} />;
   const cur = story.pages[page];
-  // 폰 가로(높이 약 360): 여백·글자·버튼을 줄여 아바타 칸이 문장 상자 위로 넘치지 않게 (태블릿은 그대로)
-  const compact = height < 520;
-  const gap = compact ? 8 : 16;
-  const navSize = compact ? 64 : 96;
+  const textFont = f(34, 17);
+  const btnH = u(72, 42);
+  const chip = u(32, 24);
 
   return (
-    <View
-      style={{
-        flex: 1,
-        backgroundColor: C.bg,
-        gap,
-        paddingTop: (compact ? 6 : 16) + insets.top,
-        paddingBottom: (compact ? 6 : 16) + insets.bottom,
-        paddingLeft: parentExitZone(isTablet) + 10 + insets.left,
-        paddingRight: (compact ? 20 : 40) + insets.right,
-      }}>
-      <ParentExit home />
-      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, minHeight: compact ? 44 : 52 }}>
-        <View style={{ flexShrink: 1, backgroundColor: C.primary, borderRadius: R.pill, paddingHorizontal: 18, paddingVertical: compact ? 6 : 10 }}>
-          <Text numberOfLines={1} style={{ color: C.onPrimary, fontSize: compact ? 16 : 18, fontWeight: '800' }}>
-            {story.title}
-          </Text>
-        </View>
-        <PillButton
-          small
-          style={compact ? { minHeight: 44 } : undefined}
-          label="소리만 듣기"
-          onPress={() => {
-            stop();
-            router.push('/child/audio');
-          }}
-        />
-      </View>
+    <KidScreen gap={18}>
+      <TopBar
+        left={<CloseButton onBefore={stop} />}
+        title={story.title}
+        icon={<BookIcon size={u(24, 16)} />}
+        right={<ParentExit />}
+      />
+      <Text style={{ marginTop: -u(14, 6), alignSelf: 'center', fontSize: f(15, 11), color: K.sub }}>
+        {page + 1} / {story.pages.length}장
+      </Text>
 
-      <View style={{ flex: 1, flexDirection: 'row', gap: compact ? 12 : 20 }}>
-        <View style={{ flex: 26, backgroundColor: C.white, borderRadius: R.lg, borderWidth: 2, borderColor: C.border, alignItems: 'center', justifyContent: 'center', gap: compact ? 4 : 12, overflow: 'hidden' }}>
-          <Avatar config={profile?.avatar} mouth={mouth} scale={scale} size={Math.min(height * (compact ? 0.22 : 0.3), width * 0.17)} expression={speaking ? 'neutral' : 'smile'} />
-          <Text style={{ fontSize: compact ? 13 : 15, color: C.sub }}>{speaking ? '읽어주는 중' : ' '}</Text>
+      {/* 큰 흰 카드: 위 장면 그림 · 아래 문장 */}
+      <View style={{ flex: 1, minHeight: 0, borderRadius: u(36, 18), backgroundColor: K.white, boxShadow: '0px 6px 20px rgba(58,54,78,0.06)', overflow: 'hidden' }}>
+        <View style={{ flex: 1, minHeight: 0 }} onLayout={(e) => setScene({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })}>
+          {/* 장면 바탕 (보드: 하늘 · 구름 · 해 · 언덕). 장마다 그림은 가운데 큰 그림 */}
+          {scene.w > 0 && (
+            <Svg width={scene.w} height={scene.h} viewBox="0 0 1077 411" preserveAspectRatio="xMidYMid slice" style={{ position: 'absolute', left: 0, top: 0 }}>
+              <Rect width="1077" height="411" fill="#CFE6F8" />
+              <Ellipse cx="200" cy="54" rx="82" ry="26" fill="#fff" />
+              <Ellipse cx="242" cy="36" rx="50" ry="26" fill="#fff" />
+              <Ellipse cx="690" cy="28" rx="80" ry="24" fill="#fff" />
+              <Ellipse cx="732" cy="12" rx="46" ry="22" fill="#fff" />
+              <Circle cx="919" cy="62" r="53" fill="#F2D060" />
+              <Path d="M0 318 Q270 268 540 292 Q810 316 1077 262 V411 H0 Z" fill="#9AD66A" />
+              <Path d="M0 372 Q300 344 600 366 Q850 384 1077 352 V411 H0 Z" fill="#84C457" />
+            </Svg>
+          )}
+          <View style={{ position: 'absolute', inset: 0, alignItems: 'center', justifyContent: 'center' }}>
+            <Animated.Text
+              key={page}
+              entering={FadeIn.duration(700)}
+              allowFontScaling={false}
+              style={{ fontSize: Math.max(48, scene.h * 0.55), lineHeight: Math.max(58, scene.h * 0.68), includeFontPadding: false }}>
+              {cur.emoji}
+            </Animated.Text>
+          </View>
+          {/* 읽어 주는 중 (작은 아바타) */}
+          <View
+            style={{
+              position: 'absolute',
+              top: u(20, 8),
+              left: u(20, 8),
+              height: u(44, 32),
+              paddingLeft: u(6, 4),
+              paddingRight: u(16, 10),
+              borderRadius: u(22, 16),
+              backgroundColor: K.white,
+              boxShadow: SOFT2,
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: u(8, 5),
+            }}>
+            <View style={{ width: chip, height: chip, borderRadius: chip / 2, backgroundColor: K.peach, overflow: 'hidden', alignItems: 'center', justifyContent: 'flex-end' }}>
+              <Avatar config={profile?.avatar} mouth={mouth} scale={scale} size={chip} expression={speaking ? 'neutral' : 'smile'} />
+            </View>
+            <Text style={{ fontSize: f(16, 12), fontWeight: '700', color: K.ink }}>{speaking ? '읽어 주는 중' : `${me}랑 동화`}</Text>
+          </View>
         </View>
-        <View style={{ flex: 74, backgroundColor: C.greenSoft, borderRadius: R.lg, borderWidth: 2, borderColor: C.green, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+        <View style={{ height: u(156, 64), paddingHorizontal: u(32, 14), alignItems: 'center', justifyContent: 'center' }}>
           <Animated.Text
             key={page}
-            entering={FadeIn.duration(700)}
-            allowFontScaling={false}
-            style={{ fontSize: Math.min(height * (compact ? 0.24 : 0.3), 220), lineHeight: Math.min(height * (compact ? 0.29 : 0.36), 260), includeFontPadding: false }}>
-            {cur.emoji}
+            entering={FadeIn.duration(500)}
+            numberOfLines={compact ? 2 : 3}
+            adjustsFontSizeToFit
+            style={{ fontSize: textFont, lineHeight: Math.round(textFont * 1.5), fontWeight: '800', color: K.ink, textAlign: 'center' }}>
+            {cur.text}
           </Animated.Text>
         </View>
       </View>
 
-      <View style={{ backgroundColor: C.white, borderRadius: R.md, minHeight: compact ? 52 : 72, alignItems: 'center', justifyContent: 'center', paddingHorizontal: compact ? 16 : 24, paddingVertical: compact ? 4 : 8 }}>
-        <Animated.Text
-          key={page}
-          entering={FadeIn.duration(500)}
-          numberOfLines={compact ? 2 : 3}
-          adjustsFontSizeToFit
-          style={{ fontSize: compact ? 20 : 26, lineHeight: compact ? 26 : 34, fontWeight: '800', color: C.text, textAlign: 'center' }}>
-          {cur.text}
-        </Animated.Text>
+      {/* 아래: 이전 장 · 소리만 듣기 · 다음 장 */}
+      <View style={{ height: u(80, 46), flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: u(24, 10) }}>
+        <ChunkyButton
+          label="이전 장"
+          icon={<ChevIcon left size={u(20, 14)} />}
+          onPress={() => setPage(Math.max(0, page - 1))}
+          color={K.white}
+          deep={K.whiteDeep}
+          height={btnH}
+          width={u(186, 120)}
+          fontSize={f(23, 15)}
+          d={u(6, 3)}
+        />
+        <ChunkyButton
+          label="소리만 듣기"
+          icon={<SpeakerIcon size={u(24, 16)} waves={1} />}
+          onPress={() => {
+            stop();
+            router.push('/child/audio');
+          }}
+          color={K.teal}
+          deep={K.tealDeep}
+          textColor={K.white}
+          height={btnH}
+          width={u(236, 150)}
+          fontSize={f(23, 15)}
+          d={u(6, 3)}
+        />
+        <ChunkyButton
+          label="다음 장"
+          iconRight={<ChevIcon size={u(20, 14)} />}
+          onPress={() => (page + 1 < story.pages.length ? setPage(page + 1) : toEnd())}
+          height={btnH}
+          width={u(188, 120)}
+          fontSize={f(23, 15)}
+          d={u(6, 3)}
+        />
       </View>
-
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: compact ? 14 : 20 }}>
-        <View style={{ flex: 1, flexDirection: 'row', gap: 10 }}>
-          {story.pages.map((_, i) => (
-            <View
-              key={i}
-              style={{ width: 16, height: 16, borderRadius: 8, borderWidth: 2, borderColor: i === page ? C.primaryStrong : C.muted, backgroundColor: i === page ? C.primary : 'transparent' }}
-            />
-          ))}
-        </View>
-        <RoundButton label="이전 장" size={navSize} color={C.card} onPress={() => setPage(Math.max(0, page - 1))}>
-          <ChevronIcon left color={C.onPrimary} size={compact ? 28 : 34} />
-        </RoundButton>
-        <RoundButton label="다음 장" size={navSize} onPress={() => (page + 1 < story.pages.length ? setPage(page + 1) : toEnd())}>
-          <ChevronIcon size={compact ? 28 : 34} />
-        </RoundButton>
-      </View>
-    </View>
+    </KidScreen>
   );
 }
+

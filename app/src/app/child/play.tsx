@@ -6,20 +6,18 @@
 // 모든 동작은 logEvent('touch', { action: 'swipe' | 'tap' | 'drag', ... }) 로 기록 → 부모 리포트 촉각
 import { router, useIsFocused, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { View, useWindowDimensions } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { View } from 'react-native';
 
 import { Avatar, type AvatarExpression } from '@/components/Avatar';
 import { ParentExit } from '@/components/ParentExit';
 import { DrumStation, RevealStation, SortStation, type StationProps } from '@/components/child/SenseStations';
-import { RoundButton, SkipIcon, sleep, useDailyLimit, useMouthScale, who } from '@/components/child/kit';
+import { AvatarPanel, ChunkyButton, CloseButton, HandIcon, K, KidScreen, SenseChip, TopBar, useKid, WhiteCard } from '@/components/child/design';
+import { sleep, useDailyLimit, useMouthScale, who } from '@/components/child/kit';
 import { NodBox } from '@/components/child/stage';
 import { dayOf, fill, ITEMS, type ItemId } from '@/content/curriculum';
 import { useSpeak } from '@/hooks/useSpeak';
-import { useDevice } from '@/lib/layout';
 import { setVibration, startActivityLog } from '@/lib/sense';
 import { loadProfile, refreshProfile, useProfile } from '@/lib/store';
-import { C, R } from '@/theme';
 
 const IDLE_MS = 8000; // 이만큼 가만히 있으면 다시 권함, 한 번 더 가만히 있으면 다음 판
 const STATIONS = 3;
@@ -36,9 +34,7 @@ const ALL_DONE = '다 정리했다! 최고야.';
 
 export default function Play() {
   const profile = useProfile();
-  const insets = useSafeAreaInsets();
-  const { width, height } = useWindowDimensions();
-  const { isTablet } = useDevice();
+  const kid = useKid();
   const focused = useIsFocused();
   const { fav, basket, next } = useLocalSearchParams<{ fav?: string; basket?: string; next?: string }>();
   const { speak, stop, mouth } = useSpeak(profile?.childId);
@@ -52,6 +48,7 @@ export default function Play() {
   const [wiggle, setWiggle] = useState(0);
   const [expr, setExpr] = useState<AvatarExpression | null>(null);
   const [stage, setStage] = useState({ w: 0, h: 0 });
+  const [line, setLine] = useState(''); // 아바타가 지금 하는 말 (왼쪽 말풍선)
 
   // 오늘 놀 사물: 말 놀이에서 모은 바구니, 없으면 오늘 계획의 사물
   const items = useMemo<ItemId[]>(() => {
@@ -106,6 +103,7 @@ export default function Play() {
       if (busy.current && !force) return;
       busy.current = true;
       const my = ++sayGen.current;
+      setLine(text);
       try {
         await speak(text);
       } finally {
@@ -228,21 +226,28 @@ export default function Play() {
     else goNext(ALL_DONE);
   }, [goNext]);
 
-  if (!profile) return <View style={{ flex: 1, backgroundColor: C.bg }} />;
+  if (!profile) return <View style={{ flex: 1, backgroundColor: K.bg }} />;
 
-  // ---------- 크기: 폰(가로 약 800x360)은 줄이고 태블릿은 크게 (session 과 같은 기준) ----------
-  const compact = !isTablet || height < 520;
-  const gap = compact ? 8 : 14;
-  const pad = {
-    paddingTop: (compact ? 6 : 12) + insets.top,
-    paddingBottom: (compact ? 6 : 14) + insets.bottom,
-    paddingLeft: (compact ? 14 : 28) + insets.left,
-    paddingRight: (compact ? 14 : 28) + insets.right,
-  };
-  const headerH = compact ? 52 : 68;
-  const mainH = Math.max(140, height - pad.paddingTop - pad.paddingBottom - headerH - gap);
-  const avatarSize = Math.max(80, Math.min(mainH / 1.2, width * 0.26));
-  const nextSize = compact ? 48 : 64;
+  // ---------- 크기: 보드(1180x820) 비율 (session 과 같은 기준). 폰 가로에선 감각 칩을 숨겨 놀이 칸을 넓게 ----------
+  const { u, f, compact } = kid;
+  const first = ITEMS[items[0]]?.ko ?? '';
+  const chips: { kind: 'touch' | 'audio' | 'visual'; label: string }[][] = [
+    [
+      { kind: 'touch', label: '촉각 · 톡톡 진동' },
+      { kind: 'audio', label: '청각 · 쓱쓱 소리' },
+      { kind: 'visual', label: `시각 · 70% 보이면 "${first}!"` },
+    ],
+    [
+      { kind: 'audio', label: '청각 · 세게 칠수록 큰 소리' },
+      { kind: 'touch', label: '촉각 · 짧고 약한 진동' },
+      { kind: 'visual', label: '시각 · 파동이 퍼져요' },
+    ],
+    [
+      { kind: 'touch', label: '촉각 · 쏙! 짧은 진동' },
+      { kind: 'audio', label: `청각 · ${me} 목소리 "잘했어!"` },
+      { kind: 'visual', label: '시각 · 살며시 제자리로' },
+    ],
+  ];
 
   const common: StationProps = {
     w: stage.w,
@@ -257,44 +262,60 @@ export default function Play() {
   };
 
   return (
-    <View style={[{ flex: 1, backgroundColor: C.bg, gap }, pad]}>
-      <ParentExit home />
-      {/* 위: (왼쪽은 자물쇠·홈 자리) 몇 번째 판인지 점 세 개 · 다음 */}
-      <View style={{ height: headerH, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 16 }}>
-        <View accessibilityLabel={`${station + 1}번째 놀이`} style={{ flexDirection: 'row', gap: 8 }}>
-          {Array.from({ length: STATIONS }, (_, i) => (
-            <View
-              key={i}
-              style={{ width: compact ? 12 : 16, height: compact ? 12 : 16, borderRadius: 8, backgroundColor: i <= station ? C.primaryStrong : C.track }}
-            />
-          ))}
-        </View>
-        <RoundButton label="다음" size={nextSize} onPress={skip}>
-          <SkipIcon size={compact ? 20 : 26} />
-        </RoundButton>
-      </View>
+    <KidScreen gap={20}>
+      {/* 머리줄 (보드 PlaySwipe · PlayDrum · PlaySort): 닫기 · 손 놀이 n / 3 + 진행 · 부모 */}
+      <TopBar
+        left={
+          <CloseButton
+            onBefore={() => {
+              flowGen.current++;
+              stop();
+            }}
+          />
+        }
+        title="손 놀이"
+        extra={`${station + 1} / ${STATIONS}`}
+        icon={<HandIcon size={u(26, 18)} />}
+        steps={3}
+        right={<ParentExit />}
+      />
 
-      <View style={{ flex: 1, flexDirection: 'row', gap: compact ? 10 : 16 }}>
-        {/* 왼쪽: 부모 아바타 */}
-        <View style={{ flex: 32, backgroundColor: C.white, borderRadius: R.lg, borderWidth: 2, borderColor: C.border, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-          <NodBox nod={nod} reduceMotion={reduceMotion}>
-            <Avatar config={profile.avatar} mouth={mouth} scale={scale} size={avatarSize} expression={expr ?? 'smile'} />
-          </NodBox>
-        </View>
-
-        {/* 오른쪽: 놀이 무대 */}
-        <View
-          onLayout={(e) => setStage({ w: Math.round(e.nativeEvent.layout.width), h: Math.round(e.nativeEvent.layout.height) })}
-          style={{ flex: 68, backgroundColor: C.greenSoft, borderRadius: R.lg, borderWidth: 2, borderColor: C.green, overflow: 'hidden' }}>
-          {ready && stage.w > 0 && (
-            <>
-              {station === 0 && <RevealStation key="reveal" items={items} {...common} />}
-              {station === 1 && <DrumStation key="drum" {...common} />}
-              {station === 2 && <SortStation key="sort" items={items} {...common} />}
-            </>
+      <View style={{ flex: 1, minHeight: 0, flexDirection: 'row', gap: u(24, 10) }}>
+        {/* 왼쪽: 아바타 판 + 말풍선 */}
+        <AvatarPanel
+          line={line}
+          avatar={(w, h) => (
+            <NodBox nod={nod} reduceMotion={reduceMotion}>
+              <Avatar config={profile.avatar} mouth={mouth} scale={scale} size={Math.round(Math.min(w * 0.8, (h * 0.72) / 1.1))} expression={expr ?? 'smile'} />
+            </NodBox>
           )}
-        </View>
+        />
+
+        {/* 오른쪽: 흰 카드 = 놀이 무대 + 감각 칩 */}
+        <WhiteCard style={{ overflow: 'hidden' }}>
+          <View onLayout={(e) => setStage({ w: Math.round(e.nativeEvent.layout.width), h: Math.round(e.nativeEvent.layout.height) })} style={{ flex: 1, overflow: 'hidden' }}>
+            {ready && stage.w > 0 && (
+              <>
+                {station === 0 && <RevealStation key="reveal" items={items} {...common} />}
+                {station === 1 && <DrumStation key="drum" {...common} />}
+                {station === 2 && <SortStation key="sort" items={items} {...common} />}
+              </>
+            )}
+          </View>
+          {!compact && (
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: u(10, 6), paddingTop: u(14, 6), paddingHorizontal: u(20, 8), paddingBottom: u(24, 8) }}>
+              {chips[station].map((c) => (
+                <SenseChip key={c.label} kind={c.kind} label={c.label} />
+              ))}
+            </View>
+          )}
+        </WhiteCard>
       </View>
-    </View>
+
+      {/* 아래: 다음 (말을 끊고 바로 다음 판) */}
+      <View style={{ height: u(86, 46), flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end' }}>
+        <ChunkyButton label="다음" onPress={skip} height={u(80, 42)} width={u(234, 110)} fontSize={f(36, 18)} d={u(6, 3)} />
+      </View>
+    </KidScreen>
   );
 }
