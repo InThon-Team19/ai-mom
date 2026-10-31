@@ -1,5 +1,7 @@
 // 담당: 민주 — 서버 API 호출은 전부 여기에 모으기 (화면에서 fetch 직접 쓰지 않기)
 // ↓ 입력 파이프라인·아이 반응·프로필(임시) 부분: 태희
+import { File } from 'expo-file-system';
+
 import { getApiUrl } from './config';
 import type {
   ActivityEvent,
@@ -25,12 +27,13 @@ const json = (method: string, body: unknown): RequestInit => ({
   body: JSON.stringify(body),
 });
 
-/** 로컬 파일(uri) + 폼 필드 → multipart 업로드 (RN fetch 방식) */
-function upload<T>(path: string, uri: string, type: string, fields: Record<string, string> = {}) {
+/** 로컬 파일(uri) + 폼 필드 → multipart 업로드.
+ * Expo 58 기본 fetch(expo/fetch)는 RN 식 {uri, name, type} 첨부를 지원하지 않음 → expo-file-system File(Blob 구현) 사용 */
+function upload<T>(path: string, uri: string, _type: string, fields: Record<string, string> = {}) {
   const form = new FormData();
   for (const [k, v] of Object.entries(fields)) form.append(k, v);
   const name = uri.split('/').pop() || 'file';
-  form.append('file', { uri, name, type } as unknown as Blob);
+  form.append('file', new File(uri), name);
   return req<T>(path, { method: 'POST', body: form });
 }
 

@@ -65,13 +65,21 @@ export function useReadAloud({
       if (!uri) return;
       setBusy(true);
       const text = sentences[index] ?? '';
-      const [v, m] = await Promise.all([
+      const [vr, mr] = await Promise.allSettled([
         api.parentVoiceSample(childId, uri, text, kind),
         camera && track.current.length ? api.mouthTrack(childId, track.current, text, kind) : Promise.resolve(null),
       ]);
-      setVoice(v.gauge);
+      const v = vr.status === 'fulfilled' ? vr.value : null;
+      const m = mr.status === 'fulfilled' ? mr.value : null;
+      if (v) setVoice(v.gauge);
       if (m) setMouth(m.gauge);
-      setGain({ voice: v.gained, mouth: m?.gained ?? 0 });
+      setGain({ voice: v?.gained ?? 0, mouth: m?.gained ?? 0 });
+      if (!v) {
+        const err = vr.status === 'rejected' ? String(vr.reason).slice(0, 80) : '';
+        setMessage(`목소리 전송 실패: ${err}`);
+        setDone((d) => ({ ...d, [index]: 'retry' }));
+        return;
+      }
       const ok = v.quality.ok && (!m || m.ok);
       setMessage(!v.quality.ok ? v.quality.message : m && !m.ok ? m.message : '좋아요!');
       setDone((d) => ({ ...d, [index]: ok ? 'done' : 'retry' }));
