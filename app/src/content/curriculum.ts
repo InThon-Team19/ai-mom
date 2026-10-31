@@ -36,6 +36,7 @@ export type Day = {
   topic: string;
   items: ItemId[];
   planSentences: string[]; // 전날 밤 부모가 낭독하는 계획 (2-4)
+  greeting: string; // 아이 화면 첫 인사 (기획 2-7 일차별 화면 문장)
   story?: { title: string; pages: { emoji: string; text: string }[] };
 };
 
@@ -43,6 +44,7 @@ export const DAYS: Day[] = [
   {
     day: 1,
     topic: '사과 · 바나나',
+    greeting: '오늘은 사과랑 바나나 만나볼까?',
     items: ['apple', 'banana'],
     planSentences: [
       '내일은 1일차, 사과와 바나나를 배워봐요.',
@@ -64,6 +66,7 @@ export const DAYS: Day[] = [
   {
     day: 2,
     topic: '과자',
+    greeting: '어제 사과 만났지? 오늘은 과자 먹어볼까?',
     items: ['snack'],
     planSentences: [
       '내일은 2일차, 과자에 대해 배워봐요.',
@@ -79,6 +82,19 @@ export const DAYS: Day[] = [
         { emoji: '☀️', text: '오빠는 해님이, 동생은 달님이 되었대요.' },
       ],
     },
+  },
+  {
+    day: 3,
+    topic: '복습 (사과 · 바나나 · 과자)',
+    greeting: '오늘은 사과, 바나나, 과자 다시 만나볼까?',
+    items: ['apple', 'banana', 'snack'],
+    planSentences: [
+      '내일은 3일차, 그동안 만난 친구들을 다시 만나요.',
+      '{name}야, 사과 기억나? 와그작!',
+      '바나나 껍질도 다시 벗겨볼까?',
+      '과자는 바삭바삭 소리가 나.',
+      '오늘도 정말 잘했어, 우리 {name}!',
+    ],
   },
 ];
 

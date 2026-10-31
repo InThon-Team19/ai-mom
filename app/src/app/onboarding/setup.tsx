@@ -7,6 +7,7 @@ import { Pressable, Text, TextInput, View } from 'react-native';
 import { PersonaCard } from '@/components/PersonaCard';
 import { Button, OnboardingScaffold } from '@/components/ui';
 import { signup } from '@/lib/account';
+import { pinHash, validPin } from '@/lib/pin';
 import { registerThisDevice } from '@/lib/device';
 import { updateProfile, useProfile, type Profile } from '@/lib/store';
 import { C, R, T } from '@/theme';
@@ -49,10 +50,13 @@ function Form({ initial, code, profile }: { initial: Profile['settings']; code: 
   const [pw, setPw] = useState('');
   const [pw2, setPw2] = useState('');
   const [accountError, setAccountError] = useState('');
+  const [pin, setPin] = useState('');
+  const [pin2, setPin2] = useState('');
 
   const timeOk = start < end; // "HH:00" 문자열 비교로 충분
   const accountOk = /^[a-zA-Z0-9_.@-]{3,40}$/.test(loginId.trim()) && pw.length >= 4 && pw === pw2;
-  const ready = consentBio && consentChild && timeOk && accountOk && !saving;
+  const pinOk = validPin(pin) && pin === pin2;
+  const ready = consentBio && consentChild && timeOk && accountOk && pinOk && !saving;
 
   const finish = async () => {
     if (!ready) return;
@@ -64,7 +68,11 @@ function Form({ initial, code, profile }: { initial: Profile['settings']; code: 
       setSaving(false);
       return;
     }
-    const p = await updateProfile({ settings: { consentBio, consentChild, start, end, dailyLimitMin: limit, vibration }, onboarded: true });
+    const p = await updateProfile({
+      settings: { ...profile.settings, consentBio, consentChild, start, end, dailyLimitMin: limit, vibration },
+      pinHash: await pinHash(code, pin),
+      onboarded: true,
+    });
     setTimeout(() => registerThisDevice(p.childId, 'parent'), 800); // 프로필 저장(PUT)이 먼저 끝나게
     router.replace('/parent');
   };
@@ -82,6 +90,15 @@ function Form({ initial, code, profile }: { initial: Profile['settings']; code: 
         <TextInput value={pw2} onChangeText={setPw2} secureTextEntry placeholder="비밀번호 확인" placeholderTextColor={C.muted} style={inputStyle} />
         {pw2.length > 0 && pw !== pw2 && <Text style={{ color: C.warn }}>비밀번호가 서로 달라요.</Text>}
         {!!accountError && <Text style={{ color: C.warn }}>{accountError}</Text>}
+      </Section>
+
+      <Section label="부모 PIN (숫자 4자리)">
+        <Text style={T.small}>아이 모드에서 부모 모드로 돌아올 때 써요. 아이가 모르게 정해 주세요.</Text>
+        <View style={{ flexDirection: 'row', gap: 8 }}>
+          <TextInput value={pin} onChangeText={(t) => setPin(t.replace(/\D/g, '').slice(0, 4))} keyboardType="number-pad" secureTextEntry maxLength={4} placeholder="PIN" placeholderTextColor={C.muted} style={[inputStyle, { flex: 1 }]} />
+          <TextInput value={pin2} onChangeText={(t) => setPin2(t.replace(/\D/g, '').slice(0, 4))} keyboardType="number-pad" secureTextEntry maxLength={4} placeholder="PIN 확인" placeholderTextColor={C.muted} style={[inputStyle, { flex: 1 }]} />
+        </View>
+        {pin2.length === 4 && pin !== pin2 && <Text style={{ color: C.warn }}>PIN이 서로 달라요.</Text>}
       </Section>
       <Section label="데이터 동의">
         <Check checked={consentBio} onPress={() => setConsentBio((v) => !v)} label="내 목소리와 얼굴 영상으로 아바타를 만드는 데 동의합니다" />

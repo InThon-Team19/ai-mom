@@ -1,15 +1,18 @@
 // 부모 앱 2-4 내일 계획 낭독: 입모양을 보이며 읽기 → 입모양·음성 학습률 상승, 코칭, "낭독 완료" → 다음날 — 담당: 태희 (민철 와이어프레임 기준)
+// 카메라 위 인식 표시(얼굴 틀·입 윤곽·체크)와 상태 문구는 기획 2-4 → components/FaceGuide
 import { router, useIsFocused, type Href } from 'expo-router';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { FaceTracker } from '@/components/FaceTracker';
+import { FaceGuide, ReadingText, doneSignal, useReadingWord } from '@/components/FaceGuide';
+import type { FaceFrame } from '@/components/FaceTracker';
 import { RingGauge } from '@/components/RingGauge';
 import { Button, Card, H1, MicButton, Sub } from '@/components/ui';
 import { DAYS, dayOf, fill, type Day } from '@/content/curriculum';
 import { useReadAloud } from '@/hooks/useReadAloud';
 import { api } from '@/lib/api';
+import { readingDonePatch } from '@/lib/progress';
 import { updateProfile, useProfile, type Profile } from '@/lib/store';
 import { C, R, T } from '@/theme';
 
@@ -34,6 +37,16 @@ function PlanReader({ profile, plan }: { profile: Profile; plan: Day }) {
   const [coaching, setCoaching] = useState<string[]>([]);
   const [camError, setCamError] = useState('');
   const [finishing, setFinishing] = useState(false);
+  const reading = useReadingWord(sentences[ra.index] ?? '', ra.recording);
+  const { onFrame: raFrame } = ra;
+  const { feed } = reading;
+  const onFrame = useCallback(
+    (f: FaceFrame) => {
+      raFrame(f);
+      feed(f);
+    },
+    [raFrame, feed],
+  );
 
   // 문장 하나 전송이 끝날 때마다(busy true → false) 코칭 갱신
   const wasBusy = useRef(false);
@@ -58,7 +71,8 @@ function PlanReader({ profile, plan }: { profile: Profile; plan: Day }) {
     if (finishing) return;
     setFinishing(true);
     try {
-      await updateProfile({ day: Math.min(profile.day + 1, DAYS.length) });
+      // 기획 2-7: 낭독 완료만 표시 → 다음날 아이 화면을 처음 켤 때 일차 +1 (설정 탭에 시연용 즉시 넘기기)
+      await updateProfile(readingDonePatch(profile));
       api.registerVoice(profile.childId).catch(() => {}); // 부모 목소리 모델 갱신 (실패해도 계속)
       router.navigate('/parent' as Href);
     } finally {
@@ -84,24 +98,17 @@ function PlanReader({ profile, plan }: { profile: Profile; plan: Day }) {
         </View>
 
         {focused ? (
-          <FaceTracker
-            onFrame={ra.onFrame}
+          <FaceGuide
+            onFrame={onFrame}
             onError={setCamError}
-            guide
-            style={{ height: 140, borderRadius: R.sm, borderWidth: 1, borderColor: C.border }}
+            recording={ra.recording}
+            doneCount={doneSignal(ra.statuses, ra.allDone)}
+            style={{ height: 160, borderRadius: R.sm, borderWidth: 1, borderColor: C.border }}
           />
         ) : (
-          <View style={{ height: 140, borderRadius: R.sm, backgroundColor: C.card }} />
+          <View style={{ height: 160, borderRadius: R.sm, backgroundColor: C.card }} />
         )}
-        <Text style={[T.small, { marginTop: -8 }]}>
-          {camError
-            ? `카메라 오류: ${camError.slice(0, 60)}`
-            : ra.face?.face
-              ? ra.recording
-                ? '입모양 인식 중'
-                : '얼굴이 잘 보여요'
-              : '얼굴을 점선 안에 맞춰주세요'}
-        </Text>
+        {!!camError && <Text style={[T.small, { color: C.warn }]}>카메라 오류: {camError.slice(0, 60)}</Text>}
 
         <Card style={{ gap: 8 }}>
           <Text style={T.small}>
@@ -121,7 +128,7 @@ function PlanReader({ profile, plan }: { profile: Profile; plan: Day }) {
                     color: st === 'done' ? C.muted : st === 'retry' ? C.warn : C.text,
                   }}>
                   {st === 'done' ? '✓ ' : st === 'retry' ? '↻ ' : ''}
-                  {t}
+                  {now ? <ReadingText text={t} word={reading.word} /> : t}
                 </Text>
               </View>
             );
@@ -145,7 +152,7 @@ function PlanReader({ profile, plan }: { profile: Profile; plan: Day }) {
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 20, paddingVertical: 12 }}>
         <MicButton recording={ra.recording} onPress={ra.toggle} size={64} />
         <Button
-          label="낭독 완료 · 다음날 보기"
+          label={profile.readingDone ? "낭독 완료됨 · 내일 아침 시작" : "낭독 완료"}
           variant="outline"
           disabled={ra.recording || ra.busy || finishing}
           onPress={finish}

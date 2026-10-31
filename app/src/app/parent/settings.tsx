@@ -2,7 +2,7 @@
 // 로그인 · 계정 정보 · 아바타 · 태블릿 연결 키(조회·재발급) · 등록된 기기 · 학습 이력 · 대화 설정 · 이 기기 모드 전환
 import { router, useFocusEffect, type Href } from 'expo-router';
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
-import { Alert, Platform, Pressable, ScrollView, Switch, Text, View } from 'react-native';
+import { Alert, Platform, Pressable, ScrollView, Switch, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AccountSection } from '@/components/AccountSection';
@@ -11,6 +11,8 @@ import { RingGauge } from '@/components/RingGauge';
 import { Button, Chip } from '@/components/ui';
 import { api } from '@/lib/api';
 import { getDeviceId } from '@/lib/device';
+import { pinHash, validPin } from '@/lib/pin';
+import { dayAdvancePatch } from '@/lib/progress';
 import { refreshProfile, resetLocal, setRole, updateProfile, useProfile, type Profile } from '@/lib/store';
 import type { Gauge, History } from '@/lib/types';
 import { C, R, T } from '@/theme';
@@ -66,6 +68,8 @@ export default function Settings() {
   const [mouth, setMouth] = useState<Gauge | null>(null);
   const [hist, setHist] = useState<History | null>(null);
   const [busy, setBusy] = useState(false);
+  const [newPin, setNewPin] = useState('');
+  const [pinMsg, setPinMsg] = useState('');
 
   useEffect(() => {
     getDeviceId().then(setMe);
@@ -102,8 +106,20 @@ export default function Settings() {
       load();
     });
 
+  const savePin = async () => {
+    if (!validPin(newPin)) return setPinMsg('숫자 4자리로 정해 주세요');
+    await updateProfile({ pinHash: await pinHash(p.childId, newPin) });
+    setNewPin('');
+    setPinMsg('PIN을 바꿨어요');
+  };
+
+  const nextDayNow = async () => {
+    const adv = dayAdvancePatch(p, true);
+    if (adv) await updateProfile(adv);
+  };
+
   const toChild = () =>
-    confirm('이 기기를 아이 태블릿으로 바꿀까요?', '아이 화면으로 바뀌어요. 아이 화면 왼쪽 위를 2초 길게 누르면 다시 부모 모드로 돌아올 수 있어요.', '전환', async () => {
+    confirm('아이 모드로 바꿀까요?', '아이 학습 화면만 보여요. 부모 모드로 돌아올 때는 화면 왼쪽 위를 3초 길게 누른 뒤 부모 PIN을 입력해요.', '전환', async () => {
       await setRole('child');
       router.replace('/child');
     });
@@ -129,6 +145,10 @@ export default function Settings() {
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: C.bg }}>
       <ScrollView contentContainerStyle={{ padding: 20, gap: 16, paddingBottom: 40 }}>
         <Text style={T.h1}>설정</Text>
+
+        {/* 기획 2-5: 설정 탭 맨 위 정보는 '아이 모드로 바꾸기' */}
+        <Button label="아이 모드로 바꾸기" onPress={toChild} />
+        {!p.pinHash && <Text style={[T.small, { color: C.warn }]}>부모 PIN이 아직 없어요. 아래 “부모 PIN”에서 먼저 정해 주세요.</Text>}
 
         <Section title="로그인">
           <AccountSection childId={p.childId} />
@@ -184,6 +204,10 @@ export default function Settings() {
         </Section>
 
         <Section title="학습 이력">
+          <Text style={{ fontSize: 15, color: C.text }}>
+            지금 {p.day}일차 · {p.readingDone ? `낭독 완료, 다음에 아이 화면을 켜면 ${p.readingDone.forDay}일차` : '오늘 밤 낭독하면 다음날 넘어가요'}
+          </Text>
+          {!!p.readingDone && <Chip label="시연: 지금 다음 일차로 넘기기" onPress={nextDayNow} />}
           <View style={{ flexDirection: 'row', justifyContent: 'space-around' }}>
             <RingGauge progress={voice?.progress ?? 0} baseline={voice?.baseline} size={96} stroke={10} label="음성" />
             <RingGauge progress={mouth?.progress ?? 0} baseline={mouth?.baseline} size={96} stroke={10} label="입모양" />
@@ -219,7 +243,7 @@ export default function Settings() {
           ))}
         </Section>
 
-        <Section title="대화 설정">
+        <Section title="사용 시간">
           <Text style={T.small}>대화 시간</Text>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
             {[
@@ -236,16 +260,52 @@ export default function Settings() {
               <Chip key={m} label={m === 60 ? '1시간' : `${m}분`} selected={p.settings.dailyLimitMin === m} onPress={() => setSettings({ dailyLimitMin: m })} />
             ))}
           </View>
+        </Section>
+
+        <Section title="소리·진동·화면">
+          <Text style={T.small}>소리 크기</Text>
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            {(
+              [
+                ['작게', 0.4],
+                ['보통', 0.7],
+                ['크게', 1],
+              ] as const
+            ).map(([label, v]) => (
+              <Chip key={label} label={label} selected={Math.abs((p.settings.volume ?? 0.8) - v) < 0.16} onPress={() => setSettings({ volume: v })} />
+            ))}
+          </View>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
             <Text style={{ fontSize: 15, color: C.text }}>진동 사용 (약하게, 짧게)</Text>
-            <Switch value={p.settings.vibration} onValueChange={(v) => setSettings({ vibration: v })} trackColor={{ true: C.primary }} />
+            <Switch value={p.settings.vibration} onValueChange={(v) => setSettings({ vibration: v })} trackColor={{ true: C.green }} />
           </View>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Text style={{ fontSize: 15, color: C.text }}>움직임 줄이기 (튀는 효과 한 번만)</Text>
+            <Switch value={!!p.settings.reduceMotion} onValueChange={(v) => setSettings({ reduceMotion: v })} trackColor={{ true: C.green }} />
+          </View>
+        </Section>
+
+        <Section title="부모 PIN">
+          <Text style={T.small}>아이 모드에서 부모 모드로 돌아올 때 입력하는 숫자 4자리예요.</Text>
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            <TextInput
+              value={newPin}
+              onChangeText={(t) => setNewPin(t.replace(/\D/g, '').slice(0, 4))}
+              keyboardType="number-pad"
+              secureTextEntry
+              maxLength={4}
+              placeholder={p.pinHash ? '새 PIN' : 'PIN 정하기'}
+              placeholderTextColor={C.muted}
+              style={{ flex: 1, fontSize: 16, borderWidth: 1, borderColor: C.border, borderRadius: R.sm, paddingHorizontal: 12, color: C.text }}
+            />
+            <Button label="저장" style={{ minHeight: 44 }} onPress={savePin} />
+          </View>
+          {!!pinMsg && <Text style={{ color: pinMsg.includes('바꿨어요') ? C.ok : C.warn }}>{pinMsg}</Text>}
         </Section>
 
         <Section title="이 기기">
           <Text style={T.small}>지금 이 기기는 부모 폰으로 쓰고 있어요.</Text>
-          <Button label="아이 태블릿 모드로 전환" variant="outline" onPress={toChild} />
-          <Button label="처음부터 다시 가입" variant="ghost" onPress={restart} />
+          <Button label="이 기기 데이터 삭제 · 처음부터 다시 가입" variant="ghost" onPress={restart} />
         </Section>
       </ScrollView>
     </SafeAreaView>

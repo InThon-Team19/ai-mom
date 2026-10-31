@@ -10,11 +10,13 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Avatar } from '@/components/Avatar';
 import { PlayIcon, RoundButton, who } from '@/components/child/kit';
 import { Button } from '@/components/ui';
-import { dayOf, fill, ITEMS } from '@/content/curriculum';
+import { dayOf, fill } from '@/content/curriculum';
 import { useSpeak } from '@/hooks/useSpeak';
 import { api } from '@/lib/api';
 import { getDeviceId, registerThisDevice } from '@/lib/device';
-import { clearRole, linkTablet, refreshProfile, resetLocal, useProfile } from '@/lib/store';
+import { PinPad } from '@/components/PinPad';
+import { dayAdvancePatch } from '@/lib/progress';
+import { clearRole, linkTablet, refreshProfile, resetLocal, updateProfile, useProfile } from '@/lib/store';
 import { C, R, T } from '@/theme';
 
 const LINKED_KEY = 'aibom.childLinked'; // 이 태블릿이 등록된 child_id (연결 해제 감지용)
@@ -28,7 +30,10 @@ export default function ChildStart() {
   useEffect(() => {
     if (!linked) return;
     (async () => {
-      const p = await refreshProfile();
+      let p = await refreshProfile();
+      // 기획 2-7: 전날 밤 낭독을 마쳤으면 오늘 처음 켤 때 일차 +1 (안 했으면 같은 일차 복습)
+      const adv = dayAdvancePatch(p);
+      if (adv) p = await updateProfile(adv);
       const me = await getDeviceId();
       let flag: string | null = null;
       try {
@@ -54,9 +59,10 @@ function Greeting({ onRelink }: { onRelink: () => void }) {
   const profile = useProfile();
   const insets = useSafeAreaInsets();
   const { speak, stop, mouth } = useSpeak(profile?.childId);
+  const [pinOpen, setPinOpen] = useState(false);
   const { name, me } = who(profile);
-  const first = ITEMS[dayOf(profile?.day ?? 1).items[0]];
-  const line = fill(`{name}야, ${first.ko} 같이 만나볼까?`, { name, me });
+  // 기획 2-7: 첫 인사는 현재 일차 값으로 만듦
+  const line = fill(`{name}야, ${dayOf(profile?.day ?? 1).greeting}`, { name, me });
 
   const greet = useCallback(() => {
     speak(`${fill('안녕 {name}! {me}랑 같이 놀자!', { name, me })} ${line}`);
@@ -92,12 +98,22 @@ function Greeting({ onRelink }: { onRelink: () => void }) {
         <PlayIcon size={56} />
       </RoundButton>
 
-      {/* 어른용 숨은 메뉴: 왼쪽 위를 2초 길게 누르기 (부모 모드 전환 · 연결 해제) */}
+      {/* 어른용 숨은 메뉴: 왼쪽 위를 3초 길게 누른 뒤 PIN (기획 2-5) → 부모 모드 전환 · 연결 해제 */}
       <Pressable
-        onLongPress={() => adultMenu(profile?.childId)}
-        delayLongPress={2000}
-        accessibilityLabel="어른 메뉴 (2초 길게 누르기)"
+        onLongPress={() => setPinOpen(true)}
+        delayLongPress={3000}
+        accessibilityLabel="어른 메뉴 (3초 길게 누르기)"
         style={{ position: 'absolute', left: insets.left, top: insets.top, width: 72, height: 72 }}
+      />
+      <PinPad
+        visible={pinOpen}
+        childId={profile?.childId ?? ''}
+        hash={profile?.pinHash}
+        onCancel={() => setPinOpen(false)}
+        onSuccess={() => {
+          setPinOpen(false);
+          adultMenu(profile?.childId);
+        }}
       />
 
       <Pressable onPress={onRelink} hitSlop={12} style={{ position: 'absolute', right: 24 + insets.right, bottom: 16 + insets.bottom }}>

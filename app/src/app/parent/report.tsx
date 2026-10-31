@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button, Card, H1 } from '@/components/ui';
 import { ITEMS, dayOf, type Item } from '@/content/curriculum';
+import { headline, wordStatus } from '@/lib/progress';
 import { api } from '@/lib/api';
 import { useProfile } from '@/lib/store';
 import type { Summary } from '@/lib/types';
@@ -102,8 +103,23 @@ export default function Report() {
 
         <Card soft style={{ gap: 10 }}>
           <Text style={{ fontSize: 13, fontWeight: '700', color: C.link }}>{today.day}일차</Text>
-          <Text style={T.sub}>오늘은 이 주제를 배웠어요</Text>
-          <Text style={T.h2}>{today.items.map((id) => `${ITEMS[id].emoji} ${ITEMS[id].ko}`).join(' · ')}</Text>
+          {/* 기획 2-7: 첫 줄은 활동 기록으로 판정한 '배움'·'만남'으로만 만듦 */}
+          <Text style={T.h2}>{headline(wordStatus(today.day, s))}</Text>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+            {today.items.map((id) => {
+              const st = wordStatus(today.day, s);
+              const w = ITEMS[id].ko;
+              const label = st.learned.includes(w) ? '배움' : st.met.includes(w) ? '만남' : '예정';
+              return (
+                <View key={id} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: label === '배움' ? C.green : label === '만남' ? C.primary : C.card, borderRadius: R.pill, paddingHorizontal: 12, paddingVertical: 6 }}>
+                  <Text style={{ fontSize: 15 }}>{ITEMS[id].emoji}</Text>
+                  <Text style={{ fontSize: 14, fontWeight: '700', color: C.onPrimary }}>
+                    {w} · {label}
+                  </Text>
+                </View>
+              );
+            })}
+          </View>
           {hasData && s && (
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
               {s.words.map((w) => (

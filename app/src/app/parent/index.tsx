@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { RingGauge } from '@/components/RingGauge';
 import { Button, Card, H1 } from '@/components/ui';
 import { DAYS, dayOf } from '@/content/curriculum';
+import { headline, wordStatus } from '@/lib/progress';
 import { api } from '@/lib/api';
 import { useProfile } from '@/lib/store';
 import type { Gauge, Summary } from '@/lib/types';
@@ -61,6 +62,11 @@ export default function ParentHome() {
       <ScrollView contentContainerStyle={{ padding: 20, gap: 14 }}>
         <View style={{ gap: 6 }}>
           <H1>{name}의 오늘</H1>
+          {/* 기획 2-5: 맨 위 정보는 오늘의 일차와 주제 한 줄 */}
+          <Text style={{ fontSize: 17, fontWeight: '800', color: C.text }}>
+            오늘은 {today.day}일차, {today.topic}
+          </Text>
+          <Text style={T.sub}>{headline(wordStatus(today.day, summary))}</Text>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
             <View style={{ width: 9, height: 9, borderRadius: 5, backgroundColor: linked ? C.primary : C.muted }} />
             <Text style={T.sub}>
@@ -91,6 +97,9 @@ export default function ParentHome() {
               내일 · {tomorrow.day}일차{tomorrowNum === dayNum ? ' (마지막)' : ''}
             </Text>
             <Text style={{ fontSize: 16, fontWeight: '800', color: C.text }}>{tomorrow.topic}</Text>
+            <Text style={T.small}>
+              {profile?.readingDone ? '낭독 완료 · 내일 아침 시작' : '오늘 밤 낭독하면 넘어가요'}
+            </Text>
           </Card>
         </View>
 

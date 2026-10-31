@@ -25,6 +25,8 @@ export type Profile = {
   feedback: { day: number; issues: string[]; note: string; review: string[]; newWords: string }[];
   onboarded: boolean;
   linkCode?: string; // 태블릿 연결 코드 (재발급 가능, 서버가 관리)
+  readingDone?: { forDay: number; date: string } | null; // 밤 낭독 완료 → 다음날 일차 +1 (기획 2-7)
+  pinHash?: string; // 부모 모드 복귀 PIN (해시, 기획 2-5)
   devices?: DeviceInfo[]; // 등록된 기기 (서버가 관리)
 };
 
