@@ -10,6 +10,8 @@ import { stopSound } from '@/content/sensory/feedback';
 import { SensoryToy } from '@/components/sensory/SensoryToy';
 import { ChunkyButton, K, SOFT2, useKid } from '@/components/child/design';
 import { Text } from '@/components/AppText';
+import { dayOf } from '@/content/curriculum';
+import { useProfile } from '@/lib/store';
 
 export default function SensoryStories() {
   const { cards } = useLocalSearchParams<{ cards?: string }>();
@@ -19,6 +21,10 @@ export default function SensoryStories() {
   const [failed, setFailed] = useState(false);
   // 크기: 다른 아이 화면처럼 보드(1180x820) 비율로 키움 (폰 가로에선 예전 크기가 최소)
   const { u, f, width, height } = useKid();
+  // 오늘 커리큘럼 동화(1·2일차 해님 달님 = 카드 1번)를 '오늘의 동화'로 표시하고 맨 앞에
+  const profile = useProfile();
+  const todayId = dayOf(profile?.day ?? 1).story ? 1 : null;
+  const ordered = [...stories].sort((a, b) => Number(b.id === todayId) - Number(a.id === todayId));
   const btn = { height: u(60, 48), fontSize: f(22, 16) };
   const titleSize = { fontSize: f(30, 22) };
   const story = stories.find(s => String(s.id) === cards);
@@ -40,7 +46,8 @@ export default function SensoryStories() {
     {!story && <Text style={[styles.section, { fontSize: f(22, 18), marginBottom: u(12, 8) }]}>동화를 듣고 단어 카드로 놀아요</Text>}
     {!ready ? <View style={styles.center}><Text style={[styles.title, titleSize]}>{failed ? '그림을 불러오지 못했어요. 다시 들어와 주세요.' : '동화 그림을 준비하고 있어요…'}</Text></View>
       : !story ? <View style={[styles.items, { gap: u(20, 12), flexDirection: width > height ? 'row' : 'column' }]}>
-        {stories.map(s => <Pressable key={s.id} style={[styles.choice, { padding: u(16, 12), borderRadius: u(32, 24) }]} accessibilityRole="button" onPress={() => router.push({ pathname: '/child/story', params: { storyId: String(s.id) } })}>
+        {ordered.map(s => <Pressable key={s.id} style={[styles.choice, { padding: u(16, 12), borderRadius: u(32, 24) }, s.id === todayId && { borderWidth: 3, borderColor: K.star }]} accessibilityRole="button" accessibilityLabel={s.id === todayId ? `오늘의 동화, ${s.title}` : s.title} onPress={() => router.push({ pathname: '/child/story', params: { storyId: String(s.id) } })}>
+          {s.id === todayId && <Text style={{ alignSelf: 'center', fontSize: f(20, 15), fontWeight: '800', color: K.ink, backgroundColor: K.peach, paddingHorizontal: u(14, 10), paddingVertical: u(4, 2), borderRadius: 999, overflow: 'hidden' }}>오늘의 동화</Text>}
           <Image source={frames[s.words[0].word_id as WordId][0]} contentFit="contain" style={{ flex: 1, width: '100%' }} />
           <Text style={[styles.title, titleSize]}>{s.title}</Text>
         </Pressable>)}
