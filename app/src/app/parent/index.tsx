@@ -134,8 +134,10 @@ export default function ParentHome() {
   const line = headline(st).replace(/^오늘은 /, `${name}${josa(name, '은', '는')} 오늘 `);
   const story = today.story ? { title: today.story.title } : null;
   const rows = todayRows(summary, story, me);
-  // 학습률 카드: 둘 다 아이에게 쓸 수 있으면 숨김 (불러오기 전에는 보이지 않게)
-  const showLearn = !!(voice && mouth) && !(voice.usable && mouth.usable);
+  // 학습률 카드: 음성·입모양 둘 다 100% 가 되기 전까지 계속 보임 (와이어프레임: 다 배우면 숨김). 하나만 불러와도 보임
+  const done = (g: Gauge | null) => !!g && g.progress >= 1;
+  const showLearn = !!(voice || mouth) && !(done(voice) && done(mouth));
+  const canUse = !!voice?.usable && !!mouth?.usable;
 
   const go = (href: string) => router.navigate(href as Href);
 
@@ -146,13 +148,15 @@ export default function ParentHome() {
           <Panel>
             <View style={{ gap: 2 }}>
               <Text style={{ fontSize: 15, fontWeight: '800', color: C.text }}>내 아바타 학습률</Text>
-              <Text style={{ fontSize: 12, color: C.sub }}>100%가 되면 {name}에게 더 자연스럽게 말해요</Text>
+              <Text style={{ fontSize: 12, color: C.sub }}>
+                {canUse ? `지금도 ${name}에게 쓸 수 있어요. 더 배우면 더 자연스럽게 말해요` : `100%가 되면 ${name}에게 더 자연스럽게 말해요`}
+              </Text>
             </View>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
               <MiniRing g={voice} label="음성" />
               <MiniRing g={mouth} label="입모양" color={C.green} />
               <View style={{ flex: 1 }} />
-              <BigButton small label="학습하러 가기" onPress={() => go('/parent/avatar')} />
+              <BigButton small label={canUse ? '더 학습하기' : '학습하러 가기'} onPress={() => go('/parent/avatar')} />
             </View>
           </Panel>
         )}
