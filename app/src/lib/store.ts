@@ -10,7 +10,7 @@ import type { DeviceInfo } from '@/lib/types';
 
 export type Profile = {
   childId: string; // = 태블릿 연결 코드
-  child: { name: string; nickname: string; birth: string; level: '한 단어' | '두 단어' | '짧은 문장'; likes: string[] };
+  child: { name: string; nickname: string; birth: string; level: '옹알이' | '한 단어' | '두 단어' | '짧은 문장'; likes: string[] };
   parent: { title: string; tone: '다정한' | '장난스러운' | '차분한'; goals: string[] };
   avatar: AvatarConfig;
   settings: {

@@ -39,7 +39,7 @@ function Maker({ initial }: { initial: AvatarConfig }) {
     <OnboardingScaffold
       step={4}
       title="나만의 아바타를 만들어요"
-      subtitle="아이를 만나러 갈 내 모습이에요. 입모양은 촬영한 영상으로 움직여요."
+      subtitle="실제 얼굴이 아닌 캐릭터예요. 입은 부모님 입모양 수치대로 움직여요."
       footer={<Button label="다음" onPress={next} />}>
       <View
         style={{ height: 220, borderRadius: R.md, backgroundColor: C.card, alignItems: 'center', justifyContent: 'flex-end', overflow: 'hidden' }}>

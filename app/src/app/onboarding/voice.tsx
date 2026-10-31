@@ -85,7 +85,7 @@ export default function VoiceSignup() {
   );
 
   return (
-    <OnboardingScaffold step={5} title="평소 목소리로 읽어주세요" subtitle="읽을 때마다 아바타 목소리가 더 정확해져요." footer={footer}>
+    <OnboardingScaffold step={5} title="평소 목소리로 읽어 주세요" subtitle="읽을 때마다 아바타 목소리가 더 정확해져요." footer={footer}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 20 }}>
         <RingGauge progress={g.progress} baseline={g.baseline} size={124} />
         <View style={{ flex: 1, gap: 4 }}>

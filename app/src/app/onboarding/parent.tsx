@@ -51,8 +51,8 @@ function Form({ initial, childName }: { initial: Profile['parent']; childName: s
   return (
     <OnboardingScaffold
       step={3}
-      title="어떻게 말해주는 부모인가요?"
-      subtitle="AI가 평소 말투에 가깝게 문장을 만들어요."
+      title="평소 아이에게 어떻게 말해 주시나요?"
+      subtitle="아바타가 평소 말투와 비슷하게 말할 수 있게 도와줘요."
       footer={<Button label="다음" disabled={!ready} onPress={next} />}>
       <Section label="아이가 나를 부르는 말">
         <View style={{ flexDirection: 'row', gap: 8 }}>
@@ -87,7 +87,7 @@ function Form({ initial, childName }: { initial: Profile['parent']; childName: s
         ))}
       </Section>
 
-      <Section label="바라는 방향" hint="(여러 개 선택)">
+      <Section label="바라는 방향" hint="(여러 개 골라도 돼요)">
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
           {GOALS.map((g) => (
             <Chip key={g} label={g} selected={goals.includes(g)} onPress={() => toggleGoal(g)} />

@@ -82,7 +82,7 @@ function Form({ initial, code, profile }: { initial: Profile['settings']; code: 
   const toggleOpen = (k: 'start' | 'end' | 'limit') => setOpen((o) => (o === k ? null : k));
 
   return (
-    <OnboardingScaffold step={7} title="마지막으로 정해주세요" footer={
+    <OnboardingScaffold step={7} title="마지막으로 몇 가지만 정해 주세요" footer={
         issued ? (
           <Button label="부모 앱으로" onPress={() => router.replace('/parent')} />
         ) : (
@@ -101,8 +101,8 @@ function Form({ initial, code, profile }: { initial: Profile['settings']; code: 
         {pin2.length === 4 && pin !== pin2 && <Text style={{ color: C.warn }}>PIN이 서로 달라요.</Text>}
       </Section>
       <Section label="데이터 동의">
-        <Check checked={consentBio} onPress={() => setConsentBio((v) => !v)} label="내 목소리와 얼굴 영상으로 아바타를 만드는 데 동의합니다" />
-        <Check checked={consentChild} onPress={() => setConsentChild((v) => !v)} label="아이의 음성·영상·터치 반응 수집에 보호자로서 동의합니다" />
+        <Check checked={consentBio} onPress={() => setConsentBio((v) => !v)} label="내 목소리와 입모양 수치로 아바타를 만드는 데 동의해요 (얼굴 영상은 저장하지 않아요)" />
+        <Check checked={consentChild} onPress={() => setConsentChild((v) => !v)} label="보호자로서 아이의 목소리·표정·터치 반응을 기록하는 데 동의해요" />
       </Section>
 
       <Section label="대화 시간">
@@ -151,7 +151,7 @@ function Form({ initial, code, profile }: { initial: Profile['settings']; code: 
         />
       </Section>
 
-      <Check checked={vibration} onPress={() => setVibration((v) => !v)} label="진동 사용 (약하게, 짧게)" />
+      <Check checked={vibration} onPress={() => setVibration((v) => !v)} label="진동 쓰기 (짧고 약하게만)" />
 
       <View style={{ borderWidth: 1, borderColor: C.border, borderRadius: R.md, padding: 16, gap: 8 }}>
         <Text style={{ fontSize: 16, fontWeight: '800', color: C.text }}>아이 태블릿 연결</Text>
