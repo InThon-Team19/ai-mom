@@ -1,7 +1,7 @@
 // 아이 태블릿 3-2 · 3-3 · 3-5 누르는 사물 — 담당: 태희 (민철 와이어프레임 · 기획 2-3 "사과 한 바퀴의 움직임")
 // 기획 1-1 "아바타가 단어를 말할 때의 연출": 사과 = 베어 문 자국 / 바나나 = 껍질이 한 줄씩 / 과자 = 둘로 부러짐
 // 움직임: 위에서 떨어져 납작하게 닿고 두 번 통통(움직임 줄이기면 한 번) · 기다리면 살짝 흔들림 · 누르면 눌렸다 튀어 오름
-//        · 따라 말하기 중엔 아이 말소리 크기만큼 커짐 · 성공하면 크게 튀며 별 · 넘어갈 때 굴러서 바구니로 쏙
+//        · 아이 말소리 크기만큼 커짐 · 딴 데를 보면(attention) 더 크게 통통 튀며 흔들림 · 성공하면 크게 튀며 별 · 넘어갈 때 굴러서 바구니로 쏙
 // 감각 자극 제한: 깜빡임 없음, 움직임 한 번은 1초 안
 import { useEffect, useRef, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
@@ -125,6 +125,7 @@ export function ItemToy({
   drop,
   reduceMotion,
   wiggle = 0,
+  attention = 0,
   voice = 0,
   success = 0,
   leave = null,
@@ -139,6 +140,7 @@ export function ItemToy({
   drop: boolean; // true 가 되는 순간 위에서 떨어짐 (그 전엔 안 보임)
   reduceMotion?: boolean; // 설정 '움직임 줄이기': 튀는 횟수 1번
   wiggle?: number; // 바뀔 때마다 살짝 흔들림 (눌러주길 기다림)
+  attention?: number; // 바뀔 때마다 크게 튀며 흔들림 (아이가 딴 데를 볼 때 시선 끌기, 1초 안)
   voice?: number; // 0~1 아이 말소리 크기 → 1.0~1.3배
   success?: number; // 바뀔 때마다 크게 튀고 별이 퍼짐
   leave?: ToyLeave | null; // 값이 생기면 그만큼 굴러가서 바구니로 쏙
@@ -196,6 +198,24 @@ export function ItemToy({
       withTiming(0, { duration: 90 }),
     ));
   }, [wiggle, reduceMotion, rot]);
+
+  // 시선 끌기: 통 튀어 오르며 크게 흔들림 (움직임 줄이기면 작게 한 번)
+  useEffect(() => {
+    if (!attention) return;
+    const a = reduceMotion ? 6 : 14;
+    rot.set(withSequence(
+      withTiming(-a, { duration: 110 }),
+      withTiming(a, { duration: 170 }),
+      withTiming(-a * 0.6, { duration: 140 }),
+      withTiming(a * 0.3, { duration: 120 }),
+      withTiming(0, { duration: 100 }),
+    ));
+    const h = size * (reduceMotion ? 0.08 : 0.22);
+    const hops = [withTiming(-h, { duration: 200, easing: out }), withTiming(0, { duration: 200, easing: inn })];
+    if (!reduceMotion) hops.push(withTiming(-h * 0.4, { duration: 140, easing: out }), withTiming(0, { duration: 140, easing: inn }));
+    ty.set(withSequence(...hops));
+    pop.set(withSequence(withTiming(reduceMotion ? 1.06 : 1.15, { duration: 200, easing: out }), withSpring(1, GENTLE)));
+  }, [attention, reduceMotion, size, rot, ty, pop]);
 
   // 따라 말하기: 아이 말소리 크기에 맞춰 커졌다 작아짐
   useEffect(() => {

@@ -1,9 +1,9 @@
-// 아이 태블릿 3-x 공용 조각 (아이콘·큰 버튼·누르고 말하는 마이크·하루 사용 상한·응시 센서) — 담당: 태희 (민철 와이어프레임 기준)
+// 아이 태블릿 3-x 공용 조각 (아이콘·큰 버튼·누르고 말하는 마이크·듣고 있는 귀·하루 사용 상한·응시 센서) — 담당: 태희 (민철 와이어프레임 기준)
 // 공용 파일(ui.tsx, theme.ts 등)은 건드리지 않고 아이 화면에만 필요한 것을 여기 모음
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, Text, View, type StyleProp, type ViewStyle } from 'react-native';
-import Animated, { useAnimatedStyle, useSharedValue, withRepeat, withTiming, cancelAnimation } from 'react-native-reanimated';
+import Animated, { useAnimatedStyle, useSharedValue, withRepeat, withTiming, cancelAnimation, type SharedValue } from 'react-native-reanimated';
 import Svg, { Path, Rect } from 'react-native-svg';
 
 import { FaceTracker, type FaceFrame } from '@/components/FaceTracker';
@@ -191,6 +191,67 @@ export function HoldMic({ recording, onPressIn, onPressOut, size = 120, disabled
         <MicIcon size={size * 0.45} />
       </Pressable>
     </View>
+  );
+}
+
+/**
+ * 듣고 있는 귀 (상시 듣기 표시). 녹음 버튼 대신 — 누르지 않아도 듣고 있음을 보여줌.
+ * level(0~1)만큼 둥근 테두리가 부드럽게 커짐 · 듣는 중엔 천천히 숨쉬듯 · 아바타가 말할 땐 흐리게. 깜빡임 없음.
+ * 누르면 지금부터 몇 초 강제로 들음 (음량 감지가 안 되는 기기용 대체)
+ */
+export function EarListener({
+  status,
+  level,
+  onPress,
+  size = 64,
+}: {
+  status: 'off' | 'denied' | 'paused' | 'listening' | 'hearing';
+  level: SharedValue<number>;
+  onPress?: () => void;
+  size?: number;
+}) {
+  const breathe = useSharedValue(0);
+  const on = status === 'listening' || status === 'hearing';
+  useEffect(() => {
+    if (on) breathe.value = withRepeat(withTiming(1, { duration: 1600 }), -1, true);
+    else {
+      cancelAnimation(breathe);
+      breathe.value = 0;
+    }
+  }, [on, breathe]);
+  const hearing = status === 'hearing';
+  const ringStyle = useAnimatedStyle(() => {
+    const k = on ? Math.max(level.value, breathe.value * 0.25) : 0;
+    return { opacity: on ? 0.25 + 0.35 * k : 0, transform: [{ scale: 1 + 0.45 * k }] };
+  });
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel="듣고 있어요"
+      onPress={onPress}
+      hitSlop={12}
+      style={{ width: size * 1.45, height: size * 1.45, alignItems: 'center', justifyContent: 'center' }}>
+      <Animated.View
+        pointerEvents="none"
+        style={[{ position: 'absolute', width: size, height: size, borderRadius: size / 2, backgroundColor: hearing ? C.accent : C.primary }, ringStyle]}
+      />
+      <View
+        style={{
+          width: size,
+          height: size,
+          borderRadius: size / 2,
+          backgroundColor: hearing ? C.primary : C.white,
+          borderWidth: 3,
+          borderColor: on ? C.primaryStrong : C.border,
+          alignItems: 'center',
+          justifyContent: 'center',
+          opacity: on ? 1 : 0.55,
+        }}>
+        <Text allowFontScaling={false} style={{ fontSize: size * 0.5, lineHeight: size * 0.62, includeFontPadding: false }}>
+          {status === 'denied' ? '🙉' : '👂'}
+        </Text>
+      </View>
+    </Pressable>
   );
 }
 

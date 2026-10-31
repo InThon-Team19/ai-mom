@@ -4,6 +4,7 @@
 // 수치 계산식은 server/app/vision/landmarks.py 와 같음 (임계값 바꾸면 둘 다 수정)
 // 기획 2-4 카메라 인식 화면용으로 입 둘레 좌표(lips)·얼굴 상자(box)·어두움(dark)도 같이 보냄 → FaceGuide 가 그림.
 // 좌표는 화면에 보이는 미리보기 기준 0~1 (거울 반전·object-fit:cover 잘림까지 반영) → RN 에서 크기만 곱하면 됨.
+// 표정(expr): blendshape 로 웃음·놀람·찡그림을 나눔 (기획 1-1 시각 반응 "표정 변화"). 앱에서만 쓰는 값 (서버 landmarks.py 엔 없음)
 import { useCameraPermissions } from 'expo-camera';
 import { memo, useEffect, useMemo, useRef } from 'react';
 import { Pressable, Text, View, type ViewStyle } from 'react-native';
@@ -23,7 +24,10 @@ export type FaceFrame = {
   lips?: [number, number][]; // 입 바깥 윤곽 20점 (미리보기 기준 0~1, 순서대로 이으면 닫힌 고리)
   box?: { x: number; y: number; w: number; h: number }; // 얼굴 상자 (미리보기 기준 0~1)
   dark?: boolean; // 화면이 어두움 (1초마다 밝기 측정)
+  expr?: FaceExpr; // 표정 (얼굴이 있을 때만)
 };
+
+export type FaceExpr = 'smile' | 'surprise' | 'frown' | 'neutral';
 
 export type FaceTrackerProps = {
   onFrame: (f: FaceFrame) => void;
@@ -104,7 +108,12 @@ try {
     if (!p) { post({ type: 'frame', face: false, looking: false, mouthOpen: false, open: 0, width: 0, yaw: 0, pitch: 0, iris: 0, smile: false, fps, dark }); return; }
     const bs = (res.faceBlendshapes && res.faceBlendshapes[0] && res.faceBlendshapes[0].categories) || [];
     const sc = (n) => { const c = bs.find((x) => x.categoryName === n); return c ? c.score : 0; };
-    const smile = (sc('mouthSmileLeft') + sc('mouthSmileRight')) / 2 > 0.5;
+    const avg = (a, b) => (sc(a) + sc(b)) / 2;
+    const smile = avg('mouthSmileLeft', 'mouthSmileRight') > 0.5;
+    // 표정: 웃음 > 놀람(눈썹 안쪽 올림, 또는 입 크게 + 눈 크게) > 찡그림(입꼬리 내림, 또는 눈썹 내림) > 보통
+    const surprise = sc('browInnerUp') > 0.5 || (sc('jawOpen') > 0.5 && avg('eyeWideLeft', 'eyeWideRight') > 0.4);
+    const frown = avg('mouthFrownLeft', 'mouthFrownRight') > 0.4 || avg('browDownLeft', 'browDownRight') > 0.5;
+    const expr = !bs.length ? undefined : smile ? 'smile' : surprise ? 'surprise' : frown ? 'frown' : 'neutral';
     const eye = d(p, 33, 263) || 1e-6;
     const open = d(p, 13, 14) / eye, width = d(p, 61, 291) / eye;
     sOpen = sOpen * 0.4 + open * 0.6; // 떨림 줄이기
@@ -117,7 +126,7 @@ try {
     for (let i = 0; i < p.length; i++) { const a = p[i]; if (a.x < x0) x0 = a.x; if (a.x > x1) x1 = a.x; if (a.y < y0) y0 = a.y; if (a.y > y1) y1 = a.y; }
     const tl = m(x1, y0), br = m(x0, y1); // 거울 반전이라 x 최대값이 왼쪽
     const box = { x: tl[0], y: tl[1], w: q(br[0] - tl[0]), h: q(br[1] - tl[1]) };
-    post({ type: 'frame', face: true, looking, mouthOpen: sOpen > 0.08, open: sOpen, width, yaw, pitch, iris, smile, fps, lips, box, dark });
+    post({ type: 'frame', face: true, looking, mouthOpen: sOpen > 0.08, open: sOpen, width, yaw, pitch, iris, smile, fps, lips, box, dark, expr });
   }
   requestAnimationFrame(tick);
 } catch (e) { post({ type: 'error', message: String(e && e.message || e) }); }
