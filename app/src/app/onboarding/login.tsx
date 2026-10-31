@@ -58,11 +58,11 @@ export default function Login() {
       </View>
       <View style={{ gap: 6 }}>
         <Text style={T.small}>비밀번호</Text>
-        <TextInput value={pw} onChangeText={setPw} secureTextEntry placeholder="4자 이상" placeholderTextColor={C.muted} onSubmitEditing={submit} style={input} />
+        <TextInput value={pw} onChangeText={setPw} secureTextEntry placeholder="비밀번호" placeholderTextColor={C.muted} onSubmitEditing={submit} style={input} />
       </View>
       {!!error && <Text style={{ color: C.warn, fontSize: 15 }}>{error}</Text>}
       <View style={{ flex: 1 }} />
-      <Button label={busy ? '로그인 중…' : '로그인'} disabled={busy || id.trim().length < 3 || pw.length < 4} onPress={submit} />
+      <Button label={busy ? '로그인 중…' : '로그인'} disabled={busy || id.trim().length < 3 || pw.length < 1} onPress={submit} />
       <Button label="처음이에요 · 가입하기" variant="ghost" onPress={() => router.replace('/onboarding/start')} />
     </SafeAreaView>
   );

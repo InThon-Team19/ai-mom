@@ -6,7 +6,7 @@ import { Pressable, Text, TextInput, View } from 'react-native';
 
 import { PersonaCard } from '@/components/PersonaCard';
 import { Button, OnboardingScaffold } from '@/components/ui';
-import { signup } from '@/lib/account';
+import { api } from '@/lib/api';
 import { pinHash, validPin } from '@/lib/pin';
 import { prefetchDay } from '@/lib/prefetch';
 import { registerThisDevice } from '@/lib/device';
@@ -47,54 +47,50 @@ function Form({ initial, code, profile }: { initial: Profile['settings']; code: 
   const [open, setOpen] = useState<'start' | 'end' | 'limit' | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const [loginId, setLoginId] = useState('');
-  const [pw, setPw] = useState('');
-  const [pw2, setPw2] = useState('');
-  const [accountError, setAccountError] = useState('');
+  const [error, setError] = useState('');
+  const [issued, setIssued] = useState<string | null>(null); // 가입 저장 후 받은 태블릿 연결 코드 (10분 유효)
   const [pin, setPin] = useState('');
   const [pin2, setPin2] = useState('');
 
   const timeOk = start < end; // "HH:00" 문자열 비교로 충분
-  const accountOk = /^[a-zA-Z0-9_.@-]{3,40}$/.test(loginId.trim()) && pw.length >= 4 && pw === pw2;
   const pinOk = validPin(pin) && pin === pin2;
-  const ready = consentBio && consentChild && timeOk && accountOk && pinOk && !saving;
+  const ready = consentBio && consentChild && timeOk && pinOk && !saving;
 
   const finish = async () => {
     if (!ready) return;
     setSaving(true);
-    setAccountError('');
-    const acc = await signup(loginId, pw, code);
-    if (!acc.ok) {
-      setAccountError(acc.message);
-      setSaving(false);
-      return;
-    }
+    setError('');
     const p = await updateProfile({
       settings: { ...profile.settings, consentBio, consentChild, start, end, dailyLimitMin: limit, vibration },
       pinHash: await pinHash(code, pin),
       onboarded: true,
     });
-    setTimeout(() => {
-      registerThisDevice(p.childId, 'parent'); // 프로필 저장(PUT)이 먼저 끝나게
-      prefetchDay(p, p.day); // 1일차 엄마 목소리 미리 만들기
-    }, 800);
-    router.replace('/parent');
+    try {
+      await api.putProfile(p.childId, p); // 가입 완료를 서버에 확실히 저장 (태블릿 연결은 가입 완료 뒤에만 됨)
+      const r = await api.reissueLinkCode(p.childId); // 지금 쓸 수 있는 연결 코드 (10분 유효)
+      setIssued(r.linkCode);
+    } catch (e) {
+      setError(`서버에 저장하지 못했어요: ${String(e).slice(0, 100)}`);
+      setSaving(false);
+      return;
+    }
+    registerThisDevice(p.childId, 'parent');
+    prefetchDay(p, p.day); // 1일차 엄마 목소리 미리 만들기
+    setSaving(false);
   };
 
   const toggleOpen = (k: 'start' | 'end' | 'limit') => setOpen((o) => (o === k ? null : k));
 
   return (
-    <OnboardingScaffold step={7} title="마지막으로 정해주세요" footer={<Button label="시작하기" disabled={!ready} onPress={finish} />}>
+    <OnboardingScaffold step={7} title="마지막으로 정해주세요" footer={
+        issued ? (
+          <Button label="부모 앱으로" onPress={() => router.replace('/parent')} />
+        ) : (
+          <Button label={saving ? '저장하는 중…' : '시작하기'} disabled={!ready} onPress={finish} />
+        )
+      }>
       <PersonaCard profile={profile} />
 
-      <Section label="부모 계정 만들기">
-        <Text style={T.small}>다른 폰에서 로그인하거나 앱을 다시 설치해도 우리 아이 정보를 그대로 불러와요.</Text>
-        <TextInput value={loginId} onChangeText={setLoginId} autoCapitalize="none" autoCorrect={false} placeholder="아이디 (영문·숫자 3자 이상)" placeholderTextColor={C.muted} style={inputStyle} />
-        <TextInput value={pw} onChangeText={setPw} secureTextEntry placeholder="비밀번호 (4자 이상)" placeholderTextColor={C.muted} style={inputStyle} />
-        <TextInput value={pw2} onChangeText={setPw2} secureTextEntry placeholder="비밀번호 확인" placeholderTextColor={C.muted} style={inputStyle} />
-        {pw2.length > 0 && pw !== pw2 && <Text style={{ color: C.warn }}>비밀번호가 서로 달라요.</Text>}
-        {!!accountError && <Text style={{ color: C.warn }}>{accountError}</Text>}
-      </Section>
 
       <Section label="부모 PIN (숫자 4자리)">
         <Text style={T.small}>아이 모드에서 부모 모드로 돌아올 때 써요. 아이가 모르게 정해 주세요.</Text>
@@ -159,12 +155,19 @@ function Form({ initial, code, profile }: { initial: Profile['settings']; code: 
 
       <View style={{ borderWidth: 1, borderColor: C.border, borderRadius: R.md, padding: 16, gap: 8 }}>
         <Text style={{ fontSize: 16, fontWeight: '800', color: C.text }}>아이 태블릿 연결</Text>
-        <Text style={T.small}>아이 태블릿에서 아이맘을 열고 이 코드를 입력하세요.</Text>
-        <View style={{ backgroundColor: C.card, borderRadius: R.sm, paddingVertical: 14, alignItems: 'center' }}>
-          <Text selectable style={{ fontSize: 30, fontWeight: '800', letterSpacing: 6, color: C.text }}>
-            {code.slice(0, 3)} {code.slice(3)}
-          </Text>
-        </View>
+        {issued ? (
+          <>
+            <Text style={T.small}>아이 태블릿에서 아이맘을 열고 이 코드를 입력하세요. 10분 동안 한 번만 쓸 수 있어요. 지나면 설정 탭에서 새로 받으면 돼요.</Text>
+            <View style={{ backgroundColor: C.card, borderRadius: R.sm, paddingVertical: 14, alignItems: 'center' }}>
+              <Text selectable style={{ fontSize: 30, fontWeight: '800', letterSpacing: 6, color: C.text }}>
+                {issued.slice(0, 3)} {issued.slice(3)}
+              </Text>
+            </View>
+          </>
+        ) : (
+          <Text style={T.small}>“시작하기”를 누르면 가입이 저장되고 여기에 태블릿 연결 코드가 나와요.</Text>
+        )}
+        {!!error && <Text style={{ color: C.warn }}>{error}</Text>}
       </View>
     </OnboardingScaffold>
   );

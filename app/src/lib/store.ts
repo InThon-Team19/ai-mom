@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 
 import { DEFAULT_AVATAR, type AvatarConfig } from '@/components/Avatar';
 import { api } from '@/lib/api';
+import { setToken } from '@/lib/session';
 import type { DeviceInfo } from '@/lib/types';
 
 export type Profile = {
@@ -78,8 +79,11 @@ export async function updateProfile(patch: Partial<Profile>) {
 
 /** 아이 태블릿: 연결 코드로 서버에서 프로필 받아오기 */
 export async function linkTablet(code: string) {
-  const p = (await api.link(code.trim().toUpperCase())) as Profile;
-  current = { ...newProfile(), ...p };
+  const r = (await api.link(code.trim().toUpperCase())) as Profile & { token?: string };
+  if (r.token) await setToken(r.token); // 아이 태블릿 기기 토큰 → 이후 모든 요청에 사용
+  const { token: _t, ...p } = r;
+  void _t;
+  current = { ...newProfile(), ...p, onboarded: true };
   listeners.forEach((l) => l(current!));
   try {
     await AsyncStorage.setItem(KEY, JSON.stringify(current));
@@ -137,6 +141,7 @@ export const setRole = async (r: Role) => {
 
 /** 이 기기의 프로필·모드 지우기 (설정 탭 "처음부터 다시" / 아이 태블릿 연결 해제) */
 export async function resetLocal() {
+  await setToken(null);
   current = newProfile();
   listeners.forEach((l) => l(current!));
   try {

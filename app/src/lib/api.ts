@@ -4,6 +4,7 @@ import { File } from 'expo-file-system';
 import { readAsStringAsync } from 'expo-file-system/legacy';
 
 import { getApiUrl } from './config';
+import { getToken } from './session';
 import type {
   ActivityEvent,
   AnalysisOut,
@@ -32,7 +33,11 @@ import type {
 } from './types';
 
 export async function req<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${getApiUrl()}${path}`, init);
+  // 저장된 토큰을 자동으로 붙임 (이미 Authorization 을 넣은 호출은 그대로)
+  const t = await getToken();
+  const headers = new Headers(init?.headers);
+  if (t && !headers.has('Authorization')) headers.set('Authorization', `Bearer ${t}`);
+  const res = await fetch(`${getApiUrl()}${path}`, { ...init, headers });
   if (!res.ok) throw new Error(`${res.status} ${path}: ${await res.text()}`);
   return res.json() as Promise<T>;
 }

@@ -101,16 +101,16 @@ export function AccountSection({ childId }: { childId: string }) {
       {mode === 'create' && (
         <View style={{ gap: 8 }}>
           {!account?.pending && <TextInput value={id} onChangeText={setId} autoCapitalize="none" autoCorrect={false} placeholder="아이디 (영문·숫자 3자 이상)" placeholderTextColor={C.muted} style={inputStyle} />}
-          <TextInput value={pw} onChangeText={setPw} secureTextEntry placeholder="비밀번호 (4자 이상)" placeholderTextColor={C.muted} style={inputStyle} />
+          <TextInput value={pw} onChangeText={setPw} secureTextEntry placeholder="비밀번호 (8자 이상)" placeholderTextColor={C.muted} style={inputStyle} />
           <TextInput value={pw2} onChangeText={setPw2} secureTextEntry placeholder="비밀번호 확인" placeholderTextColor={C.muted} style={inputStyle} />
-          <Button label={busy ? '등록 중…' : '등록'} disabled={busy || pw.length < 4 || pw !== pw2 || (!account?.pending && id.trim().length < 3)} onPress={create} />
+          <Button label={busy ? '등록 중…' : '등록'} disabled={busy || pw.length < 8 || pw !== pw2 || (!account?.pending && id.trim().length < 3)} onPress={create} />
         </View>
       )}
       {mode === 'password' && (
         <View style={{ gap: 8 }}>
           <TextInput value={pw} onChangeText={setPw} secureTextEntry placeholder="지금 비밀번호" placeholderTextColor={C.muted} style={inputStyle} />
-          <TextInput value={pw2} onChangeText={setPw2} secureTextEntry placeholder="새 비밀번호 (4자 이상)" placeholderTextColor={C.muted} style={inputStyle} />
-          <Button label={busy ? '바꾸는 중…' : '비밀번호 바꾸기'} disabled={busy || pw.length < 4 || pw2.length < 4} onPress={change} />
+          <TextInput value={pw2} onChangeText={setPw2} secureTextEntry placeholder="새 비밀번호 (8자 이상)" placeholderTextColor={C.muted} style={inputStyle} />
+          <Button label={busy ? '바꾸는 중…' : '비밀번호 바꾸기'} disabled={busy || pw.length < 8 || pw2.length < 8} onPress={change} />
         </View>
       )}
       {!!msg && <Text style={{ color: msg.includes('바꿨어요') ? C.ok : C.warn }}>{msg}</Text>}

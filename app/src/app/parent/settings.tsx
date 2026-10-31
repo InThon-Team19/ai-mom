@@ -68,6 +68,7 @@ export default function Settings() {
   const [mouth, setMouth] = useState<Gauge | null>(null);
   const [hist, setHist] = useState<History | null>(null);
   const [busy, setBusy] = useState(false);
+  const [issued, setIssued] = useState<string | null>(null); // 받은 연결 코드 (10분, 한 번만)
   const [newPin, setNewPin] = useState('');
   const [pinMsg, setPinMsg] = useState('');
 
@@ -85,13 +86,28 @@ export default function Settings() {
   useFocusEffect(load);
 
   if (!p) return null;
-  const code = p.linkCode || p.childId;
-
+  const hasTablet = (p.devices ?? []).some((d) => d.role === 'child');
+  const getCode = async () => {
+    setBusy(true);
+    try {
+      const r = await api.reissueLinkCode(p.childId);
+      setIssued(r.linkCode);
+      load();
+    } catch (e) {
+      Alert.alert('연결 코드를 받지 못했어요', String(e).slice(0, 120));
+    } finally {
+      setBusy(false);
+    }
+  };
+  // 새 코드를 받으면 서버가 이미 연결된 아이 태블릿을 끊음 → 태블릿이 있을 때만 확인
   const reissue = () =>
-    confirm('연결 키를 다시 만들까요?', '이전 키로 연결된 아이 태블릿은 연결이 끊기고, 새 키로 다시 연결해야 해요.', '재발급', async () => {
+    !hasTablet
+      ? getCode()
+      : confirm('새 연결 코드를 받을까요?', '지금 연결된 아이 태블릿은 연결이 끊기고, 새 코드로 다시 연결해야 해요.', '받기', async () => {
       setBusy(true);
       try {
-        await api.reissueLinkCode(p.childId);
+        const r = await api.reissueLinkCode(p.childId);
+        setIssued(r.linkCode);
         load();
       } catch (e) {
         Alert.alert('재발급 실패', String(e).slice(0, 120));
@@ -168,14 +184,18 @@ export default function Settings() {
           </View>
         </Section>
 
-        <Section title="태블릿 연결 키">
-          <Text style={T.small}>아이 태블릿에서 이 키를 입력하면 연결돼요.</Text>
-          <View style={{ backgroundColor: C.card, borderRadius: R.sm, paddingVertical: 14, alignItems: 'center' }}>
-            <Text style={{ fontSize: 30, fontWeight: '900', letterSpacing: 6, color: C.text }}>
-              {code.slice(0, 3)} {code.slice(3)}
-            </Text>
-          </View>
-          <Button label={busy ? '만드는 중…' : '연결 키 재발급'} variant="outline" disabled={busy} onPress={reissue} />
+        <Section title="아이 기기 연결">
+          <Text style={T.small}>
+            {hasTablet ? '아이 태블릿이 연결돼 있어요. 다른 태블릿을 연결하려면 새 코드를 받으세요.' : '코드를 받아 아이 태블릿에 입력하면 연결돼요.'} 코드는 보안을 위해 10분 동안 한 번만 쓸 수 있어요.
+          </Text>
+          {issued && (
+            <View style={{ backgroundColor: C.card, borderRadius: R.sm, paddingVertical: 14, alignItems: 'center' }}>
+              <Text selectable style={{ fontSize: 30, fontWeight: '900', letterSpacing: 6, color: C.text }}>
+                {issued.slice(0, 3)} {issued.slice(3)}
+              </Text>
+            </View>
+          )}
+          <Button label={busy ? '받는 중…' : issued ? '새 코드 다시 받기' : '연결 코드 받기'} variant="outline" disabled={busy} onPress={reissue} />
         </Section>
 
         <Section title="등록된 기기">

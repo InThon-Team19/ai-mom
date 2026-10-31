@@ -8,6 +8,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '@/components/ui';
 import { api } from '@/lib/api';
 import { loadApiUrl, saveApiUrl } from '@/lib/config';
+import { loadAccount } from '@/lib/account';
 import { getRole, loadProfile, setRole, type Role } from '@/lib/store';
 import { C, T } from '@/theme';
 
@@ -27,8 +28,9 @@ export default function Entry() {
     (async () => {
       setUrl(await loadApiUrl());
       check();
-      const [role, p] = await Promise.all([getRole(), loadProfile()]);
-      if (role === 'parent' && p.onboarded) setDest('/parent');
+      const [role, p, a] = await Promise.all([getRole(), loadProfile(), loadAccount()]);
+      // 서버가 모든 API 에 로그인을 요구: 부모 기기인데 로그인 토큰이 없으면(이전 버전 가입 기기 포함) 로그인부터
+      if (role === 'parent' && p.onboarded) setDest(a?.token ? '/parent' : '/onboarding/login');
       else if (role === 'child') setDest('/child');
       setReady(true);
     })();
@@ -40,8 +42,10 @@ export default function Entry() {
   const choose = async (r: Role) => {
     await setRole(r);
     const p = await loadProfile();
-    // 이미 가입한 기기를 부모 모드로 되돌리면 가입을 다시 하지 않음
-    router.replace(r === 'parent' ? (p.onboarded ? '/parent' : '/onboarding/start') : '/child');
+    const a = await loadAccount();
+    // 부모 모드: 로그인 토큰이 있고 가입을 마쳤으면 부모 앱, 가입 중이면 이어서, 아니면 로그인/가입
+    const dest = r === 'child' ? '/child' : a?.token ? (p.onboarded ? '/parent' : '/onboarding/child') : p.onboarded ? '/onboarding/login' : '/onboarding/start';
+    router.replace(dest as '/parent');
   };
 
   return (

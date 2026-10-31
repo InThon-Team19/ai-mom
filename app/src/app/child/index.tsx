@@ -145,7 +145,17 @@ function LinkScreen({ onDone, canCancel }: { onDone: () => void; canCancel: bool
       onDone();
     } catch (e) {
       const msg = String((e as Error)?.message ?? '');
-      setError(msg.startsWith('404') ? '코드를 찾을 수 없어요. 부모 폰의 연결 코드를 확인해 주세요.' : '서버에 연결할 수 없어요. 잠시 후 다시 해주세요.');
+      setError(
+        msg.startsWith('404')
+          ? '코드가 맞지 않거나 10분이 지났어요. 부모 폰 설정 탭에서 새 코드를 받아 주세요.'
+          : msg.includes('가입 설정')
+            ? '부모 폰에서 가입을 끝까지 마친 뒤 연결해 주세요.'
+            : msg.includes('이미 사용한')
+              ? '이미 쓴 코드예요. 부모 폰 설정 탭에서 새 코드를 받아 주세요.'
+              : msg.startsWith('429')
+                ? '시도가 너무 많아요. 잠시 후 다시 해주세요.'
+                : '서버에 연결할 수 없어요. 잠시 후 다시 해주세요.',
+      );
     } finally {
       setBusy(false);
     }
@@ -155,7 +165,7 @@ function LinkScreen({ onDone, canCancel }: { onDone: () => void; canCancel: bool
     <View style={{ flex: 1, backgroundColor: C.primarySoft, alignItems: 'center', justifyContent: 'center', padding: 24 }}>
       <View style={{ backgroundColor: C.white, borderRadius: R.lg, padding: 32, gap: 18, width: '100%', maxWidth: 520, alignItems: 'stretch' }}>
         <Text style={T.h1}>태블릿 연결</Text>
-        <Text style={T.sub}>부모 폰의 설정 화면에 있는 연결 코드 6자리를 입력해 주세요.</Text>
+        <Text style={T.sub}>부모 폰 설정 탭에서 받은 연결 코드 6자리를 입력해 주세요.</Text>
         <TextInput
           value={code}
           onChangeText={(t) => setCode(t.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6))}

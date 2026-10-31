@@ -4,6 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useState } from 'react';
 
 import { api, req } from '@/lib/api';
+import { setToken } from '@/lib/session';
 import { loadProfile, setProfileFromServer, type Profile } from '@/lib/store';
 
 export type Account = { loginId: string; token?: string; pending?: boolean }; // pending: 서버 가입 전 (기기에만 있음)
@@ -25,6 +26,7 @@ export async function loadAccount(): Promise<Account | null> {
 
 async function save(a: Account | null) {
   current = a;
+  await setToken(a?.token ?? null); // 모든 API 요청에 붙는 토큰
   listeners.forEach((l) => l(a));
   try {
     if (a) await AsyncStorage.setItem(KEY, JSON.stringify(a));
@@ -49,7 +51,7 @@ export function authMessage(e: unknown) {
   const m = String((e as Error)?.message ?? e);
   if (m.startsWith('401')) return '아이디 또는 비밀번호가 맞지 않아요.';
   if (m.startsWith('409')) return '이미 쓰는 아이디예요. 다른 아이디를 써 주세요.';
-  if (m.startsWith('422')) return '아이디는 공백 없이 3~60자, 비밀번호는 4~128자로 입력해 주세요.';
+  if (m.startsWith('422')) return '아이디는 공백 없이 3~60자, 비밀번호는 8자 이상으로 입력해 주세요.';
   if (m.startsWith('400')) return m.replace(/^400 [^:]*: /, '').replace(/^\{"detail":"(.*)"\}$/, '$1');
   if (m.startsWith('404') || m.startsWith('405')) return '로그인 서버가 아직 준비 중이에요. 잠시 후 다시 해주세요.';
   return '서버에 연결할 수 없어요. 잠시 후 다시 해주세요.';
@@ -59,7 +61,7 @@ export function authMessage(e: unknown) {
 export async function signup(loginId: string, password: string, childId: string) {
   const id = loginId.trim().toLowerCase();
   try {
-    const r = await api.signup({ login_id: id, password, child_id: childId, profile: await loadProfile() });
+    const r = await api.signup({ login_id: id, password, child_id: childId, profile: { ...(await loadProfile()), onboarded: false } }); // 가입 완료는 1-7 에서 (서버가 PIN·동의를 확인)
     await save({ loginId: r.login_id, token: r.token });
     return { ok: true as const, pending: false };
   } catch (e) {
