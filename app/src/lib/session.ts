@@ -16,7 +16,16 @@ export async function getToken(): Promise<string | null> {
   return token;
 }
 
+/** 아이 모드에서 기기 토큰이 끊겨 부모 토큰으로 성공했을 때, 앱을 다시 켤 때까지 쓰는 임시 토큰 (저장 안 함).
+ *  새 토큰이 저장되면(태블릿 다시 연결·로그인) 지움 */
+let override: string | null = null;
+export const getOverride = () => override;
+export const setOverride = (t: string | null) => {
+  override = t;
+};
+
 export async function setToken(t: string | null) {
+  override = null;
   token = t;
   try {
     if (t) await AsyncStorage.setItem(KEY, t);

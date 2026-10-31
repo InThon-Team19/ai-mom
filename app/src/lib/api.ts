@@ -4,7 +4,7 @@ import { File } from 'expo-file-system';
 import { readAsStringAsync } from 'expo-file-system/legacy';
 
 import { getApiUrl } from './config';
-import { getParentToken, getToken, isParentDevice, notifyAuthLost, setToken } from './session';
+import { getOverride, getParentToken, getToken, isParentDevice, notifyAuthLost, setOverride, setToken } from './session';
 import type {
   ActivityEvent,
   AnalysisOut,
@@ -36,7 +36,8 @@ import type {
 
 export async function req<T>(path: string, init?: RequestInit): Promise<T> {
   // 저장된 토큰을 자동으로 붙임 (이미 Authorization 을 넣은 호출은 그대로)
-  const t = await getToken();
+  // 아이 모드에서 부모 토큰으로 성공한 적이 있으면 처음부터 그 토큰 (매번 401 을 거치지 않게)
+  const t = getOverride() ?? (await getToken());
   const headers = new Headers(init?.headers);
   if (t && !headers.has('Authorization')) headers.set('Authorization', `Bearer ${t}`);
   let res = await fetch(`${getApiUrl()}${path}`, { ...init, headers });
@@ -46,11 +47,14 @@ export async function req<T>(path: string, init?: RequestInit): Promise<T> {
     // 부모 모드면 토큰 자리를 부모 토큰으로 바꾸고, 아이 모드(같은 폰을 태블릿으로 쓸 때)면 이번 요청만 다시 시도 (기기 토큰 자리는 그대로)
     const p = await getParentToken();
     if (p && p !== t) {
-      if (await isParentDevice()) await setToken(p);
+      const parentMode = await isParentDevice();
+      if (parentMode) await setToken(p);
       headers.set('Authorization', `Bearer ${p}`);
       res = await fetch(`${getApiUrl()}${path}`, { ...init, headers });
+      if (!parentMode && res.ok) setOverride(p);
     }
   }
+  if (res.status === 401 && getOverride()) setOverride(null); // 임시 토큰도 끊김
   if (res.status === 401 && !(await isParentDevice())) notifyAuthLost(); // 아이 모드: 다시 연결해야 함
   if (!res.ok) throw new Error(`${res.status} ${path}: ${await res.text()}`);
   return res.json() as Promise<T>;
