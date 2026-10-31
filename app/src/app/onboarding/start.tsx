@@ -8,6 +8,7 @@ import { Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Avatar, DEFAULT_AVATAR } from '@/components/Avatar';
+import { Logo } from '@/components/Logo';
 import { BigApple, Button } from '@/components/ui';
 import { C } from '@/theme';
 import { useDevice } from '@/lib/layout';
@@ -51,7 +52,10 @@ export default function Start() {
           </View>
         </View>
         <View style={{ gap: 8 }}>
-          <Text style={{ fontSize: 30, fontWeight: '900', color: C.text }}>아이맘</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+            <Logo size={52} />
+            <Text style={{ fontSize: 30, fontWeight: '900', color: C.text }}>아이맘</Text>
+          </View>
           <Text style={{ fontSize: 15, lineHeight: 24, color: C.sub }}>일하는 동안에도 내 아바타가 아이의 눈, 귀, 손을 깨워 줘요.</Text>
         </View>
       </View>

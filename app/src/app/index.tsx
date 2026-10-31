@@ -6,6 +6,7 @@ import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button, Note, fieldStyle } from '@/components/ui';
+import { Logo } from '@/components/Logo';
 import { api } from '@/lib/api';
 import { loadApiUrl, saveApiUrl } from '@/lib/config';
 import { loadAccount, parentEntry } from '@/lib/account';
@@ -56,7 +57,10 @@ export default function Entry() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }}>
       <ScrollView contentContainerStyle={{ flexGrow: 1, paddingTop: 48, paddingBottom: 24, paddingHorizontal: gutter, gap: 20 }} keyboardShouldPersistTaps="handled">
-        <Text style={{ fontSize: 32, fontWeight: '900', color: C.text }}>아이맘</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+          <Logo size={56} />
+          <Text style={{ fontSize: 32, fontWeight: '900', color: C.text }}>아이맘</Text>
+        </View>
         <Text style={{ fontSize: 20, fontWeight: '700', color: C.text }}>이 기기를 어떻게 쓸까요?</Text>
         <Pressable
           accessibilityRole="button"

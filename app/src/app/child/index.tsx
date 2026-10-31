@@ -8,6 +8,7 @@ import Animated, { FadeIn } from 'react-native-reanimated';
 import Svg, { Circle, Ellipse } from 'react-native-svg';
 
 import { Avatar } from '@/components/Avatar';
+import { Logo } from '@/components/Logo';
 import {
   AvatarCircle,
   BookIcon,
@@ -154,7 +155,10 @@ function Greeting() {
     <KidScreen gap={22} style={{ paddingBottom: u(38, 8) + insets.bottom }}>
       {/* 위: 아이맘 · 부모(3초 꾹) · 일차 */}
       <View style={{ height: topH, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-        <Text style={{ fontSize: f(38, 20), fontWeight: '900', color: K.red }}>아이맘</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: u(8, 4) }}>
+          <Logo size={u(52, 30)} />
+          <Text style={{ fontSize: f(38, 20), fontWeight: '900', color: K.red }}>아이맘</Text>
+        </View>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: u(10, 6) }}>
           <ParentExit label={compact ? '부모' : '부모 · 3초 꾹'} />
           <View
