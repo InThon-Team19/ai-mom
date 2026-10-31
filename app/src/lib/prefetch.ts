@@ -22,6 +22,9 @@ export function dayLines(p: Profile, dayNum = p.day): string[] {
     const it = ITEMS[id];
     const word = english ? `${it.ko}! ${it.en}!` : `${it.ko}!`;
     lines.push(word, fill(it.invite, { name, me }), '눌러볼까?', `같이 따라 해 볼까? ${it.ko}!`, `좋아! ${word}`);
+    // 따라 말하기 반응 (child/session.tsx: 칭찬 → 한 번 더 → 넘어가기 / 다른 말이면 "좋아! 잘했어." / 조용하면 달래기)
+    lines.push(fill('참 잘했어, 우리 {name}!', { name, me }), `한 번 더 해 볼까? ${it.ko}!`, '우와, 최고야!', '이제 다음으로 넘어가 볼까?');
+    lines.push(`좋아! 잘했어. ${word}`, '천천히 해도 괜찮아.', `준비되면 말해 줘. ${it.ko}!`);
   }
   lines.push(fill('잘했어, 우리 {name}!', { name, me }));
   if (d.story) {

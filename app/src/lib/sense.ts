@@ -46,12 +46,13 @@ let lastTick = 0;
  * tick: 손가락을 따라오는 아주 가벼운 톡 (스스로 0.12초 간격 제한) / strong: 북을 세게 쳤을 때 조금 더 (Medium 한 번, 여전히 짧게)
  */
 /** Android 진동 길이(ms) — 모두 짧고 약하게. iOS 기본 Vibration 은 0.4초로 길어서 쓰지 않음 */
+// 너무 짧으면(0.02초 미만) 대부분 폰 모터가 돌지 않아 안 느껴짐 → 느껴지는 최소 길이로, 그래도 짧고 약하게
 const ANDROID_MS: Record<HapticKind, number | number[]> = {
-  tick: 8,
-  tap: 18,
-  strong: 35,
-  praise: [0, 22, 90, 22],
-  soft: [0, 10, 190, 10, 190, 10],
+  tick: 18,
+  tap: 35,
+  strong: 60,
+  praise: [0, 40, 90, 40],
+  soft: [0, 25, 170, 25, 170, 25],
 };
 
 export function haptic(kind: HapticKind) {
