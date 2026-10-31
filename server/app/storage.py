@@ -1,14 +1,19 @@
-"""업로드·생성 파일 저장 위치 (server/static, git 제외). 담당: 태희"""
+"""파일 저장 위치. 담당: 태희
+
+- DATA_DIR (server/data, 비공개): 부모 음성·입모양 수치·아이 반응 기록 — URL 로 노출하지 않음 (기획 4장: 생체·영유아 데이터 보호)
+- STATIC_DIR (server/static, 공개 /static): 아바타가 말할 TTS mp3 처럼 앱이 재생해야 하는 파일만
+"""
 import os
 import re
 import uuid
 from contextvars import ContextVar
 from pathlib import Path
 
-STATIC_DIR = Path(__file__).resolve().parent.parent / "static"
+ROOT = Path(__file__).resolve().parent.parent
+STATIC_DIR = ROOT / "static"
+DATA_DIR = Path(os.getenv("DATA_DIR", ROOT / "data"))
 
-# 파일 URL 의 앞부분. 기본은 "요청이 들어온 주소" (LAN IP·터널 어디서든 맞게).
-# PUBLIC_BASE_URL 을 .env 에 적으면 그 값으로 고정.
+# 공개 파일 URL 앞부분. 기본은 "요청이 들어온 주소" (LAN IP·터널 어디서든 맞게). PUBLIC_BASE_URL 로 고정 가능
 FIXED_BASE_URL = os.getenv("PUBLIC_BASE_URL", "").rstrip("/")
 request_base_url: ContextVar[str] = ContextVar("request_base_url", default="http://localhost:8000")
 
@@ -22,17 +27,25 @@ def safe_id(raw: str) -> str:
 
 
 def child_dir(child_id: str, *sub: str) -> Path:
+    """비공개 데이터 폴더 server/data/children/<id>/..."""
+    d = DATA_DIR.joinpath("children", safe_id(child_id), *sub)
+    d.mkdir(parents=True, exist_ok=True)
+    return d
+
+
+def public_dir(child_id: str, *sub: str) -> Path:
+    """공개 폴더 server/static/children/<id>/... (TTS mp3 등)"""
     d = STATIC_DIR.joinpath("children", safe_id(child_id), *sub)
     d.mkdir(parents=True, exist_ok=True)
     return d
 
 
 def tmp_path(suffix: str) -> Path:
-    d = STATIC_DIR / "tmp"
+    d = DATA_DIR / "tmp"
     d.mkdir(parents=True, exist_ok=True)
     return d / f"{uuid.uuid4().hex}{suffix}"
 
 
 def public_url(path: Path) -> str:
-    rel = path.resolve().relative_to(STATIC_DIR).as_posix()
+    rel = path.resolve().relative_to(STATIC_DIR.resolve()).as_posix()
     return f"{FIXED_BASE_URL or request_base_url.get()}/static/{rel}"

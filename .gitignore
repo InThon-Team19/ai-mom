@@ -9,6 +9,7 @@ __pycache__/
 *.pyc
 server/*.db
 server/models/
+server/data/
 server/static/*
 !server/static/.gitkeep
 

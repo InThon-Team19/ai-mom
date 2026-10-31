@@ -1,84 +1,138 @@
-# 부모 입모양 영상 분석, 아이 응시·입모양 — 담당: 태희
+# 부모 입모양 기준값·학습률, 아이 응시·입모양 — 담당: 태희
 import json
+import math
 import shutil
 from pathlib import Path
 
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 from pydantic import BaseModel
 
-from app.storage import child_dir, public_url
+from app.routers.voice import Gauge
+from app.storage import child_dir, tmp_path
 from app.vision.child import analyze_frame
-from app.vision.mouth import analyze_video
-from app.voice.audio import to_wav
+from app.vision.mouth import video_track
+from app.vision.profile import merge, profile
 
 router = APIRouter(prefix="/vision", tags=["vision"])
 
-
-class MouthTrackPoint(BaseModel):
-    t: float
-    open: float
-    width: float
-
-
-class ParentMouthOut(BaseModel):
-    ok: bool
-    face_ratio: float            # 얼굴이 잡힌 프레임 비율 (0.6 미만이면 다시 찍기 안내)
-    frames: int
-    open_range: list[float]
-    sprites: list[str]           # 립싱크용 입 사진 URL 4장 (닫힘 → 크게 벌림)
-    face_url: str | None
-    video_url: str
-    audio_url: str | None        # 영상에서 뽑은 음성 (16kHz wav) — TTS 목소리 샘플로도 사용 가능
-    track_url: str | None        # 프레임별 입 벌림 JSON
-    message: str
+# 입모양 학습률: 얼굴이 잡힌 채 읽은 시간. 최소 기준 20초, 100% = 40초 (시연용 임시값)
+MOUTH_TARGET_S = 40.0
+MOUTH_MIN_S = 20.0
+KINDS = ("signup", "plan")
 
 
-@router.post("/parent-mouth", response_model=ParentMouthOut)
-def parent_mouth(child_id: str = Form(...), kind: str = Form("signup"), file: UploadFile = File(...)):
-    """부모 입모양 영상 업로드 → 입 사진 4장 + 입 벌림 트랙. kind: signup(가입) | plan(밤 낭독)."""
-    if kind not in ("signup", "plan"):
-        raise HTTPException(400, "kind 는 signup | plan")
-    try:
-        out = child_dir(child_id, "parent", kind)
-    except ValueError:
-        raise HTTPException(400, "child_id 형식 오류")
-    suffix = Path(file.filename or "video.mp4").suffix or ".mp4"
-    video = out / f"mouth{suffix}"
-    with video.open("wb") as f:
-        shutil.copyfileobj(file.file, f)
+def _mouth_dir(child_id: str, kind: str) -> Path:
+    return child_dir(child_id, "parent", "mouth", kind)
 
-    try:
-        res = analyze_video(video, out)
-    except ValueError as e:
-        raise HTTPException(400, str(e))
 
-    audio_url = None
-    try:
-        audio_url = public_url(to_wav(video, out / "mouth_audio.wav"))
-    except Exception:  # 오디오 트랙이 없는 영상
-        pass
+def mouth_profiles(child_id: str, kind: str) -> list[dict]:
+    return [json.loads(p.read_text(encoding="utf-8")) for p in sorted(_mouth_dir(child_id, kind).glob("profile_*.json"))]
 
-    track_url = None
-    if res["track"]:
-        track_path = out / "track.json"
-        track_path.write_text(json.dumps(res["track"]), encoding="utf-8")
-        track_url = public_url(track_path)
 
-    ok = res["face_ratio"] >= 0.6
-    return ParentMouthOut(
-        ok=ok,
-        face_ratio=res["face_ratio"],
-        frames=res["frames"],
-        open_range=res["open_range"],
-        sprites=[public_url(p) for p in res["sprites"]],
-        face_url=public_url(res["face"]) if res["face"] else None,
-        video_url=public_url(video),
-        audio_url=audio_url,
-        track_url=track_url,
-        message="좋아요!" if ok else "얼굴이 잘 안 보여요. 밝은 곳에서 정면으로 다시 찍어 주세요.",
+def mouth_gauge(child_id: str) -> Gauge:
+    ps = [p for k in KINDS for p in mouth_profiles(child_id, k) if p["face_ratio"] >= 0.6]
+    total = sum(p["face_s"] for p in ps)
+    per = total / len(ps) if ps else 2.5
+    remaining = max(0.0, MOUTH_MIN_S - total)
+    return Gauge(
+        progress=round(min(1.0, total / MOUTH_TARGET_S), 3),
+        baseline=MOUTH_MIN_S / MOUTH_TARGET_S,
+        usable=total >= MOUTH_MIN_S,
+        amount=round(total, 1),
+        sentences=len(ps),
+        remaining_sentences=math.ceil(remaining / per) if remaining else 0,
     )
 
 
+class TrackPoint(BaseModel):
+    t: float
+    open: float
+    width: float
+    face: bool = True
+
+
+class MouthTrackIn(BaseModel):
+    child_id: str
+    kind: str = "signup"   # signup(가입 1-6) | plan(밤 낭독 2-4)
+    text: str = ""         # 읽은 문장
+    track: list[TrackPoint]
+
+
+class MouthProfile(BaseModel):
+    frames: int
+    face_ratio: float
+    face_s: float
+    open_p50: float
+    open_p90: float
+    width_p50: float
+
+
+class MouthTrackOut(BaseModel):
+    ok: bool               # 얼굴이 충분히 잡혔는지 (60% 이상)
+    profile: MouthProfile
+    gauge: Gauge
+    gained: float
+    message: str
+
+
+def _save_track(child_id: str, kind: str, text: str, track: list[dict]) -> MouthTrackOut:
+    if kind not in KINDS:
+        raise HTTPException(400, "kind 는 signup | plan")
+    try:
+        d = _mouth_dir(child_id, kind)
+    except ValueError:
+        raise HTTPException(400, "child_id 형식 오류")
+    before = mouth_gauge(child_id).progress
+    prof = profile(track)
+    n = len(list(d.glob("profile_*.json")))
+    (d / f"profile_{n:03d}.json").write_text(json.dumps({**prof, "text": text}, ensure_ascii=False), encoding="utf-8")
+    g = mouth_gauge(child_id)
+    ok = prof["face_ratio"] >= 0.6
+    return MouthTrackOut(ok=ok, profile=MouthProfile(**prof), gauge=g, gained=round(g.progress - before, 3),
+                         message="좋아요!" if ok else "얼굴이 잘 안 보여요. 밝은 곳에서 정면을 봐 주세요.")
+
+
+@router.post("/parent-mouth-track", response_model=MouthTrackOut)
+def parent_mouth_track(body: MouthTrackIn):
+    """문장 하나 읽는 동안 앱이 0.05초마다 잰 입 벌림 수치 → 입모양 기준값 + 학습률. (영상은 기기 밖으로 안 나감)"""
+    return _save_track(body.child_id, body.kind, body.text, [p.model_dump() for p in body.track])
+
+
+@router.post("/parent-mouth", response_model=MouthTrackOut)
+def parent_mouth_video(child_id: str = Form(...), kind: str = Form("signup"), text: str = Form(""),
+                       file: UploadFile = File(...)):
+    """(예비) 입모양 영상 업로드 → 수치만 뽑고 영상은 바로 삭제."""
+    src = tmp_path(Path(file.filename or "v.mp4").suffix or ".mp4")
+    with src.open("wb") as f:
+        shutil.copyfileobj(file.file, f)
+    try:
+        track = video_track(src)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    finally:
+        src.unlink(missing_ok=True)
+    return _save_track(child_id, kind, text, track)
+
+
+@router.get("/gauge/{child_id}", response_model=Gauge)
+def gauge(child_id: str):
+    """입모양 학습률 (부모 홈 2-1)."""
+    try:
+        return mouth_gauge(child_id)
+    except ValueError:
+        raise HTTPException(400, "child_id 형식 오류")
+
+
+@router.get("/mouth-profile/{child_id}", response_model=MouthProfile)
+def mouth_profile(child_id: str):
+    """아바타 입 움직임 크기 기준 (가입 + 밤 낭독 전체). 아이 태블릿 아바타가 사용."""
+    try:
+        return merge(mouth_profiles(child_id, "signup") + mouth_profiles(child_id, "plan"))
+    except ValueError:
+        raise HTTPException(400, "child_id 형식 오류")
+
+
+# ---------- 아이 ----------
 class Gaze(BaseModel):
     yaw: float
     pitch: float
@@ -94,14 +148,14 @@ class Mouth(BaseModel):
 class ChildFrameOut(BaseModel):
     face: bool
     looking: bool      # 화면을 보고 있는지
-    mouth_open: bool   # 입을 벌렸는지 (따라 말하기 확인용)
+    mouth_open: bool   # 입을 벌렸는지
     mouth: Mouth | None
     gaze: Gaze | None
 
 
 @router.post("/child-frame", response_model=ChildFrameOut)
 def child_frame(file: UploadFile = File(...)):
-    """아이 카메라 프레임(jpg/png) 한 장 → 얼굴·응시·입 벌림. 앱에서 1~2초 간격 호출."""
+    """(예비) 아이 카메라 프레임 한 장 → 얼굴·응시·입 벌림. 기본은 앱 FaceTracker 가 기기 안에서 판정."""
     try:
         return analyze_frame(file.file.read())
     except ValueError as e:

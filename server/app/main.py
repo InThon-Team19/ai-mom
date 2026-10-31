@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from app.db import init_db
-from app.routers import children, conversation, evening, vision, voice
+from app.routers import activity, children, conversation, evening, profile, vision, voice
 from app.storage import STATIC_DIR, request_base_url
 
 
@@ -28,7 +28,7 @@ async def remember_base_url(request: Request, call_next):
     request_base_url.set(str(request.base_url).rstrip("/"))
     return await call_next(request)
 
-for r in (children, voice, vision, conversation, evening):
+for r in (children, voice, vision, conversation, evening, activity, profile):
     app.include_router(r.router)
 
 

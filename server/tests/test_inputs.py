@@ -1,15 +1,22 @@
 """입력 파이프라인 테스트 — 담당: 태희.  실행: cd server && pytest -q"""
 import io
+import os
+import tempfile
 import wave
 
-import cv2
-import numpy as np
-from fastapi.testclient import TestClient
+os.environ["DATA_DIR"] = tempfile.mkdtemp(prefix="aibom-test-")  # 실제 데이터와 분리
 
-from app.main import app
-from app.routers.voice import match_expected
-from app.vision import landmarks as L
-from app.voice.audio import speech_features
+import cv2  # noqa: E402
+import numpy as np  # noqa: E402
+from fastapi.testclient import TestClient  # noqa: E402
+
+from app.main import app  # noqa: E402
+from app.routers.activity import summarize  # noqa: E402
+from app.routers.voice import match_expected  # noqa: E402
+from app.vision import landmarks as L  # noqa: E402
+from app.vision.profile import merge, profile  # noqa: E402
+from app.voice.analysis import coaching, traits_and_tips  # noqa: E402
+from app.voice.audio import quality, speech_features  # noqa: E402
 
 client = TestClient(app)
 
@@ -35,11 +42,10 @@ def fake_face(open_gap=0.0, nose_x=0.5, iris_shift=0.0) -> np.ndarray:
     return lm
 
 
+# ---------- 순수 함수 ----------
 def test_mouth_open_scales_with_gap():
-    closed = L.mouth_metrics(fake_face(0.0))["open"]
-    opened = L.mouth_metrics(fake_face(0.06))["open"]
-    assert closed == 0.0
-    assert abs(opened - 0.2) < 1e-3  # 0.06 / 눈 사이 0.3
+    assert L.mouth_metrics(fake_face(0.0))["open"] == 0.0
+    assert abs(L.mouth_metrics(fake_face(0.06))["open"] - 0.2) < 1e-3  # 0.06 / 눈 사이 0.3
 
 
 def test_gaze_front_vs_turned():
@@ -48,50 +54,116 @@ def test_gaze_front_vs_turned():
     assert L.gaze_metrics(fake_face(iris_shift=0.04))["looking"] is False  # 눈만 옆으로
 
 
-def test_mouth_box_inside_image():
-    x0, y0, x1, y1 = L.mouth_box(fake_face(0.05), 640, 480)
-    assert 0 <= x0 < x1 <= 640 and 0 <= y0 < y1 <= 480
+def _tone(sr=16000, seconds=1.0, hz=220.0, amp=0.3, gaps=0):
+    t = np.arange(int(sr * seconds)) / sr
+    x = amp * np.sin(2 * np.pi * hz * t)
+    if gaps:  # 말-쉼 반복
+        x *= (np.sin(2 * np.pi * gaps * t) > 0)
+    return x.astype(np.float32)
 
 
-def test_speech_features_silence_vs_tone():
+def test_speech_features_pitch_and_pauses():
     sr = 16000
     silence = np.zeros(sr, dtype=np.float32)
     assert speech_features(silence, sr)["speech_s"] == 0.0
-    t = np.arange(sr) / sr
-    tone = np.concatenate([silence, 0.3 * np.sin(2 * np.pi * 220 * t).astype(np.float32)])
-    f = speech_features(tone, sr, "안녕하세요")
-    assert 0.8 < f["speech_s"] < 1.2
+    f = speech_features(np.concatenate([silence, _tone(sr, 2.0, 220, gaps=1)]), sr, "안녕하세요")
+    assert 0.7 < f["speech_s"] < 1.4
+    assert abs(f["pitch_hz"] - 220) < 10
+    assert f["pause_mean_s"] >= 0.3
     assert f["syllables_per_s"] > 0
+
+
+def test_quality_flags():
+    sr = 16000
+    good = speech_features(np.concatenate([np.zeros(sr // 2, np.float32), _tone(sr, 2.0)]), sr)
+    assert quality(good)["ok"]
+    noisy = speech_features(_tone(sr, 2.0) + np.random.default_rng(0).normal(0, 0.1, 2 * sr).astype(np.float32), sr)
+    assert not quality(noisy)["quiet"]
+
+
+def test_traits_and_coaching():
+    traits, tips = traits_and_tips({"pause_mean_s": 0.3, "pitch_var": 0.05, "syllables_per_s": 4.0})
+    assert "발화 간격이 비교적 짧아요" in traits and "톤이 일정해요" in traits
+    assert any("기다리는 시간" in t for t in tips)
+    msgs = coaching({"pitch_hz": 220}, {"pitch_hz": 190, "syllables_per_s": 4}, {"open_p90": 0.3}, {"open_p90": 0.25})
+    assert any("톤" in m for m in msgs) and any("20% 더 크게" in m for m in msgs)
+
+
+def test_mouth_profile_and_merge():
+    track = [{"t": i * 0.05, "open": 0.1 + 0.01 * (i % 10), "width": 0.8, "face": i % 5 != 0} for i in range(100)]
+    p = profile(track)
+    assert p["face_ratio"] == 0.8 and p["face_s"] == 4.0 and p["open_p90"] > p["open_p50"]
+    assert merge([p, p])["face_s"] == 8.0
 
 
 def test_match_expected_is_lenient():
     assert match_expected("사과", "사과")
     assert match_expected("사가 주세요", "사과 주세요")
+    assert match_expected("애플", "사과|애플")
     assert not match_expected("바나나", "사과 주세요")
 
 
-def _wav_bytes(seconds=1.0, sr=16000, amp=0.0) -> bytes:
-    t = np.arange(int(sr * seconds)) / sr
-    pcm = (amp * np.sin(2 * np.pi * 220 * t) * 32767).astype(np.int16)
+def test_activity_summary_balance():
+    ev = [{"type": "touch", "data": {"target": "사과", "reaction_ms": 800}}] * 4 + \
+         [{"type": "gaze", "data": {"seconds": 30}}, {"type": "smile", "data": {}},
+          {"type": "repeat", "data": {"word": "사과", "matched": True}},
+          {"type": "out_of_scope", "data": {"text": "공룡은 왜 없어?"}}]
+    s = summarize(ev, "2026-10-31")
+    assert s.touches == 4 and s.words == ["사과"] and s.favorites == ["사과"]
+    assert abs(sum(s.balance.values()) - 1) < 0.01 and s.balance["touch"] == 0.444
+    assert s.out_of_scope == ["공룡은 왜 없어?"]
+
+
+# ---------- API ----------
+def _wav_bytes(seconds=1.0, sr=16000, amp=0.0, lead=0.5) -> bytes:
+    pcm = np.concatenate([np.zeros(int(sr * lead)), _tone(sr, seconds, amp=amp)]) if amp else np.zeros(int(sr * seconds))
     buf = io.BytesIO()
     with wave.open(buf, "wb") as w:
         w.setnchannels(1), w.setsampwidth(2), w.setframerate(sr)
-        w.writeframes(pcm.tobytes())
+        w.writeframes((pcm * 32767).astype(np.int16).tobytes())
     return buf.getvalue()
 
 
 def test_stt_silence_skips_api():
     r = client.post("/voice/stt", files={"file": ("a.wav", _wav_bytes(), "audio/wav")}, data={"expected": "사과"})
     assert r.status_code == 200, r.text
-    assert r.json()["text"] == "" and r.json()["matched"] is False
+    assert r.json()["text"] == "" and r.json()["matched"] is False and r.json()["alert"] is False
 
 
-def test_parent_sample_progress():
-    r = client.post("/voice/parent-sample", data={"child_id": "pytest"},
-                    files={"file": ("a.wav", _wav_bytes(2.0, amp=0.3), "audio/wav")})
+def test_parent_sample_gauge_and_analysis():
+    r = client.post("/voice/parent-sample", data={"child_id": "pytest", "text": "지호야, 안녕? 엄마야."},
+                    files={"file": ("a.wav", _wav_bytes(3.0, amp=0.3), "audio/wav")})
     assert r.status_code == 200, r.text
-    body = r.json()
-    assert body["sample_count"] >= 1 and 0 < body["progress"] <= 1
+    b = r.json()
+    assert b["quality"]["ok"] and b["gauge"]["sentences"] == 1 and b["gained"] > 0
+    assert b["gauge"]["baseline"] == 0.5 and b["gauge"]["remaining_sentences"] > 0
+    assert client.get("/voice/gauge/pytest").json()["sentences"] == 1
+    a = client.get("/voice/analysis/pytest")
+    assert a.status_code == 200 and a.json()["tips"]
+
+
+def test_mouth_track_gauge_and_profile():
+    track = [{"t": i * 0.05, "open": 0.1 + 0.02 * (i % 6), "width": 0.8} for i in range(120)]
+    r = client.post("/vision/parent-mouth-track", json={"child_id": "pytest", "kind": "signup", "text": "사과", "track": track})
+    assert r.status_code == 200, r.text
+    assert r.json()["ok"] and r.json()["gauge"]["amount"] == 6.0
+    assert client.get("/vision/mouth-profile/pytest").json()["open_p90"] > 0
+
+
+def test_coaching_after_plan_read():
+    client.post("/voice/parent-sample", data={"child_id": "pytest", "kind": "plan", "text": "내일은 과자야"},
+                files={"file": ("a.wav", _wav_bytes(2.0, amp=0.3), "audio/wav")})
+    r = client.get("/voice/coaching/pytest")
+    assert r.status_code == 200, r.text and r.json()["messages"]
+
+
+def test_activity_and_profile_api():
+    assert client.post("/activity/pytest", json={"events": [{"type": "touch", "data": {"target": "사과"}}]}).status_code == 200
+    assert client.post("/activity/pytest", json={"events": [{"type": "nope"}]}).status_code == 400
+    assert client.get("/activity/pytest/summary").json()["touches"] == 1
+    assert client.get("/profile/nobody").status_code == 404
+    client.put("/profile/pytest", json={"child": {"name": "지호"}, "day": 1})
+    assert client.put("/profile/pytest", json={"day": 2}).json() == {"child": {"name": "지호"}, "day": 2}
 
 
 def test_child_frame_no_face():
