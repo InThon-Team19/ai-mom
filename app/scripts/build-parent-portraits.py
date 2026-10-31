@@ -47,8 +47,13 @@ def mouth_patch(base, frame, roi, amount=1):
     patch=Image.fromarray(np.clip(pp+delta,0,255).astype('uint8'))
     if amount != 1:
         # Vertical mouth aperture calibration without scaling the face or head.
+        # Shrinking samples beyond the crop. Extend its skin edge pixels first:
+        # Pillow's default out-of-bounds black otherwise becomes two opaque bars.
+        padding=h if amount < 1 else 0
+        if padding:
+            patch=Image.fromarray(np.pad(np.asarray(patch),((padding,padding),(0,0),(0,0)),mode='edge'))
         center=(h-1)/2
-        patch=patch.transform((w,h),Image.Transform.AFFINE,(1,0,0,0,1/amount,center-center/amount),Image.Resampling.BICUBIC)
+        patch=patch.transform((w,h),Image.Transform.AFFINE,(1,0,0,0,1/amount,padding+center-center/amount),Image.Resampling.BICUBIC)
     mask=Image.new('L',(w,h));ImageDraw.Draw(mask).rounded_rectangle((5,5,w-6,h-6),radius=18,fill=255)
     mask=mask.filter(ImageFilter.GaussianBlur(3))
     mask_np=np.asarray(mask).copy();mask_np[:2]=0;mask_np[-2:]=0;mask_np[:,:2]=0;mask_np[:,-2:]=0

@@ -21,6 +21,14 @@ for vid, item in manifest['variants'].items():
             diff[y0-3:y1+3,x0-3:x1+3]=False
             assert not diff.any(), name
             assert (a[:,:,3]==0).any() and (a[:,:,3]==255).any(), name
+            if scale == 'small':
+                # A shrunken mouth cannot reach the top/bottom skin seam.
+                # Detect dark horizontal fill bars, including feathered gray edges.
+                for rows in [slice(y0,y0+4),slice(y1-4,y1)]:
+                    seam=a[rows,x0+10:x1-10,:3].astype(float)
+                    skin=base[rows,x0+10:x1-10,:3].astype(float)
+                    darkening=(skin-seam).mean(axis=(1,2))
+                    assert darkening.max() < 30, (name,'dark mouth seam',darkening.tolist())
             distinct.add(a.tobytes());checked+=1
         assert len(distinct)==6, (vid,scale,'indistinguishable mouth assets')
     for kind in ['blink','right']:
@@ -29,4 +37,4 @@ for vid, item in manifest['variants'].items():
         # Eye overlays must never modify any pixel in the mouth region.
         assert not overlay[y0-3:y1+3,:,3].any()
 assert len(manifest['variants'])==8 and checked==144
-print('PASS: 8 combinations, 144 calibrated PNGs, 6 unique states each; identical pixels/alpha outside mouth; 16 eye overlays isolated')
+print('PASS: 8 combinations, 144 calibrated PNGs, 6 unique states each; no dark small-mouth seams; identical pixels/alpha outside mouth; 16 eye overlays isolated')
