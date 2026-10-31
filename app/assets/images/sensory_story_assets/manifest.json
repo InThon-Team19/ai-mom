@@ -14,11 +14,11 @@
       "frames": [
         {
           "step": 1,
-          "path": "story_01_햇님과달님/sun/sun_01.png"
+          "path": "story_01_sun_moon/sun/sun_01.png"
         },
         {
           "step": 2,
-          "path": "story_01_햇님과달님/sun/sun_02.png"
+          "path": "story_01_sun_moon/sun/sun_02.png"
         }
       ],
       "transition": {
@@ -53,19 +53,19 @@
       "frames": [
         {
           "step": 1,
-          "path": "story_01_햇님과달님/moon/moon_01.png"
+          "path": "story_01_sun_moon/moon/moon_01.png"
         },
         {
           "step": 2,
-          "path": "story_01_햇님과달님/moon/moon_02.png"
+          "path": "story_01_sun_moon/moon/moon_02.png"
         },
         {
           "step": 3,
-          "path": "story_01_햇님과달님/moon/moon_03.png"
+          "path": "story_01_sun_moon/moon/moon_03.png"
         },
         {
           "step": 4,
-          "path": "story_01_햇님과달님/moon/moon_04.png"
+          "path": "story_01_sun_moon/moon/moon_04.png"
         }
       ],
       "transition": {
@@ -103,15 +103,15 @@
       "frames": [
         {
           "step": 1,
-          "path": "story_01_햇님과달님/tiger/tiger_01.png"
+          "path": "story_01_sun_moon/tiger/tiger_01.png"
         },
         {
           "step": 2,
-          "path": "story_01_햇님과달님/tiger/tiger_02.png"
+          "path": "story_01_sun_moon/tiger/tiger_02.png"
         },
         {
           "step": 3,
-          "path": "story_01_햇님과달님/tiger/tiger_03.png"
+          "path": "story_01_sun_moon/tiger/tiger_03.png"
         }
       ],
       "transition": {
@@ -147,11 +147,11 @@
       "frames": [
         {
           "step": 1,
-          "path": "story_02_도깨비이야기/hat/hat_01.png"
+          "path": "story_02_dokkaebi/hat/hat_01.png"
         },
         {
           "step": 2,
-          "path": "story_02_도깨비이야기/hat/hat_02.png"
+          "path": "story_02_dokkaebi/hat/hat_02.png"
         }
       ],
       "transition": {
@@ -186,19 +186,19 @@
       "frames": [
         {
           "step": 1,
-          "path": "story_02_도깨비이야기/pouch/pouch_01.png"
+          "path": "story_02_dokkaebi/pouch/pouch_01.png"
         },
         {
           "step": 2,
-          "path": "story_02_도깨비이야기/pouch/pouch_02.png"
+          "path": "story_02_dokkaebi/pouch/pouch_02.png"
         },
         {
           "step": 3,
-          "path": "story_02_도깨비이야기/pouch/pouch_03.png"
+          "path": "story_02_dokkaebi/pouch/pouch_03.png"
         },
         {
           "step": 4,
-          "path": "story_02_도깨비이야기/pouch/pouch_04.png"
+          "path": "story_02_dokkaebi/pouch/pouch_04.png"
         }
       ],
       "transition": {
@@ -235,15 +235,15 @@
       "frames": [
         {
           "step": 1,
-          "path": "story_02_도깨비이야기/stick/stick_01.png"
+          "path": "story_02_dokkaebi/stick/stick_01.png"
         },
         {
           "step": 2,
-          "path": "story_02_도깨비이야기/stick/stick_02.png"
+          "path": "story_02_dokkaebi/stick/stick_02.png"
         },
         {
           "step": 3,
-          "path": "story_02_도깨비이야기/stick/stick_03.png"
+          "path": "story_02_dokkaebi/stick/stick_03.png"
         }
       ],
       "transition": {
@@ -279,11 +279,11 @@
       "frames": [
         {
           "step": 1,
-          "path": "story_03_까마귀와물주전자/crow/crow_01.png"
+          "path": "story_03_crow_pitcher/crow/crow_01.png"
         },
         {
           "step": 2,
-          "path": "story_03_까마귀와물주전자/crow/crow_02.png"
+          "path": "story_03_crow_pitcher/crow/crow_02.png"
         }
       ],
       "transition": {
@@ -318,19 +318,19 @@
       "frames": [
         {
           "step": 1,
-          "path": "story_03_까마귀와물주전자/pitcher/pitcher_01.png"
+          "path": "story_03_crow_pitcher/pitcher/pitcher_01.png"
         },
         {
           "step": 2,
-          "path": "story_03_까마귀와물주전자/pitcher/pitcher_02.png"
+          "path": "story_03_crow_pitcher/pitcher/pitcher_02.png"
         },
         {
           "step": 3,
-          "path": "story_03_까마귀와물주전자/pitcher/pitcher_03.png"
+          "path": "story_03_crow_pitcher/pitcher/pitcher_03.png"
         },
         {
           "step": 4,
-          "path": "story_03_까마귀와물주전자/pitcher/pitcher_04.png"
+          "path": "story_03_crow_pitcher/pitcher/pitcher_04.png"
         }
       ],
       "transition": {
@@ -367,7 +367,7 @@
       "frames": [
         {
           "step": 1,
-          "path": "story_03_까마귀와물주전자/stone/stone_01.png"
+          "path": "story_03_crow_pitcher/stone/stone_01.png"
         }
       ],
       "transition": {
