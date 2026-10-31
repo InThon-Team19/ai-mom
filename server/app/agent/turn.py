@@ -105,9 +105,11 @@ def _ask_llm_messages(system: str, messages: list[dict]) -> dict | None:
         )
         return "".join(b.text for b in res.content if b.type == "text")
 
+    fut = _pool.submit(call)
     try:
-        raw = _pool.submit(call).result(timeout=LLM_TIMEOUT_S)
+        raw = fut.result(timeout=LLM_TIMEOUT_S)
     except FutureTimeout:
+        fut.cancel()  # 아직 대기열에 있으면 실행하지 않음 (몰릴 때 늦은 호출이 쌓여 토큰만 쓰지 않게)
         logger.warning("agent LLM slower than %.1fs", LLM_TIMEOUT_S)
         return None
     except Exception as e:  # 키 없음·서버 오류 → 정해진 문장

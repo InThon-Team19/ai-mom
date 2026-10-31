@@ -7,7 +7,7 @@ import { api, req } from '@/lib/api';
 import { setToken } from '@/lib/session';
 import { loadProfile, setProfileFromServer, type Profile } from '@/lib/store';
 
-export type Account = { loginId: string; token?: string; childId?: string; pending?: boolean }; // childId: 이 계정의 아이 (서버 기준) // pending: 서버 가입 전 (기기에만 있음)
+export type Account = { loginId: string; token?: string; childId?: string; serverOnboarded?: boolean; pending?: boolean }; // childId: 이 계정의 아이 (서버 기준), serverOnboarded: 서버에서 가입을 마친 계정 // pending: 서버 가입 전 (기기에만 있음)
 
 const KEY = 'aibom.account';
 let current: Account | null | undefined;
@@ -73,8 +73,11 @@ export async function signup(loginId: string, password: string, childId: string)
 /** 다른 기기·재설치: 로그인 → 같은 가족 프로필을 이 기기로 */
 export async function login(loginId: string, password: string) {
   const r = await api.login({ login_id: loginId.trim().toLowerCase(), password });
-  await setProfileFromServer({ ...(r.profile as Partial<Profile>), childId: r.child_id, onboarded: true });
-  await save({ loginId: r.login_id, token: r.token, childId: r.child_id });
+  // 가입 완료 여부는 서버 값 그대로 (무조건 완료로 두면 PIN·동의 단계를 건너뜀)
+  const onboarded = (r.profile as Partial<Profile>)?.onboarded === true;
+  const p = await setProfileFromServer({ ...(r.profile as Partial<Profile>), childId: r.child_id, onboarded });
+  await save({ loginId: r.login_id, token: r.token, childId: r.child_id, serverOnboarded: onboarded });
+  return p;
 }
 
 export async function changePassword(loginId: string, password: string, newPassword: string) {
@@ -93,34 +96,39 @@ export async function syncAccountProfile(profile: Profile) {
   if (!a?.token) return;
   // 빈 프로필(초기화된 폰)은 올리지 않음: 서버에 저장된 아이 정보를 빈칸으로 덮어쓰지 않게
   if (!profile.onboarded && !profile.child?.name) return;
+  // 서버에서 가입을 마친 계정에 "가입 중" 상태를 올리지 않음 (진행 일차·피드백·동의가 초기값으로 덮이지 않게)
+  if (a.serverOnboarded && !profile.onboarded) return;
+  // 이 폰의 프로필이 계정의 아이가 아니면(다른 가족 태블릿으로 연결했던 폰) 올리지 말고 계정 쪽 정보로 되살림
+  if (!a.childId || profile.childId !== a.childId) {
+    await restoreFromAccount();
+    return;
+  }
   const view = await req<Partial<Profile>>('/auth/profile', {
     method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${a.token}` },
     body: JSON.stringify(profile),
   });
-  if (!view?.childId) return;
-  // 이 폰의 프로필이 계정의 아이와 다르면(다른 가족 태블릿으로 연결했던 폰 등) 계정 쪽 아이 번호로 맞춤.
-  // 안 맞추면 목소리·입모양 업로드가 다른 아이 번호로 가서 404 로 거절됨
-  if (view.childId !== profile.childId) await setProfileFromServer({ ...view, onboarded: profile.onboarded });
-  if (a.childId !== view.childId) await save({ ...a, childId: view.childId });
+  if (view?.onboarded && !a.serverOnboarded) await save({ ...a, serverOnboarded: true });
 }
 
-/** 이 폰의 프로필이 비었거나 가입 중으로 남아 있으면 로그인 계정의 서버 프로필로 되살림 (아이 소개를 다시 하지 않게).
- *  같은 폰을 아이 모드로 쓰다 연결이 끊기면 프로필이 초기화되기 때문. 실패하면 null */
-export async function restoreFromAccount(): Promise<Profile | null> {
+export type RestoreResult = { ok: true; profile: Profile } | { ok: false; reason: 'auth' | 'network' | 'none' };
+
+/** 로그인 계정의 서버 프로필로 이 폰의 프로필을 맞춤 (아이 소개를 다시 하지 않게, 다른 가족 정보가 남지 않게).
+ *  실패하면 이유: auth(로그인 끊김) / network(서버 연결 안 됨) / none(로그인 안 함) */
+export async function restoreFromAccount(): Promise<RestoreResult> {
   const a = await loadAccount();
-  if (!a?.token) return null;
+  if (!a?.token) return { ok: false, reason: 'none' };
   const auth = { Authorization: `Bearer ${a.token}` };
   try {
     // childId 를 모르는 예전 계정은 빈 변경(PUT {})으로 서버 프로필만 받아옴 (아무것도 바꾸지 않음)
     const view = a.childId
       ? await req<Partial<Profile>>(`/profile/${a.childId}`, { headers: auth })
       : await req<Partial<Profile>>('/auth/profile', { method: 'PUT', headers: { ...auth, 'Content-Type': 'application/json' }, body: '{}' });
-    if (!view?.childId) return null;
-    const p = await setProfileFromServer(view);
-    if (a.childId !== view.childId) await save({ ...a, childId: view.childId });
-    return p;
-  } catch {
-    return null;
+    if (!view?.childId) return { ok: false, reason: 'network' };
+    const profile = await setProfileFromServer({ ...view, onboarded: view.onboarded === true });
+    await save({ ...a, childId: view.childId, serverOnboarded: view.onboarded === true });
+    return { ok: true, profile };
+  } catch (e) {
+    return { ok: false, reason: /^(Error: )?40[13]\b/.test(String(e)) ? 'auth' : 'network' };
   }
 }
 
@@ -131,11 +139,19 @@ export function resumeStep(p: Profile): string {
   return '/onboarding/parent';
 }
 
-/** 부모 모드로 들어갈 때 갈 곳: 로그인돼 있으면 (필요하면 서버에서 되살린 뒤) 부모 앱 또는 가입 이어서 */
+/** 부모 모드로 들어갈 때 갈 곳: 로그인돼 있으면 서버 정보로 맞춘 뒤 부모 앱 또는 가입 이어서 */
 export async function parentEntry(): Promise<string> {
   const a = await loadAccount();
-  let p = await loadProfile();
+  const p = await loadProfile();
   if (!a?.token) return p.onboarded ? '/onboarding/login' : '/onboarding/start';
-  if (!p.onboarded) p = (await restoreFromAccount()) ?? p;
+  // 가입 중이거나, 이 폰의 프로필이 계정의 아이가 아니면(다른 가족 태블릿으로 연결했던 폰) 서버에서 되살림
+  if (!p.onboarded || !a.childId || p.childId !== a.childId) {
+    const r = await restoreFromAccount();
+    if (r.ok) return resumeStep(r.profile);
+    if (r.reason === 'auth') return '/onboarding/login'; // 로그인이 끊김 → 다시 로그인 (가입으로 보내지 않음)
+    // 서버 연결 안 됨: 이 폰에 정보가 있으면 그대로, 없으면 로그인 화면(로그인하면 서버 정보를 받아옴)
+    if (p.childId === a.childId && (p.onboarded || p.child?.name)) return resumeStep(p);
+    return '/onboarding/login';
+  }
   return resumeStep(p);
 }

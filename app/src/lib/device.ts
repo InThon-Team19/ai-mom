@@ -24,8 +24,11 @@ export async function getDeviceId() {
 export const deviceName = () => Device.deviceName || [Device.brand, Device.modelName].filter(Boolean).join(' ') || '이 기기';
 
 /** 이 기기를 아이 프로필에 등록 (부모 폰 / 아이 태블릿). 실패해도 앱은 계속 */
-export async function registerThisDevice(childId: string, role: 'parent' | 'child') {
+export async function registerThisDevice(childId: string, role: 'parent' | 'child'): Promise<boolean> {
   try {
     await api.registerDevice(childId, { device_id: await getDeviceId(), role, name: deviceName() });
-  } catch {}
+    return true;
+  } catch {
+    return false;
+  }
 }

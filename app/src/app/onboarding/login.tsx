@@ -6,9 +6,9 @@ import { Pressable, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button, H1, Sub } from '@/components/ui';
-import { authMessage, login } from '@/lib/account';
+import { authMessage, login, resumeStep } from '@/lib/account';
 import { registerThisDevice } from '@/lib/device';
-import { loadProfile, setRole } from '@/lib/store';
+import { setRole } from '@/lib/store';
 import { C, R, T } from '@/theme';
 import { useDevice } from '@/lib/layout';
 import { goBack } from '@/lib/nav';
@@ -34,11 +34,11 @@ export default function Login() {
     setBusy(true);
     setError('');
     try {
-      await login(id, pw);
+      const p = await login(id, pw);
       await setRole('parent');
-      const p = await loadProfile();
       registerThisDevice(p.childId, 'parent');
-      router.replace('/parent');
+      // 서버에서 가입을 마쳤으면 부모 앱, 아니면 멈춘 단계부터 (PIN·동의를 건너뛰지 않게)
+      router.replace(resumeStep(p) as Href);
     } catch (e) {
       setError(authMessage(e));
     } finally {

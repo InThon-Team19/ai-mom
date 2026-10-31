@@ -132,6 +132,13 @@ def mouth_profile(child_id: str):
         raise HTTPException(400, "child_id 형식 오류")
 
 
+@router.get("/mouth-scale/{child_id}", response_model=MouthProfile)
+def mouth_scale(child_id: str):
+    """아이 태블릿용: 아바타 입 벌림 기준 수치만 (위와 같은 값). /mouth-profile/ 은 부모 전용이라 태블릿 기기 토큰으로는 403 →
+    태블릿이 이 주소를 씀. 가족 소유권 검사는 main.py legacy_scope 가 그대로 함"""
+    return mouth_profile(child_id)
+
+
 # ---------- 아이 ----------
 class Gaze(BaseModel):
     yaw: float

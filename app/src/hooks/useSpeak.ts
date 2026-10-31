@@ -19,6 +19,7 @@ export function useSpeak(childId: string | undefined) {
   const watchdog = useRef<ReturnType<typeof setTimeout> | null>(null);
   // 서버가 준 소리 크기 그래프(0.04초 간격)로 입 움직임 — 재생 위치에 맞춰서 목소리와 정확히 맞춤
   const env = useRef<{ v: number[]; ms: number } | null>(null);
+  const playingGen = useRef(-1); // 지금 재생 중인 mp3 가 몇 번째 말하기인지 (앞 문장 끝남 알림 무시용)
   const envTimer = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // 재생 중 PCM 음량 → 입 벌림 (0~1)
@@ -72,12 +73,20 @@ export function useSpeak(childId: string | undefined) {
   useEffect(() => {
     const sub = player.addListener('playbackStatusUpdate', (st) => {
       if (st.playing && st.currentTime > 0 && done.current) startMouth(); // 소리가 실제로 나기 시작함
-      if (st.didJustFinish) finish();
+      if (st.didJustFinish && playingGen.current === gen.current) finish(); // 앞 문장이 늦게 끝난 알림은 무시
     });
     return () => sub.remove();
   }, [player, finish, startMouth]);
 
-  useEffect(() => () => stopFake(), [stopFake]);
+  useEffect(
+    () => () => {
+      gen.current++; // 화면을 떠나면 늦게 온 TTS 를 틀거나 기기 음성으로 말하지 않게
+      if (watchdog.current) clearTimeout(watchdog.current);
+      Speech.stop();
+      stopFake();
+    },
+    [stopFake],
+  );
 
   /** 문장 말하기 → 끝나면 resolve */
   const speak = useCallback(
@@ -123,6 +132,7 @@ export function useSpeak(childId: string | undefined) {
           await setAudioModeAsync({ playsInSilentMode: true, allowsRecording: false });
           if (my !== gen.current) return;
           env.current = v && v.length ? { v, ms: env_ms || 40 } : null;
+          playingGen.current = my;
           player.replace({ uri: url });
           player.setPlaybackRate(rate.current);
           player.play();

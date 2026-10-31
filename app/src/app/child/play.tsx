@@ -95,6 +95,7 @@ export default function Play() {
 
   useEffect(
     () => () => {
+      flowGen.current++; // 화면을 떠나면 남은 흐름이 다른 화면으로 이동시키지 않게 취소 (말하기가 끝나며 이어지던 문제)
       if (exprTimer.current) clearTimeout(exprTimer.current);
       stop();
     },
@@ -188,6 +189,9 @@ export default function Play() {
       feel('smile', 1500);
       await say(fill(INTRO[station], { name, me }), true);
     })();
+    return () => {
+      if (my === flowGen.current) flowGen.current++; // 포커스를 잃으면 이 판의 첫 말도 취소
+    };
   }, [station, ready, focused, name, me, say, feel]);
 
   // ---------- 가만히 있으면 다시 권하고, 또 가만히 있으면 다음 판 · 한 판 최대 시간 ----------

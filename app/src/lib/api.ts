@@ -45,9 +45,10 @@ export async function req<T>(path: string, init?: RequestInit): Promise<T> {
     // 같은 폰을 아이 태블릿으로 연결했다가 끊긴(401)·부모 권한 없는(403) 기기 토큰이 남은 경우 → 부모 계정 토큰으로 한 번 더
     // 서버는 부모 토큰으로 그 계정의 아이만 허용하므로 다른 가족 데이터엔 닿지 않음.
     // 부모 모드면 토큰 자리를 부모 토큰으로 바꾸고, 아이 모드(같은 폰을 태블릿으로 쓸 때)면 이번 요청만 다시 시도 (기기 토큰 자리는 그대로)
-    const p = await getParentToken();
+    const parentMode = await isParentDevice();
+    // 아이 모드는 401(기기 토큰 끊김)에만 부모 토큰으로 복구. 403(부모 전용 API)은 권한을 올리지 않음
+    const p = parentMode || res.status === 401 ? await getParentToken() : null;
     if (p && p !== t) {
-      const parentMode = await isParentDevice();
       if (parentMode) await setToken(p);
       headers.set('Authorization', `Bearer ${p}`);
       res = await fetch(`${getApiUrl()}${path}`, { ...init, headers });
@@ -133,7 +134,8 @@ export const api = {
   mouthTrack: (childId: string, track: TrackPoint[], text: string, kind: 'signup' | 'plan' = 'signup') =>
     req<MouthTrackOut>('/vision/parent-mouth-track', json('POST', { child_id: childId, kind, text, track })),
   mouthGauge: (childId: string) => req<Gauge>(`/vision/gauge/${childId}`),
-  mouthProfile: (childId: string) => req<MouthProfile>(`/vision/mouth-profile/${childId}`),
+  // 아이 태블릿도 쓰는 입 크기 기준 (/mouth-profile/ 은 부모 전용이라 기기 토큰으로 403)
+  mouthProfile: (childId: string) => req<MouthProfile>(`/vision/mouth-scale/${childId}`),
 
   // STT (아이 따라 말하기). expected 는 '사과|apple' 처럼 여러 답 가능
   stt: (uri: string, expected = '', who: 'child' | 'parent' = 'child') =>

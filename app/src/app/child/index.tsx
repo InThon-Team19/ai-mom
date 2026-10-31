@@ -14,6 +14,7 @@ import { Button } from '@/components/ui';
 import { dayOf, fill, ITEMS } from '@/content/curriculum';
 import { useSpeak } from '@/hooks/useSpeak';
 import { getDeviceId, registerThisDevice } from '@/lib/device';
+import { getOverride, getParentToken, getToken } from '@/lib/session';
 import { prefetchDay } from '@/lib/prefetch';
 import { api } from '@/lib/api';
 import { clearRole, linkTablet, loadProfile, refreshProfile, resetLocal, useProfile } from '@/lib/store';
@@ -49,13 +50,15 @@ export default function ChildStart() {
         flag = await AsyncStorage.getItem(LINKED_KEY);
       } catch {}
       const registered = (p.devices ?? []).some((d) => d.device_id === me && d.role === 'child');
-      if (flag === p.childId && p.devices && !registered) {
+      // 부모 토큰으로 도는 아이 모드(같은 폰)는 기기 등록 자체가 안 되므로 연결 해제 검사를 하지 않음
+      const usingParent = (getOverride() ?? (await getToken())) === (await getParentToken());
+      if (!usingParent && flag === p.childId && p.devices && !registered) {
         await resetLocal();
         await AsyncStorage.removeItem(LINKED_KEY).catch(() => {});
         return;
       }
-      await registerThisDevice(p.childId, 'child');
-      await AsyncStorage.setItem(LINKED_KEY, p.childId).catch(() => {});
+      // 연결됨 표시는 기기 토큰으로 등록에 성공했을 때만 (부모 토큰으로 도는 아이 모드에서 다음 진입 때 프로필이 지워지던 문제)
+      if (await registerThisDevice(p.childId, 'child')) await AsyncStorage.setItem(LINKED_KEY, p.childId).catch(() => {});
     })();
   }, [linked]);
 
