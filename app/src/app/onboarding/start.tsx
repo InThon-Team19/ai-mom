@@ -1,5 +1,5 @@
 // 온보딩 1-1 시작 — 담당: 태희 (민철 와이어프레임 기준)
-// 역할 선택 없이 부모만 가입. 그림 자리: "부모 아바타가 사과를 건네는 장면" → 기본 아바타 + 사과
+// 역할 선택 없이 부모만 가입. 그림 자리: 부모 아바타 (사과는 사용자 요청으로 뺌)
 import { router, type Href } from 'expo-router';
 
 import { loadAccount, parentEntry } from '@/lib/account';
@@ -9,7 +9,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { FamilyAvatar } from '@/components/FamilyAvatar';
 import { Logo } from '@/components/Logo';
-import { BigApple, Button } from '@/components/ui';
+import { Button } from '@/components/ui';
 import { C } from '@/theme';
 import { useDevice } from '@/lib/layout';
 import { Text } from '@/components/AppText';
@@ -31,7 +31,7 @@ export default function Start() {
     router.replace((await parentEntry()) as Href);
   };
 
-  // 디자인 Main: 크림 바탕 · 높이 300 노랑 그림 칸(아바타 + 사과) · 아이맘 30px · 설명 · 아래 노랑 버튼 56 + 로그인 글자 링크
+  // 디자인 Main: 크림 바탕 · 높이 300 노랑 그림 칸(아바타) · 아이맘 30px · 설명 · 아래 노랑 버튼 56 + 로그인 글자 링크
   const art = Math.min(300, Math.max(200, height * 0.36));
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: C.bg, paddingHorizontal: gutter }}>
@@ -46,11 +46,8 @@ export default function Start() {
             justifyContent: 'flex-end',
             overflow: 'hidden',
           }}
-          accessibilityLabel="엄마 아바타가 사과를 건네는 그림">
+          accessibilityLabel="부모 아바타">
           <FamilyAvatar size={art * 0.77} mouth={0.3} expression="smile" />
-          <View style={{ position: 'absolute', right: '11%', bottom: art * 0.13 }}>
-            <BigApple size={art * 0.21} />
-          </View>
         </View>
         <View style={{ gap: 8 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
