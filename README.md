@@ -39,13 +39,14 @@ aibom/
 - 민주·충항은 앱 화면을 신경 쓰지 말고 **TTS / 에이전트 서버 작업만**. 화면 붙이기는 태희가 함.
 
 ## 실행
-**서버** (Python 3.11 — MediaPipe 호환)
+**서버** (Python 3.11 또는 3.12 — MediaPipe 호환. 첫 실행 때 얼굴 모델을 `server/models/`에 자동 다운로드)
 ```bash
 cd server
 python3.11 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env
 uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload   # http://localhost:8000/docs
+pytest -q                                                   # 서버 테스트
 ```
 **앱** (Expo SDK 58)
 ```bash
