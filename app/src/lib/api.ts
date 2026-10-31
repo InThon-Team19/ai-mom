@@ -148,7 +148,8 @@ export const api = {
   // TTS (민주) — 부모 목소리
   registerVoice: (childId: string) =>
     form<{ model_id: string; state: string; sample_count: number }>('/voice/register', { child_id: childId }),
-  tts: (childId: string, text: string) => req<{ url: string }>('/voice/tts', json('POST', { child_id: childId, text })),
+  // 서버가 멈춰도 아바타 말이 계속 기다리지 않게 20초 제한 (넘으면 기기 음성으로 대신 말함)
+  tts: (childId: string, text: string) => withTimeout(req<{ url: string }>('/voice/tts', json('POST', { child_id: childId, text })), 20000, 'TTS'),
 
   // 아이 반응 기록 · 하루 요약 (리포트 원자료)
   logActivity: (childId: string, events: ActivityEvent[]) =>

@@ -60,7 +60,7 @@ export default function Login() {
       </View>
       <View style={{ gap: 6 }}>
         <Text style={T.small}>비밀번호</Text>
-        <TextInput value={pw} onChangeText={setPw} secureTextEntry placeholder="비밀번호" placeholderTextColor={C.muted} onSubmitEditing={submit} style={input} />
+        <TextInput value={pw} onChangeText={setPw} secureTextEntry placeholder="비밀번호" placeholderTextColor={C.muted} onSubmitEditing={() => !busy && id.trim().length >= 3 && pw.length > 0 && submit()} style={input} />
       </View>
       {!!error && <Text style={{ color: C.warn, fontSize: 15 }}>{error}</Text>}
       <View style={{ flex: 1 }} />
