@@ -26,17 +26,17 @@ type Turn = NonNullable<TurnIn['history']>[number];
 
 const IDLE_MS = 12000; // 이만큼 조용하면 부드러운 질문 하나
 const IDLE_MAX = 3; // 질문을 이만큼 해도 조용하면 마무리
-const CHAT_MAX_MS = 3 * 60 * 1000; // 약 3분이면 마무리
-const CHAT_MAX_TURNS = 10; // 아이 말 10번이면 마무리
+const CHAT_MAX_MS = 10 * 60 * 1000; // 약 10분이면 마무리 (하루 사용 상한도 따로 적용)
+const CHAT_MAX_TURNS = 40; // 아이 말 40번이면 마무리
 const HISTORY_MAX = 6;
 
 // 엄마 목소리 대사 (물결·말줄임·이모지 없이)
 const OPENING = '{name}야, 오늘 재미있었어? {me}랑 이야기하자!';
 const ENDING = '오늘 {me}랑 이야기해서 정말 좋았어. 이따 {me} 오면 또 이야기해 줘!';
-const ACKS = ['응응!', '그랬구나!', '우와!', '정말?', '좋아!'];
+const ACKS = ['응응!', '우와!', '정말?', '히히, 좋아!', '오오, 그래서?', '와, 신난다!'];
 const IDLE_ASKS = ['{name}는 뭐가 제일 좋아?', '오늘 뭐 하고 놀았어?', '기분이 어때?', '{name}는 무슨 놀이가 재미있어?'];
 // 에이전트가 없거나 늦을 때의 대답 (아이 말에 맞장구만, 지어내지 않음)
-const REPLY_FALLBACK = ['그랬구나! {me}한테 더 이야기해 줘.', '우와, 정말? 또 이야기해 줘!', '{name} 이야기 정말 재미있다!'];
+const REPLY_FALLBACK = ['우와, 정말? 또 이야기해 줘!', '{name} 이야기 정말 재미있다!', '오, 그래서 어떻게 됐어?', '히히, {me}도 궁금해!'];
 
 export default function Chat() {
   const profile = useProfile();
@@ -151,8 +151,10 @@ export default function Chat() {
     setEnding(true);
     feel('smile', 6000);
     setNod((n) => n + 1);
-    await talk(fill(ENDING, { name, me }));
-    if (t !== run.current) return;
+    void t;
+    // 다른 흐름이 끼어들어도, 인사 목소리가 늦어도 반드시 마무리 화면으로 (그만할래가 안 먹던 문제)
+    await Promise.race([talk(fill(ENDING, { name, me })), sleep(5000)]);
+    stop();
     await sleep(300);
     const params = { ...(fav ? { fav } : {}), ...(basket ? { basket } : {}) };
     router.replace({ pathname: '/child/end', params });
@@ -227,7 +229,8 @@ export default function Chat() {
   /** 듣기 hook 이 말소리 토막을 올린 뒤 (기록은 hook 이 이미 함) */
   const handleClip = (r: ClipResult) => {
     if (ended.current || !startedAt.current) return;
-    const text = r.res?.text?.trim() ?? '';
+    const raw = r.res?.text?.trim() ?? '';
+    const text = /[가-힣a-zA-Z]/.test(raw) ? raw : ''; // "." 처럼 기호만 인식되면 옹알이로
     const saved = !!r.res?.saved;
     if (saved && text) {
       lastActivity.current = Date.now();
@@ -304,7 +307,7 @@ export default function Chat() {
     }
     if (shouldEnd()) return void wrapUp();
     if (Date.now() - lastActivity.current < IDLE_MS) return;
-    if (idleCount.current >= IDLE_MAX) return void wrapUp();
+    void IDLE_MAX; // 조용해도 저절로 끝내지 않음 — 그만할래 버튼·시간 상한으로만 (사용자 요청)
     idleCount.current += 1;
     busy.current = true;
     const t = ++run.current;

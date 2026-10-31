@@ -2,6 +2,7 @@
 // 안전망(기획 2-1-2): 진동은 짧고 약하게만, 효과음은 작은 음량(합성 시 최대 0.35, 재생 0.6), 진동 끄기 설정 존중
 import { createAudioPlayer, type AudioPlayer } from 'expo-audio';
 import * as Haptics from 'expo-haptics';
+import { Platform, Vibration } from 'react-native';
 
 import { api } from '@/lib/api';
 import type { ActivityEvent, ActivityType } from '@/lib/types';
@@ -44,18 +45,31 @@ let lastTick = 0;
  * tap: 순간 짧게 / soft: 진행 중 약하게 (최대 3번, 0.6초 안) / praise: 칭찬
  * tick: 손가락을 따라오는 아주 가벼운 톡 (스스로 0.12초 간격 제한) / strong: 북을 세게 쳤을 때 조금 더 (Medium 한 번, 여전히 짧게)
  */
+/** Android 진동 길이(ms) — 모두 짧고 약하게. iOS 기본 Vibration 은 0.4초로 길어서 쓰지 않음 */
+const ANDROID_MS: Record<HapticKind, number | number[]> = {
+  tick: 8,
+  tap: 18,
+  strong: 35,
+  praise: [0, 22, 90, 22],
+  soft: [0, 10, 190, 10, 190, 10],
+};
+
 export function haptic(kind: HapticKind) {
   if (!vibrationOn) return;
+  if (kind === 'tick') {
+    const now = Date.now();
+    if (now - lastTick < TICK_GAP_MS) return;
+    lastTick = now;
+  }
   try {
-    if (kind === 'tick') {
-      const now = Date.now();
-      if (now - lastTick < TICK_GAP_MS) return;
-      lastTick = now;
-      Haptics.selectionAsync();
-    } else if (kind === 'strong') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    else if (kind === 'tap') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    else if (kind === 'praise') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    else [0, 200, 400].forEach((ms) => setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Soft), ms));
+    // Android: 이 Expo Go 에는 expo-haptics 가 없어서(… is not available on android) 기본 진동으로
+    if (Platform.OS === 'android') return void Vibration.vibrate(ANDROID_MS[kind]);
+    const quiet = () => {};
+    if (kind === 'tick') Haptics.selectionAsync().catch(quiet);
+    else if (kind === 'strong') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(quiet);
+    else if (kind === 'tap') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(quiet);
+    else if (kind === 'praise') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(quiet);
+    else [0, 200, 400].forEach((ms) => setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Soft).catch(quiet), ms));
   } catch {}
 }
 

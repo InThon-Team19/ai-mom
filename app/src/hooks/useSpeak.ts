@@ -4,7 +4,7 @@ import { setAudioModeAsync, useAudioPlayer, useAudioSampleListener } from 'expo-
 import * as Speech from 'expo-speech';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { api } from '@/lib/api';
+import { api, reportError } from '@/lib/api';
 
 export function useSpeak(childId: string | undefined) {
   const player = useAudioPlayer();
@@ -129,7 +129,8 @@ export function useSpeak(childId: string | undefined) {
             return api.tts(childId, text);
           });
           if (my !== gen.current) return; // 기다리는 사이 멈췄거나 다음 문장으로 넘어감 → 늦게 온 소리는 틀지 않음
-          await setAudioModeAsync({ playsInSilentMode: true, allowsRecording: false });
+          // 재생 모드 설정이 실패해도 받은 엄마 목소리는 그대로 틈 (예전엔 여기서 실패하면 기기 음성으로 바뀜)
+          await setAudioModeAsync({ playsInSilentMode: true, allowsRecording: false }).catch((e) => reportError('speak.audioMode', e));
           if (my !== gen.current) return;
           env.current = v && v.length ? { v, ms: env_ms || 40 } : null;
           playingGen.current = my;
@@ -139,8 +140,9 @@ export function useSpeak(childId: string | undefined) {
           if (env.current) startMouth(); // 0.04초마다 실제 재생 위치를 보고 입을 움직임 (재생 전엔 닫힘)
           guard();
           setUsingFallback(false);
-        } catch {
+        } catch (e) {
           if (my !== gen.current) return;
+          reportError('speak.fallback', e); // 왜 기기 음성으로 바뀌었는지 서버 기록에 남김
           setUsingFallback(true);
           guard();
           Speech.speak(text, {

@@ -16,6 +16,7 @@ from app.agent.scope import ITEMS, items_for_day, scope_text
 logger = logging.getLogger(__name__)
 LLM_TIMEOUT_S = 3.0  # 앱은 3.5초까지 기다림 (네트워크 몫을 남김). 연결 시간까지 포함한 전체 시간으로 끊음
 _pool = ThreadPoolExecutor(max_workers=4)
+CHAT_BUDGET_S = 5.0  # 이야기하기는 조금 기다려도 됨(아바타가 생각하는 얼굴) → 앱은 6.5초까지 기다림
 
 MOOD_GUIDE = {
     "overloaded": "아이가 지금 자극이 많아 힘들어 보여요. 아주 천천히, 짧고 차분하게 말하고 잠깐 쉬자고 해요. 새 활동은 권하지 않아요.",
@@ -96,21 +97,21 @@ def _ask_llm(system: str, user: str) -> dict | None:
     return _ask_llm_messages(system, [{"role": "user", "content": user}])
 
 
-def _ask_llm_messages(system: str, messages: list[dict]) -> dict | None:
+def _ask_llm_messages(system: str, messages: list[dict], budget: float = LLM_TIMEOUT_S) -> dict | None:
     from app.llm import MODEL, client
 
     def call() -> str:
-        res = client().with_options(timeout=5.0).messages.create(
+        res = client().with_options(timeout=max(5.0, budget)).messages.create(
             model=MODEL, max_tokens=500, system=system, messages=messages,  # 모델이 속으로 생각하는 데도 토큰을 써서 200이면 빈 답이 옴
         )
         return "".join(b.text for b in res.content if b.type == "text")
 
     fut = _pool.submit(call)
     try:
-        raw = fut.result(timeout=LLM_TIMEOUT_S)
+        raw = fut.result(timeout=budget)
     except FutureTimeout:
         fut.cancel()  # 아직 대기열에 있으면 실행하지 않음 (몰릴 때 늦은 호출이 쌓여 토큰만 쓰지 않게)
-        logger.warning("agent LLM slower than %.1fs", LLM_TIMEOUT_S)
+        logger.warning("agent LLM slower than %.1fs", budget)
         return None
     except Exception as e:  # 키 없음·서버 오류 → 정해진 문장
         logger.warning("agent LLM unavailable: %s", type(e).__name__)
@@ -131,7 +132,7 @@ def _mentions_today(text: str, day: int) -> bool:
 
 
 CHAT_OPENERS = ("{call}, 오늘 재미있었어? {me}랑 이야기하자!", "{call}, 오늘 뭐가 제일 좋았어?", "{call}, 지금 기분이 어때?")
-CHAT_FALLBACKS = ("그랬구나. {name} 마음, {me}가 잘 들었어.", "응응, {name} 말 잘 듣고 있어.", "그랬구나. {name} 이야기 더 해 줄래?")
+CHAT_FALLBACKS = ("우와, 정말? {name} 이야기 더 해 줄래?", "히히, {me}도 궁금해. 그래서 어떻게 됐어?", "오오, {name} 말 잘 듣고 있어!")
 CHAT_UNSURE = "그건 이따 {me}랑 같이 알아보자. {name}는 오늘 뭐 하고 놀았어?"
 
 
@@ -142,6 +143,8 @@ def _chat_system(day: int, p: dict, profile: dict, mood: str | None) -> str:
 지금 아이 상태: {MOOD_GUIDE.get(mood or 'calm', MOOD_GUIDE['calm'])}
 
 목표: 아이 말에 공감하고 호응해 주기. 아이 기분, 놀이, 좋아하는 것, 오늘 한 일이 주제야. 가르치려 하지 마.
+말투는 진짜 엄마처럼 감정을 듬뿍 담아. 놀라면 "우와!", 웃기면 "히히", 속상하면 "아이고, 속상했겠다"처럼 아이 기분에 맞춰 반응해.
+"그랬구나"로 시작하지 말고, 앞에서 한 말과 같은 표현을 되풀이하지 마. 아이가 말한 단어를 넣어 구체적으로 대답해.
 규칙:
 - 한두 문장, 전체 35자 안팎. 쉬운 말. 아이 말을 따라 해 주고("사과 먹었구나!") 가끔 쉬운 질문 하나로 이어가.
 - 사실을 지어내지 마. 모르는 걸 묻거나 정확한 답이 필요한 질문(왜, 어떻게, 언제, 어디)은 답하지 말고 sensitive=true 로 하고 "이따 {p['me']}랑 같이 알아보자"처럼 말해.
@@ -176,7 +179,13 @@ def make_chat(day: int, child_text: str, history: list[dict] | None, signals: di
             merged[-1]["content"] += " " + m["content"]
         else:
             merged.append(dict(m))
-    data = _ask_llm_messages(_chat_system(day, p, profile, mood), merged)
+    import time as _t
+    t0 = _t.monotonic()
+    system = _chat_system(day, p, profile, mood)
+    data = _ask_llm_messages(system, merged, CHAT_BUDGET_S)
+    left = CHAT_BUDGET_S - (_t.monotonic() - t0)
+    if data is None and left > 1.5:  # AI 가 가끔 빈 답을 바로 줌 → 시간 여유가 있으면 한 번 더
+        data = _ask_llm_messages(system, merged, left)
     if data is None:
         return {"text": fill(random.choice(CHAT_FALLBACKS)), "out_of_scope": False, "blocked": None}
     sensitive = bool(data.get("sensitive"))

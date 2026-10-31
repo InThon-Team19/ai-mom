@@ -411,9 +411,16 @@ export default function Session() {
           if (t !== run.current) return;
           r = await waitUtterance(t, REPEAT_WAIT_MS);
           if (t !== run.current) return;
-          if (!r) {
-            logEvent('repeat', { word: it.ko, matched: null, text: '' });
-            return leaveRef.current();
+          // 그래도 조용하면 저절로 넘어가지 않고, 가끔 다시 권하며 계속 기다림 (넘어가는 건 아이가 말하거나 다음 버튼)
+          const nudges = ['천천히 해도 괜찮아.', word, `준비되면 말해 줘. ${it.ko}!`];
+          for (let i = 0; !r; i++) {
+            if (i === 0) logEvent('repeat', { word: it.ko, matched: null, text: '' });
+            r = await waitUtterance(t, 12000);
+            if (t !== run.current) return;
+            if (r) break;
+            react([['smile', 1600]]);
+            await talk(nudges[i % nudges.length]);
+            if (t !== run.current) return;
           }
         }
         await respondRef.current(t, r);

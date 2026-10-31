@@ -22,7 +22,6 @@ import { refreshProfile, useProfile } from '@/lib/store';
 import { C, R } from '@/theme';
 
 const IDLE_MS = 8000; // 이만큼 가만히 있으면 다시 권함, 한 번 더 가만히 있으면 다음 판
-const STATION_MAX_MS = 45000; // 한 판이 아무리 길어도 이만큼 지나면 다음으로
 const STATIONS = 3;
 
 // 엄마 목소리 대사 (물결·말줄임·이모지 없이)
@@ -32,10 +31,8 @@ const INTRO = [
   '이제 정리해 볼까? 바구니 제자리에 쏙 넣어 줘.',
 ];
 const INVITE = ['여기를 손으로 쓱쓱 해 볼까?', '북을 톡 쳐 볼까?', '손으로 꾹 잡고 바구니로 옮겨 볼까?'];
-const MOVE_ON = '다음 놀이 해 보자!';
 const DRUM_DONE = '잘했어! 둥둥 최고야.';
 const ALL_DONE = '다 정리했다! 최고야.';
-const TIME_UP_LAST = '오늘 손 놀이 끝! 정말 잘했어.';
 
 export default function Play() {
   const profile = useProfile();
@@ -199,21 +196,17 @@ export default function Play() {
     if (moving.current) return;
     const now = Date.now();
     const last = stationRef.current === STATIONS - 1;
-    if (now - stationAt.current > STATION_MAX_MS) {
-      goNext(last ? TIME_UP_LAST : MOVE_ON);
-      return;
-    }
+    void last; // 저절로 다음 판으로 가지 않음 — 아이가 끝내거나 다음 버튼 (사용자 요청)
     if (busy.current) return;
     const idle = now - Math.max(lastAction.current, quietSince.current, stationAt.current);
     if (idle < IDLE_MS) return;
-    if (idleStage.current === 0) {
-      idleStage.current = 1;
+    {
+      // 가만히 있으면 흔들며 다시 권함 (12초마다 반복, 넘어가지는 않음)
+      lastAction.current = now + 4000;
       setWiggle((w) => w + 1);
       setNod((n) => n + 1);
       feel('wait', 2200);
       void say(fill(INVITE[stationRef.current], { name, me }));
-    } else {
-      goNext(last ? undefined : MOVE_ON);
     }
   };
   const tickRef = useRef(tick);
