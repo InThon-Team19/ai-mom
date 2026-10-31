@@ -33,6 +33,7 @@ export function useReadAloud({
   const [face, setFace] = useState<FaceFrame | null>(null);
   const track = useRef<TrackPoint[]>([]);
   const t0 = useRef(0);
+  const pending = useRef(false); // 녹음 시작·멈춤 처리 중 (빠르게 두 번 눌러 stop 이 두 번 불리지 않게)
 
   useEffect(() => {
     if (!childId) return;
@@ -52,7 +53,8 @@ export function useReadAloud({
   );
 
   const toggle = useCallback(async () => {
-    if (!childId || busy) return;
+    if (!childId || busy || pending.current) return;
+    pending.current = true;
     try {
       if (!rec.isRecording) {
         setMessage('');
@@ -94,6 +96,7 @@ export function useReadAloud({
       reportError('readAloud', e);
       setMessage(`전송 실패: ${String(e).slice(0, 80)}`);
     } finally {
+      pending.current = false;
       setBusy(false);
     }
   }, [childId, busy, rec, sentences, index, kind, camera]);
@@ -107,7 +110,7 @@ export function useReadAloud({
     statuses,
     allDone,
     recording: rec.isRecording,
-    seconds: rec.seconds,
+    seconds: Math.floor(rec.seconds), // 화면 표시용 정수 초 (그대로면 3.217초처럼 보임)
     busy,
     toggle,
     voice,

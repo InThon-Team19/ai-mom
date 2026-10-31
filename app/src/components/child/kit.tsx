@@ -257,7 +257,11 @@ export function EarListener({
 
 // ---------- 하루 사용 상한 (1-7 설정) ----------
 const USAGE_KEY = 'aibom.child.usage';
-const today = () => new Date().toISOString().slice(0, 10);
+const today = () => {
+  // 기기 현지 날짜 (toISOString 은 UTC 라 한국에선 오전 9시에 하루가 바뀜)
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
 let usage: { date: string; seconds: number } | null = null;
 
 async function loadUsage() {

@@ -926,8 +926,17 @@ export default function Session() {
                 label="다시 들려줘"
                 style={smallPill}
                 onPress={() => {
-                  run.current++;
-                  talk(say(item));
+                  // 다시 들려준 뒤에도 아이 말을 기다림 (예전엔 흐름만 끊겨 따라 말해도 반응이 없었음)
+                  const t = ++run.current;
+                  stop();
+                  (async () => {
+                    await talk(say(item));
+                    if (t !== run.current) return;
+                    const r = await waitUtterance(t, REPEAT_WAIT_MS);
+                    if (t !== run.current) return;
+                    if (r) await respondRef.current(t, r);
+                    else setKick((k) => k + 1);
+                  })();
                 }}
               />
             </Animated.View>
