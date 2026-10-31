@@ -14,8 +14,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Avatar, type AvatarExpression, type AvatarLook } from '@/components/Avatar';
 import type { FaceFrame } from '@/components/FaceTracker';
 import { dropDuration, ItemToy, type ToyLeave } from '@/components/child/ItemToy';
-import { ChildMirror } from '@/components/child/ChildMirror';
-import { HoldMic, PillButton, RoundButton, SkipIcon, sleep, useDailyLimit, useMouthScale, who } from '@/components/child/kit';
+import { FaceSensor, HoldMic, PillButton, RoundButton, SkipIcon, sleep, useDailyLimit, useMouthScale, who } from '@/components/child/kit';
 import { Basket, NodBox } from '@/components/child/stage';
 import { dayOf, fill, ITEMS, type Day, type ItemId } from '@/content/curriculum';
 import { useSpeak } from '@/hooks/useSpeak';
@@ -50,7 +49,7 @@ export default function Session() {
   const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();
   const focused = useIsFocused();
-  const { speak, stop, mouth, speaking, setSlow } = useSpeak(profile?.childId);
+  const { speak, stop, mouth, setSlow } = useSpeak(profile?.childId);
   const scale = useMouthScale(profile?.childId);
   const rec = useVoiceRecorder();
   const { name, me, english } = who(profile);
@@ -87,13 +86,10 @@ export default function Session() {
   // 얼굴 센서용 최신 상태 (0.05초마다 들어오므로 state 대신 ref)
   const meterRef = useRef(-160); // 녹음 중 음량 (dB)
   const listeningRef = useRef(false);
-  const mouthStat = useRef({ max: 0, moving: 0, last: 0 }); // 듣는 동안 아이 입 움직임
   const listenRef = useRef<(t: number, word: string) => Promise<void>>(async () => {});
-  const live = useRef({ phase: 'object' as Phase, word: '', speaking: false, recording: false });
   const looked = useRef(0);
   const smileOn = useRef(false);
   const lastSmile = useRef(0);
-  const imitated = useRef(new Set<string>());
 
   const item = plan ? ITEMS[plan.items[idx]] : null;
   const say = (it: typeof item) => (it ? (english ? `${it.ko}! ${it.en}!` : `${it.ko}!`) : '');
@@ -133,10 +129,6 @@ export default function Session() {
       alive = false;
     };
   }, []);
-
-  useEffect(() => {
-    live.current = { phase, word: item?.ko ?? '', speaking, recording: rec.isRecording };
-  }, [phase, item, speaking, rec.isRecording]);
 
   // ---------- 하루 사용 상한 ----------
   const goEnd = useCallback(() => {
@@ -246,7 +238,7 @@ export default function Session() {
     meterRef.current = rec.metering ?? -160;
   }, [rec.metering]);
 
-  // ---------- 아이 얼굴: 응시 시간 5초마다, 웃음, 입모양 따라 하기 ----------
+  // ---------- 아이 얼굴: 응시 시간 5초마다, 웃음 (입 트래킹은 아이 앱에서 뺌) ----------
   useEffect(() => {
     if (!plan || !focused) return;
     const id = setInterval(() => {
@@ -267,17 +259,6 @@ export default function Session() {
     }
     if (f.smile !== smileOn.current) setChildSmile(f.smile); // 아이가 웃으면 아바타도 같이 웃음
     smileOn.current = f.smile;
-    if (listeningRef.current && f.face) {
-      const m = mouthStat.current;
-      if (f.open > m.max) m.max = f.open;
-      if (Math.abs(f.open - m.last) > 0.012 || f.mouthOpen) m.moving += 1;
-      m.last = f.open;
-    }
-    const l = live.current;
-    if (l.phase === 'repeat' && !l.speaking && l.word && f.mouthOpen && !imitated.current.has(l.word)) {
-      imitated.current.add(l.word);
-      logEvent('imitate', { word: l.word });
-    }
   }, []);
 
   // ---------- 누르는 놀이 ----------
@@ -320,7 +301,6 @@ export default function Session() {
       return { uri: null, spoke: false }; // 마이크 권한 없음 등
     }
     listeningRef.current = true;
-    mouthStat.current = { max: 0, moving: 0, last: 0 };
     const t0 = Date.now();
     let spoke = false;
     let lastLoud = 0;
@@ -348,9 +328,6 @@ export default function Session() {
     if (!item) return;
     const { uri, spoke } = await listenOnce(t);
     if (t !== run.current) return;
-    // 아이 입 움직임 기록 (듣는 동안 0.05초마다 잰 값)
-    const m = mouthStat.current;
-    if (m.moving >= 3) logEvent('imitate', { word: item.ko, max_open: Math.round(m.max * 1000) / 1000, moving_frames: m.moving });
     if (!spoke || !uri) {
       if (attempt >= 2) {
         logEvent('repeat', { word: item.ko, matched: null, text: '' });
@@ -555,8 +532,8 @@ export default function Session() {
 
       {/* 아이 얼굴 센서: 작고 흐리게 (기기 안에서만 처리, 영상은 저장·전송 안 함) */}
       {focused && (
-        <View pointerEvents="box-none" style={{ position: 'absolute', top: 10 + insets.top, left: width / 2 - (phase === 'repeat' ? 110 : 36) }}>
-          <ChildMirror onFrame={onFrame} big={phase === 'repeat'} />
+        <View pointerEvents="box-none" style={{ position: 'absolute', top: 14 + insets.top, left: width / 2 - 36, opacity: 0.45 }}>
+          <FaceSensor onFrame={onFrame} style={{ width: 72, height: 54, borderRadius: 12 }} />
         </View>
       )}
     </View>
