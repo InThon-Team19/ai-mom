@@ -89,8 +89,7 @@ export function ClipList({ childId, clips, state }: { childId: string; clips: Ch
                 )}
               </Svg>
             </Pressable>
-            <Text style={{ flex: 1, fontSize: 14, color: c.alert ? C.warn : C.text, fontWeight: c.alert ? '700' : '400' }} numberOfLines={2}>
-              {c.alert ? '⚠ ' : ''}
+            <Text style={{ flex: 1, fontSize: 14, color: C.text, fontWeight: c.alert ? '700' : '400' }} numberOfLines={2}>
               {c.text ? `"${c.text}"` : '(말소리)'}
               {c.item ? ` · ${itemLabel(c.item)}` : ''}
               {c.duration_s ? <Text style={{ color: C.sub, fontSize: 12 }}>{` · ${c.duration_s.toFixed(1)}초`}</Text> : null}

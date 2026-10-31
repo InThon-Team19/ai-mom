@@ -36,6 +36,7 @@ export type Day = {
   topic: string;
   items: ItemId[];
   planSentences: string[]; // 전날 밤 부모가 낭독하는 계획 (2-4)
+  planCards: string[]; // 피드백 2-3 '내일 계획' 짧은 활동 카드 3개 (그림 · 소리 · 칭찬)
   greeting: string; // 아이 화면 첫 인사 (기획 2-7 일차별 화면 문장)
   story?: { title: string; pages: { emoji: string; text: string }[] };
 };
@@ -46,6 +47,7 @@ export const DAYS: Day[] = [
     topic: '사과 · 바나나',
     greeting: '오늘은 사과랑 바나나 만나볼까?',
     items: ['apple', 'banana'],
+    planCards: ['사과·바나나 그림', '사과 와그작 · 바나나 스르륵 소리', '"잘했어 우리 {name}!" 칭찬'],
     planSentences: [
       '내일은 1일차, 사과와 바나나를 배워봐요.',
       '{name}야, 사과 같이 먹어볼까?',
@@ -68,6 +70,7 @@ export const DAYS: Day[] = [
     topic: '과자',
     greeting: '어제 사과 만났지? 오늘은 과자 먹어볼까?',
     items: ['snack'],
+    planCards: ['과자 종류별 그림', '과자 부수기 소리', '"잘했어 우리 {name}!" 칭찬'],
     planSentences: [
       '내일은 2일차, 과자에 대해 배워봐요.',
       '{name}야, 과자 알지? 과자는 바삭바삭 소리가 나.',
@@ -88,6 +91,7 @@ export const DAYS: Day[] = [
     topic: '복습 (사과 · 바나나 · 과자)',
     greeting: '오늘은 사과, 바나나, 과자 다시 만나볼까?',
     items: ['apple', 'banana', 'snack'],
+    planCards: ['사과·바나나·과자 다시 보기', '와그작 · 스르륵 · 바삭 소리', '"잘했어 우리 {name}!" 칭찬'],
     planSentences: [
       '내일은 3일차, 그동안 만난 친구들을 다시 만나요.',
       '{name}야, 사과 기억나? 와그작!',

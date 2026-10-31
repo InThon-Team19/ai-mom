@@ -116,8 +116,8 @@ function FeedbackForm({ profile }: { profile: Profile }) {
   const today = dayOf(dayNum);
   const tomorrow = dayOf(Math.min(dayNum + 1, DAYS.length));
   const name = profile.child.nickname || profile.child.name;
-  const sentences = useMemo(
-    () => tomorrow.planSentences.map((t) => fill(t, { name, me: profile.parent.title })),
+  const cards = useMemo(
+    () => tomorrow.planCards.map((t) => fill(t, { name, me: profile.parent.title })), // 낭독할 문장 전체는 2-3a 낭독 화면에서
     [tomorrow, name, profile.parent.title],
   );
   const read = readToday(profile);
@@ -172,10 +172,10 @@ function FeedbackForm({ profile }: { profile: Profile }) {
           <View style={{ gap: 10 }}>
             <SectionHead icon={<MicIcon />} color={C.primary} title="내일 계획" />
             <Text style={{ fontSize: 15, fontWeight: '800', color: C.text }}>
-              {tomorrow.day === dayNum ? `${tomorrow.topic}${josa(tomorrow.topic, '을', '를')} 한 번 더 이어가요` : `${tomorrow.topic}에 대해 배워 봐요`}
+              {tomorrow.day === dayNum ? `${tomorrow.topic}${josa(tomorrow.topic, '을', '를')} 한 번 더 이어가요` : `${tomorrow.topic}에 대해 배워봐요`}
             </Text>
             <View style={{ gap: 8 }}>
-              {sentences.map((t, i) => (
+              {cards.map((t, i) => (
                 <View key={i} style={{ paddingVertical: 13, paddingHorizontal: 16, borderRadius: 14, borderWidth: 2, borderBottomWidth: 4, borderColor: C.border, backgroundColor: C.white }}>
                   <Text style={{ fontSize: 14, fontWeight: '700', lineHeight: 21, color: C.text }}>{t}</Text>
                 </View>
@@ -185,6 +185,7 @@ function FeedbackForm({ profile }: { profile: Profile }) {
               variant="outline"
               label={read ? '낭독 완료 · 다시 낭독하기' : '탭하여 낭독하기'}
               icon={<MicIcon color={C.link} />}
+              color={C.link}
               onPress={() => router.navigate('/parent/plan' as Href)}
               style={{ minHeight: 54, borderRadius: 14 }}
             />

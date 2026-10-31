@@ -8,7 +8,6 @@ import Svg, { Circle, G, Text as SvgText } from 'react-native-svg';
 
 import { Avatar } from '@/components/Avatar';
 import { ChecksBox } from '@/components/ChecksBox';
-import { StatusChip } from '@/components/SensoryCard';
 import { Art, BigButton, Bubble, MicIcon, Panel, artOf } from '@/components/ui';
 import { ITEMS, dayOf, type Item } from '@/content/curriculum';
 import { useDevice } from '@/lib/layout';
@@ -186,7 +185,6 @@ export default function Report() {
                       <Text style={{ flex: 1, minWidth: 28, fontSize: 14, fontWeight: '800', color: C.text }} numberOfLines={1}>
                         {counts[k]}번
                       </Text>
-                      <StatusChip status={statusOf(k)} />
                     </View>
                   ))}
                 </View>
@@ -194,16 +192,11 @@ export default function Report() {
               {sensory && (
                 <View style={{ gap: 4, borderTopWidth: 1, borderTopColor: C.track, paddingTop: 10 }}>
                   <Text style={{ fontSize: 15, fontWeight: '800', color: C.text }}>{sensory.overall}</Text>
-                  {sensory.hasData && (
-                    <Text style={T.small}>{sensory.historyDays ? `지난 ${sensory.historyDays}일 평균과 비교했어요` : '비교할 지난 기록이 아직 없어요'}</Text>
-                  )}
                   {sensory.strain.map((t) => (
                     <Text key={t} style={{ fontSize: 13, fontWeight: '700', color: C.text }}>
                       · {t}
                     </Text>
                   ))}
-                  {sensory.suggestions[0] && <Text style={[T.small, { color: C.text }]}>내일 해볼 만한 것 · {sensory.suggestions[0]}</Text>}
-                  <Text style={{ fontSize: 11, color: C.muted }}>{sensory.note}</Text>
                 </View>
               )}
             </>
@@ -218,8 +211,8 @@ export default function Report() {
               <SenseHead k="visual" desc="보고 반응한 것" />
               <View style={{ flexDirection: 'row', gap: 8 }}>
                 <Tile label="바라본 시간" icon={<Art name="clock" />} value={duration(s.gaze_s)} />
-                <Tile label="좋아한 사물" icon={<Art name={artOf(fav?.id) ?? 'eye'} />} value={fav?.ko ?? '아직 없어요'} />
-                <Tile label="웃음·놀람" icon={<Art name="smile" />} value={`${smiles}번`} />
+                <Tile label="가장 오래 바라본" icon={<Art name={artOf(fav?.id) ?? 'eye'} />} value={fav?.ko ?? '아직 없어요'} />
+                <Tile label="많이 반응한" icon={<Art name="smile" />} value={smiles > 0 ? `웃음 ${smiles}번` : '-'} />
               </View>
             </View>
 

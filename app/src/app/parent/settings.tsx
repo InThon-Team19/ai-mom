@@ -347,7 +347,6 @@ export default function Settings() {
           )}
         </Section>
 
-        <Text style={{ fontSize: 12, color: C.sub }}>가입 ID {p.childId}</Text>
         <Pressable onPress={restart} accessibilityRole="button" hitSlop={8} style={{ alignSelf: 'flex-start', minHeight: 36, justifyContent: 'center' }}>
           <Text style={{ fontSize: 13, color: C.warn, textDecorationLine: 'underline' }}>이 기기 기록 지우기 · 처음부터 다시 가입</Text>
         </Pressable>

@@ -411,9 +411,11 @@ export function BigButton({
   icon,
   style,
   small,
+  color = C.text,
 }: {
   label: string;
   onPress?: () => void;
+  color?: string; // 글자색 (outline 링크 버튼은 C.link — 와이어프레임 '탭하여 낭독하기')
   variant?: 'primary' | 'outline';
   disabled?: boolean;
   icon?: ReactNode;
@@ -447,7 +449,7 @@ export function BigButton({
         style,
       ]}>
       {icon}
-      <Text style={{ flexShrink: 1, textAlign: 'center', fontSize: small ? 14 : 16, fontWeight: '800', color: C.text }}>{label}</Text>
+      <Text style={{ flexShrink: 1, textAlign: 'center', fontSize: small ? 14 : 16, fontWeight: '800', color }}>{label}</Text>
     </Pressable>
   );
 }

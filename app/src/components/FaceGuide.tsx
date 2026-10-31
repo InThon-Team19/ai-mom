@@ -25,7 +25,7 @@ const FILL = { flex: 1 }; // FaceTracker memo 유지용 고정 스타일
 
 const MESSAGE: Record<Exclude<GuideState, 'hard'>, string> = {
   searching: '얼굴을 틀 안에 맞춰주세요',
-  found: '잘 보여요',
+  found: '얼굴 인식됨', // 와이어프레임 2-4 알약 문구
   reading: '입모양을 배우고 있어요',
   done: '좋아요! 한 문장 더 배웠어요',
 };
