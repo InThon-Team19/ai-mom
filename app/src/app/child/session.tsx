@@ -441,7 +441,7 @@ export default function Session() {
 
   return (
     <View style={[{ flex: 1, backgroundColor: C.bg, gap: 14 }, pad]}>
-      <ParentExit />
+      <ParentExit home />
       {/* 상단: 일차 · 소리만 듣기 */}
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: 52 }}>
         <View style={{ backgroundColor: C.primary, borderRadius: R.pill, paddingHorizontal: 18, paddingVertical: 10 }}>

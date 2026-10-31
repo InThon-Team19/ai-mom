@@ -58,7 +58,7 @@ export default function End() {
 
   return (
     <View style={{ flex: 1, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center', gap: 16, paddingTop: insets.top, paddingBottom: insets.bottom }}>
-      <ParentExit />
+      <ParentExit home />
       <Animated.View style={bobStyle}>
         <View style={{ width: 230, height: 230, borderRadius: 115, backgroundColor: C.white, borderWidth: 3, borderColor: C.primary, overflow: 'hidden', alignItems: 'center', justifyContent: 'flex-end' }}>
           <Avatar config={profile?.avatar} mouth={mouth} scale={scale} size={200} expression="smile" />

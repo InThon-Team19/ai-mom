@@ -40,7 +40,8 @@ function adultMenu(childId?: string, onDone?: () => void) {
   ]);
 }
 
-export function ParentExit({ dark = false }: { dark?: boolean }) {
+/** home: 아이 홈으로 돌아가는 버튼도 같이 (학습·동화·소리만·마무리 화면) */
+export function ParentExit({ dark = false, home = false }: { dark?: boolean; home?: boolean }) {
   const profile = useProfile();
   const insets = useSafeAreaInsets();
   const [progress, setProgress] = useState(0);
@@ -66,8 +67,8 @@ export function ParentExit({ dark = false }: { dark?: boolean }) {
     }, 50);
   };
 
-  const size = 44;
-  const r = 19;
+  const size = 52;
+  const r = 23;
   const len = 2 * Math.PI * r;
   return (
     <>
@@ -76,7 +77,7 @@ export function ParentExit({ dark = false }: { dark?: boolean }) {
         onPressOut={stop}
         accessibilityLabel="부모 모드 (3초 길게 누르기)"
         hitSlop={8}
-        style={{ position: 'absolute', left: 10 + insets.left, top: 10 + insets.top, width: size, height: size, zIndex: 50, opacity: progress > 0 ? 1 : 0.5 }}>
+        style={{ position: 'absolute', left: 10 + insets.left, top: 10 + insets.top, width: size, height: size + 16, zIndex: 50, alignItems: 'center', opacity: progress > 0 ? 1 : 0.85 }}>
         <Svg width={size} height={size} style={{ position: 'absolute' }}>
           <Circle cx={size / 2} cy={size / 2} r={r} stroke={dark ? '#ffffff55' : C.border} strokeWidth={3} fill={dark ? 'transparent' : C.white} />
           {progress > 0 && (
@@ -92,10 +93,20 @@ export function ParentExit({ dark = false }: { dark?: boolean }) {
             />
           )}
         </Svg>
-        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-          <Text style={{ fontSize: 18 }}>🔒</Text>
+        <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
+          <Text style={{ fontSize: 20 }}>🔒</Text>
         </View>
+        <Text style={{ fontSize: 11, fontWeight: '800', color: dark ? '#ffffffcc' : C.sub }}>{progress > 0 ? '꾹…' : '부모'}</Text>
       </Pressable>
+      {home && (
+        <Pressable
+          onPress={() => router.replace('/child')}
+          accessibilityLabel="아이 홈으로"
+          hitSlop={8}
+          style={{ position: 'absolute', left: 10 + insets.left + size + 14, top: 10 + insets.top, width: 64, height: 64, borderRadius: 32, zIndex: 50, alignItems: 'center', justifyContent: 'center', backgroundColor: dark ? '#ffffff22' : C.primary }}>
+          <Text style={{ fontSize: 30 }}>🏠</Text>
+        </Pressable>
+      )}
       <PinPad
         visible={pinOpen}
         childId={profile?.childId ?? ''}

@@ -71,7 +71,7 @@ export default function AudioOnly() {
 
   return (
     <View style={{ flex: 1, backgroundColor: BG, alignItems: 'center', justifyContent: 'center', gap: 36, paddingTop: insets.top, paddingBottom: insets.bottom }}>
-      <ParentExit dark />
+      <ParentExit dark home />
       <Waveform level={mouth} />
       <Text style={{ fontSize: 32, fontWeight: '800', color: '#FFFFFF' }}>{me} 목소리를 들어봐요</Text>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 24 }}>

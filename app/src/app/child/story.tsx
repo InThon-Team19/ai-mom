@@ -73,8 +73,8 @@ export default function Story() {
   const cur = story.pages[page];
 
   return (
-    <View style={{ flex: 1, backgroundColor: C.bg, gap: 16, paddingTop: 16 + insets.top, paddingBottom: 16 + insets.bottom, paddingLeft: 68 + insets.left, paddingRight: 40 + insets.right }}>
-      <ParentExit />
+    <View style={{ flex: 1, backgroundColor: C.bg, gap: 16, paddingTop: 16 + insets.top, paddingBottom: 16 + insets.bottom, paddingLeft: 150 + insets.left, paddingRight: 40 + insets.right }}>
+      <ParentExit home />
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: 52 }}>
         <View style={{ backgroundColor: C.primary, borderRadius: R.pill, paddingHorizontal: 18, paddingVertical: 10 }}>
           <Text style={{ color: C.onPrimary, fontSize: 18, fontWeight: '800' }}>{story.title}</Text>
