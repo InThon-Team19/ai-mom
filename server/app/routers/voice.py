@@ -245,7 +245,27 @@ def match_expected(text: str, expected: str) -> bool:
     for e in (_normalize(x) for x in expected.split("|")):
         if e and _lcs(t, e) >= max(1, (len(e) + 1) // 2):
             return True
+        # 짧은 말은 자모 단위로도 비교: 아이가 자음을 빼고 말해도("사과" -> "아가") 성공으로 봄. 긴 문장엔 적용 안 함
+        if e and len(t) <= len(e) + 2:
+            je, jt = _jamo(e), _jamo(t)
+            if je and _lcs(jt, je) * 2 >= len(je) and _lcs(jt, je) >= 2:
+                return True
     return False
+
+
+def _jamo(s: str) -> str:
+    """한글 음절 -> 초성·중성·종성 (영문 등은 그대로)"""
+    out = []
+    for ch in s:
+        c = ord(ch) - 0xAC00
+        if 0 <= c < 11172:
+            out += [chr(0x1100 + c // 588), chr(0x1161 + (c % 588) // 28)]
+            if c % 28:
+                out.append(chr(0x11A7 + c % 28))
+        else:
+            out.append(ch)
+    return "".join(out)
+
 
 
 def _stt_from_path(src: Path, expected: str) -> SttOut:
@@ -259,7 +279,7 @@ def _stt_from_path(src: Path, expected: str) -> SttOut:
         text = ""
         if speech_features(pcm, sr)["speech_s"] > 0.2:  # 무음이면 STT 호출 생략
             try:
-                text = transcribe(wav, prompt=expected.replace("|", ", "))
+                text = transcribe(wav)  # 힌트 없이: 목표 단어를 힌트로 주면 말 없는 소리도 그 단어로 되읊어 '맞게 말함'으로 잘못 기록됨 (시험: 삐 소리 -> '사과')
             except RuntimeError as e:  # 키 없음
                 raise HTTPException(503, str(e))
             except Exception as e:
@@ -452,7 +472,7 @@ def child_clip(body: ChildClipIn):
         return ChildClipOut(saved=False, features=SpeechFeatures(**feats))
     text = ""
     try:
-        text = transcribe(wav, prompt=body.expected.replace("|", ", "))
+        text = transcribe(wav)  # 힌트 없이: 목표 단어를 힌트로 주면 말 없는 소리도 그 단어로 되읊어 '맞게 말함'으로 잘못 기록됨 (시험: 삐 소리 -> '사과')
     except Exception:
         pass  # STT 키가 없거나 실패해도 소리는 저장 (부모가 들을 수 있게)
     feats = speech_features(pcm, sr, text)

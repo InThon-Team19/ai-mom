@@ -111,7 +111,9 @@ def summarize(events: list[dict], day: str) -> Summary:
         smiles=smiles,
         repeats=len(repeats),
         repeat_ok=len(ok),
-        words=sorted({e["data"].get("word", "") for e in ok} - {""}),
+        # 따라 말하기에서 맞힌 단어 + 시키지 않았는데 먼저 말해서 맞힌 단어(voice, matched)
+        words=sorted(({e["data"].get("word", "") for e in ok}
+                     | {e["data"].get("item", "") for e in by("voice") if e["data"].get("matched")}) - {""}),
         favorites=[k for k, _ in fav.most_common(3)],
         balance=balance,
         out_of_scope=[e["data"].get("text", "") for e in by("out_of_scope")]
