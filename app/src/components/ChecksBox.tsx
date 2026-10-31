@@ -1,7 +1,7 @@
 // 확인 필요 상자 (리포트·아이 녹음 기록): 와이어프레임 2-2a 대로 범위 밖 질문 → 위험 신호, 차분한 살구색(빨강·기호 없음) — 담당: 태희 (민철 디자인 Recordings)
 import { Pressable, View } from 'react-native';
 
-import { josa } from '@/lib/progress';
+import { named } from '@/lib/progress';
 import type { Summary } from '@/lib/types';
 import { C, T } from '@/theme';
 import { Text } from '@/components/AppText';
@@ -34,7 +34,7 @@ export function ChecksBox({ summary, name, compact, onPress }: { summary: Summar
       </View>
       {compact ? (
         <Text style={[T.small, { color: C.text }]} numberOfLines={2}>
-          {alerts ? `${name}${josa(name, '이', '가')} 불편함을 말한 순간이 ${alerts}번 있었어요` : '범위 밖 질문이 있었어요'}
+          {alerts ? `${named(name, '가')} 불편함을 말한 순간이 ${alerts}번 있었어요` : '범위 밖 질문이 있었어요'}
         </Text>
       ) : (
         checks.map((c, i) => (

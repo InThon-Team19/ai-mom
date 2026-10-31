@@ -12,7 +12,7 @@ import { Art, BigButton, Bubble, Panel, artOf, type ArtName } from '@/components
 import { ITEMS, dayOf, type Item } from '@/content/curriculum';
 import { api } from '@/lib/api';
 import { useDevice } from '@/lib/layout';
-import { headline, josa, wordStatus } from '@/lib/progress';
+import { headline, josa, wordStatus, named } from '@/lib/progress';
 import { duration, loadSensory, type SensoryReport } from '@/lib/sensory';
 import { useProfile, refreshProfile } from '@/lib/store';
 import type { Gauge, Summary } from '@/lib/types';
@@ -133,7 +133,7 @@ export default function ParentHome() {
   const today = dayOf(profile?.day ?? 1);
   const st = wordStatus(today.day, summary);
   // "오늘은 사과를 배웠어요" → "지호는 오늘 사과를 배웠어요"
-  const line = headline(st).replace(/^오늘은 /, `${name}${josa(name, '은', '는')} 오늘 `);
+  const line = headline(st).replace(/^오늘은 /, `${named(name, '는')} 오늘 `);
   const story = today.story ? { title: today.story.title } : null;
   const rows = todayRows(summary, story, me);
   // 학습률 카드: 음성·입모양 둘 다 100% 가 되기 전까지 계속 보임 (와이어프레임: 다 배우면 숨김). 하나만 불러와도 보임
@@ -216,8 +216,7 @@ export default function ParentHome() {
 
         <View style={{ gap: 10 }}>
           <Text style={{ fontSize: 17, fontWeight: '800', color: C.text }}>
-            오늘 {name}
-            {josa(name, '은', '는')}…
+            오늘 {named(name, '는')}…
           </Text>
           {rows.length ? (
             rows.map((r) => (
@@ -243,7 +242,7 @@ export default function ParentHome() {
               <Text style={[T.small, { textAlign: 'center' }]}>
                 {linked === false
                   ? '태블릿과 서버가 켜져 있는지 확인해 주세요.'
-                  : `${name}${josa(name, '이', '가')} 아바타와 놀고 나면 여기에 보여요.`}
+                  : `${named(name, '가')} 아바타와 놀고 나면 여기에 보여요.`}
               </Text>
             </View>
           )}

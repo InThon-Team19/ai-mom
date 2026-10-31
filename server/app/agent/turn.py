@@ -150,7 +150,7 @@ def _mentions_today(text: str, day: int) -> bool:
 CHAT_OPENERS = ("{call}, 오늘 재미있었어? {me}랑 이야기하자!", "{call}, 오늘 뭐가 제일 좋았어?", "{call}, 지금 기분이 어때?")
 CHAT_FALLBACKS = ("우와, 정말? {me}는 {name} 이야기 듣는 게 제일 좋아. 조금만 더 이야기해 줄래?", "히히, {me}도 너무 궁금해. 그래서 그다음에 어떻게 됐어?", "오오, {name} 말 잘 듣고 있어. {me}한테 하나만 더 알려 줄래?")
 CHAT_MISS = "{me}도 {name} 많이 보고 싶어. 이따 {me} 오면 꼭 안아 주자. 그때 오늘 제일 재미있었던 거 이야기해 줄래?"  # AI 가 늦을 때 '엄마 보고 싶어'에 엉뚱한 답이 안 나가게
-CHAT_UNSURE = "그건 이따 {me}랑 같이 알아보자. {name}는 오늘 뭐 하고 놀았어?"
+CHAT_UNSURE = "그건 이따 {me}랑 같이 알아보자. {stem}는 오늘 뭐 하고 놀았어?"  # stem: 민혁이 / 지호
 
 
 def _chat_system(day: int, p: dict, profile: dict, mood: str | None) -> str:
@@ -181,7 +181,8 @@ def make_chat(day: int, child_text: str, history: list[dict] | None, signals: di
     import random
     p = _persona(profile)
     mood = (signals or {}).get("mood")
-    fill = lambda s: s.format(name=p["name"], me=p["me"], call=p["call"])  # noqa: E731
+    stem = p["name"] + ("이" if p["call"].endswith("아") and p["call"] != p["name"] + "야" else "")  # 받침 있으면 민혁이는
+    fill = lambda s: s.format(name=p["name"], me=p["me"], call=p["call"], stem=stem)  # noqa: E731
     if not child_text:
         return {"text": fill(random.choice(CHAT_OPENERS)), "out_of_scope": False, "blocked": None}
     if safety.danger_in(child_text):

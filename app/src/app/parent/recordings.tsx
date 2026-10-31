@@ -11,7 +11,7 @@ import { dayOf } from '@/content/curriculum';
 import { api } from '@/lib/api';
 import { useDevice } from '@/lib/layout';
 import { goBack } from '@/lib/nav';
-import { josa, today as todayYmd } from '@/lib/progress';
+import { today as todayYmd, named } from '@/lib/progress';
 import { useProfile } from '@/lib/store';
 import type { ChildClip, Summary } from '@/lib/types';
 import { C, T } from '@/theme';
@@ -60,8 +60,7 @@ export default function Recordings() {
       <ScrollView contentContainerStyle={[{ padding: 20, gap: 14, paddingBottom: 32 }, frame]}>
         <BackHeader title="아이 녹음 기록" backLabel="리포트로 돌아가기" onBack={() => goBack('/parent/report' as Href)} />
         <Text style={{ fontSize: 13, color: C.sub }}>
-          {name}
-          {josa(name, '이', '가')} 말한 순간 자동으로 녹음돼요. ✓는 따라 말한 단어와 비슷했다는 뜻이에요.
+          {named(name, '가')} 말한 순간 자동으로 녹음돼요. ✓는 따라 말한 단어와 비슷했다는 뜻이에요.
         </Text>
         <Text style={{ fontSize: 14, fontWeight: '800', color: C.text }}>
           {d.getMonth() + 1}월 {d.getDate()}일 · {day}일차

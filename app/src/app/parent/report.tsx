@@ -11,7 +11,7 @@ import { ChecksBox } from '@/components/ChecksBox';
 import { Art, BigButton, Bubble, MicIcon, Panel, artOf } from '@/components/ui';
 import { ITEMS, dayOf, type Item } from '@/content/curriculum';
 import { useDevice } from '@/lib/layout';
-import { josa } from '@/lib/progress';
+import { named } from '@/lib/progress';
 import { duration, loadSensory, type SenseKey, type SensoryReport } from '@/lib/sensory';
 import { useProfile } from '@/lib/store';
 import type { Summary } from '@/lib/types';
@@ -152,7 +152,7 @@ export default function Report() {
   const smiles = (s?.smiles ?? 0) + (s?.expressions?.smile ?? 0) + (s?.expressions?.surprise ?? 0);
   // 아바타 제안: 좋아한 사물 → 오늘 동화 → 오늘 주제 순
   const talk = fav?.ko ?? today.story?.title ?? today.topic;
-  const withJosa = `${name}${josa(name, '이랑', '랑')}`;
+  const withJosa = named(name, '랑');
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: C.bg }}>
@@ -243,8 +243,7 @@ export default function Report() {
               <Art name="sprout" />
               <Text style={[T.body, { fontWeight: '700', textAlign: 'center' }]}>아직 오늘 대화 기록이 없어요</Text>
               <Text style={[T.small, { textAlign: 'center' }]}>
-                {name}
-                {josa(name, '과', '와')} 아바타가 놀고 나면 감각 일지가 채워져요.
+                {named(name, '와')} 아바타가 놀고 나면 감각 일지가 채워져요.
               </Text>
             </View>
           )

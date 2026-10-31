@@ -13,6 +13,11 @@ export function josa(word: string, a: string, b: string) {
   return (c - 0xac00) % 28 ? a : b;
 }
 
+/** 아이 이름 + 조사: 받침 있는 이름은 '이'를 붙여 부름 (민혁이는 / 지호는, 민혁이가 / 지호가). particle 은 받침 없는 쪽(는·가·랑·와) */
+export function named(name: string, particle: string) {
+  return `${name}${josa(name, '이', '')}${particle}`;
+}
+
 const joinKo = (ws: string[]) => ws.reduce((acc, w, i) => (i === 0 ? w : `${acc}${josa(ws[i - 1], '과', '와')} ${w}`), '');
 
 export type WordStatus = { learned: string[]; met: string[]; planned: string[] };
