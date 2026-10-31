@@ -10,7 +10,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PinPad } from '@/components/PinPad';
 import { api } from '@/lib/api';
 import { getDeviceId } from '@/lib/device';
-import { loadAccount } from '@/lib/account';
+import { authMessage, loadAccount, login } from '@/lib/account';
 import { resetLocal, setRole, useProfile } from '@/lib/store';
 import { C } from '@/theme';
 
@@ -118,6 +118,22 @@ export function ParentExit({ dark = false, home = false }: { dark?: boolean; hom
         onSuccess={() => {
           setPinOpen(false);
           adultMenu(profile?.childId);
+        }}
+        onForgot={async (loginId, password) => {
+          // PIN 을 잊었을 때: 부모 아이디·비밀번호로 로그인 → 바로 부모 앱 → 설정에서 새 PIN
+          try {
+            await login(loginId, password);
+          } catch (e) {
+            return authMessage(e);
+          }
+          setPinOpen(false);
+          await setRole('parent');
+          router.replace('/parent/settings' as Href);
+          setTimeout(() => {
+            if (Platform.OS === 'web') globalThis.alert?.('설정 탭 "부모 PIN"에서 새 PIN을 정해 주세요.');
+            else Alert.alert('부모 모드로 들어왔어요', '설정 탭 "부모 PIN"에서 새 PIN을 정해 주세요.');
+          }, 600);
+          return null;
         }}
       />
     </>

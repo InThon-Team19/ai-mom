@@ -16,7 +16,7 @@ import { useSpeak } from '@/hooks/useSpeak';
 import { getDeviceId, registerThisDevice } from '@/lib/device';
 import { prefetchDay } from '@/lib/prefetch';
 import { api } from '@/lib/api';
-import { linkTablet, loadProfile, refreshProfile, resetLocal, useProfile } from '@/lib/store';
+import { clearRole, linkTablet, loadProfile, refreshProfile, resetLocal, useProfile } from '@/lib/store';
 import { C, R, T } from '@/theme';
 
 
@@ -199,7 +199,18 @@ function LinkScreen({ onDone, canCancel }: { onDone: () => void; canCancel: bool
         />
         {!!error && <Text style={{ fontSize: 15, color: C.warn }}>{error}</Text>}
         <Button label={busy ? '연결 중...' : '연결'} disabled={code.length !== 6 || busy} onPress={submit} style={{ minHeight: 64 }} />
-        {canCancel && <Button label="취소" variant="ghost" onPress={onDone} />}
+        {canCancel ? (
+          <Button label="취소" variant="ghost" onPress={onDone} />
+        ) : (
+          <Button
+            label="‹ 돌아가기 (부모 폰으로 쓰기·다시 고르기)"
+            variant="ghost"
+            onPress={async () => {
+              await clearRole(); // 아이 태블릿으로 잘못 골랐을 때: 기기 용도 선택 화면으로
+              router.replace('/');
+            }}
+          />
+        )}
       </View>
     </View>
   );
