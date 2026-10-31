@@ -2,6 +2,7 @@
 import base64
 import binascii
 import hashlib
+import re
 import json
 import math
 import shutil
@@ -349,6 +350,19 @@ def _reference_samples(child_id: str, n: int = 6) -> list[dict]:  # Fish 권장 
     return ss[:n]
 
 
+_EMOJI = re.compile("[🀀-🫿☀-➿️‍]")
+
+
+def _speakable(text: str) -> str:
+    """TTS 가 이상한 소리(웅얼거림·숨소리)로 읽는 기호 정리: 이모지, 물결(~), 말줄임(...), 반복 문장부호"""
+    t = _EMOJI.sub("", text)
+    t = re.sub(r"[~∼〜]+", "", t)
+    t = re.sub(r"\.{2,}|…+", ", ", t)
+    t = re.sub(r"([!?])[!?]+", r"\1", t)
+    t = re.sub(r"\s*,\s*(,\s*)+", ", ", t)
+    return re.sub(r"\s+", " ", t).strip(" ,")
+
+
 @router.post("/tts", response_model=TtsOut)
 def tts(body: TtsIn):
     """부모 목소리로 문장 읽기 → mp3 URL. 같은 문장은 캐시.
@@ -357,6 +371,9 @@ def tts(body: TtsIn):
         id_file = _voice_id_file(body.child_id)
     except ValueError:
         raise HTTPException(400, "child_id 형식 오류")
+    body.text = _speakable(body.text)
+    if not body.text:
+        raise HTTPException(400, "읽을 글자가 없어요")
     model_id = id_file.read_text(encoding="utf-8").strip() if id_file.exists() else ""
     refs = [] if model_id else _reference_samples(body.child_id)
     if not model_id and not refs:
