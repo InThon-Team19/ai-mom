@@ -5,7 +5,7 @@ import { Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Circle, Path } from 'react-native-svg';
 
-import { Avatar } from '@/components/Avatar';
+import { FamilyAvatar } from '@/components/FamilyAvatar';
 import { ChecksBox } from '@/components/ChecksBox';
 import { RingGauge } from '@/components/RingGauge';
 import { Art, BigButton, Bubble, Panel, artOf, type ArtName } from '@/components/ui';
@@ -192,7 +192,7 @@ export default function ParentHome() {
               overflow: 'hidden',
             }}
             accessibilityLabel={`${me} 아바타`}>
-            {profile && <Avatar config={profile.avatar} size={isTablet ? 112 : 92} expression="smile" />}
+            {profile && <FamilyAvatar config={profile.avatar} size={isTablet ? 112 : 92} expression="smile" />}
           </View>
           <Bubble>
             <Text style={{ fontSize: 13, fontWeight: '800', color: C.link }}>오늘 {today.day}일차!</Text>

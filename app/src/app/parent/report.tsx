@@ -6,7 +6,7 @@ import { ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Circle, G, Text as SvgText } from 'react-native-svg';
 
-import { Avatar } from '@/components/Avatar';
+import { FamilyAvatar } from '@/components/FamilyAvatar';
 import { ChecksBox } from '@/components/ChecksBox';
 import { Art, BigButton, Bubble, MicIcon, Panel, artOf } from '@/components/ui';
 import { ITEMS, dayOf, type Item } from '@/content/curriculum';
@@ -253,7 +253,7 @@ export default function Report() {
         {/* 아바타 제안 말풍선 */}
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
           <View style={{ width: 52, height: 52, borderRadius: 26, backgroundColor: C.primarySoft, overflow: 'hidden', alignItems: 'center', justifyContent: 'flex-end' }}>
-            {profile && <Avatar config={profile.avatar} size={48} expression="smile" />}
+            {profile && <FamilyAvatar config={profile.avatar} size={48} expression="smile" />}
           </View>
           <Bubble>
             <Text style={{ fontSize: 14, lineHeight: 22, color: C.text }}>

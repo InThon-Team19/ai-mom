@@ -6,7 +6,7 @@ import { KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from 'rea
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 
-import { Avatar } from '@/components/Avatar';
+import { FamilyAvatar } from '@/components/FamilyAvatar';
 import { BigButton, Bubble, MicIcon } from '@/components/ui';
 import { DAYS, ITEMS, dayOf, fill } from '@/content/curriculum';
 import { useDevice } from '@/lib/layout';
@@ -160,7 +160,7 @@ function FeedbackForm({ profile }: { profile: Profile }) {
         <ScrollView contentContainerStyle={[{ padding: 20, paddingBottom: 28, gap: 20, flexGrow: 1 }, frame]} keyboardShouldPersistTaps="handled">
           <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 12 }}>
             <View style={{ width: 96, height: 96, alignItems: 'center', justifyContent: 'flex-end', overflow: 'hidden' }} accessibilityLabel={`${profile.parent.title} 아바타`}>
-              <Avatar config={profile.avatar} size={96} expression="smile" />
+              <FamilyAvatar config={profile.avatar} size={96} expression="smile" />
             </View>
             <Bubble style={{ alignSelf: 'stretch' }}>
               <Text style={{ fontSize: 14, fontWeight: '700', lineHeight: 22, color: C.text }}>

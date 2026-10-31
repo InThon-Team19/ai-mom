@@ -1,3 +1,4 @@
+import { ParentFrameAvatar } from '@/components/ParentFrameAvatar';
 // 아이 태블릿 3-8 마무리 (실제 부모에게 연결 — AI가 부모를 대체하지 않도록) — 담당: 태희 (민철 Design 보드 KidEnd)
 // 기획 4 리스크 "아이가 AI를 실제 부모로 오인" → "이따 엄마 오면 ○○ 이야기 해줄래?"로 실제 부모에게 넘김
 // 기획 2-3: 마무리 장면에서 오늘 모은 사물 바구니를 함께 보며 끝냄 (글자 없이 그림으로)
@@ -8,7 +9,7 @@ import { View } from 'react-native';
 import Animated, { Easing, FadeIn, useAnimatedStyle, useSharedValue, withRepeat, withTiming, ZoomIn } from 'react-native-reanimated';
 import Svg, { Circle, Path, Rect } from 'react-native-svg';
 
-import { Avatar } from '@/components/Avatar';
+
 import { AvatarCircle, BasketArt, ChatIcon, ChunkyButton, HomePill, ItemArt, K, KidScreen, StarIcon, Stars, useKid } from '@/components/child/design';
 import { sleep, useMouthScale, who } from '@/components/child/kit';
 import { ParentExit } from '@/components/ParentExit';
@@ -33,7 +34,7 @@ export default function End() {
   const profile = useProfile();
   const { fav: favParam, basket: basketParam } = useLocalSearchParams<{ fav?: string; basket?: string }>();
   const { u, f, width, height, insets } = useKid();
-  const { speak, stop, mouth } = useSpeak(profile?.childId);
+  const { speak, stop, mouth, avatarDriver } = useSpeak(profile?.childId);
   const scale = useMouthScale(profile?.childId);
   const { name, me } = who(profile);
   const fav = favParam || ITEMS[dayOf(profile?.day ?? 1).items[0]].ko;
@@ -99,7 +100,7 @@ export default function End() {
         <View style={{ width: Math.min(u(560, 230), circle + u(90, 20)), alignItems: 'center', justifyContent: 'center' }}>
           <Animated.View style={bobStyle}>
             <AvatarCircle size={circle} border={u(10, 5)}>
-              <Avatar config={profile?.avatar} mouth={mouth} scale={scale} size={Math.round(circle * 0.87)} expression="smile" />
+              <ParentFrameAvatar driver={avatarDriver} config={profile?.avatar} mouth={mouth} scale={scale} size={Math.round(circle * 0.87)} expression="smile" />
             </AvatarCircle>
             <View style={{ position: 'absolute', top: -circle * 0.03, left: -circle * 0.04 }}>
               <StarIcon size={Math.round(circle * 0.17)} />

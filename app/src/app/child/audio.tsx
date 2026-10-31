@@ -6,7 +6,7 @@ import { useCallback, useMemo, useRef, useState } from 'react';
 import { View } from 'react-native';
 import Svg, { Circle, Ellipse, G } from 'react-native-svg';
 
-import { Avatar } from '@/components/Avatar';
+import { ParentFrameAvatar } from '@/components/ParentFrameAvatar';
 import { ChunkyButton, HomePill, K, KidScreen, MonitorIcon, SkipNextIcon, useKid } from '@/components/child/design';
 import { sleep, useMouthScale, who } from '@/components/child/kit';
 import { ParentExit } from '@/components/ParentExit';
@@ -19,7 +19,7 @@ import { Text } from '@/components/AppText';
 export default function AudioOnly() {
   const profile = useProfile();
   const { u, f, width, height, compact, insets } = useKid();
-  const { speak, stop, mouth } = useSpeak(profile?.childId);
+  const { speak, stop, mouth, avatarDriver } = useSpeak(profile?.childId, true);
   const scale = useMouthScale(profile?.childId);
   const { name, me, english } = who(profile);
   const [from, setFrom] = useState({ at: 0 }); // "다음" 누를 때마다 새 객체 → 흐름을 그 문장부터 다시 시작
@@ -127,7 +127,7 @@ export default function AudioOnly() {
             <Circle cx="183" cy="183" r={116 + k * 6} stroke={K.nightRing2} strokeWidth={4} fill="none" />
           </Svg>
           <View style={{ width: av, height: av, borderRadius: av / 2, borderWidth: u(6, 3), borderColor: K.bg, backgroundColor: K.peach, overflow: 'hidden', alignItems: 'center', justifyContent: 'flex-end' }}>
-            <Avatar config={profile?.avatar} mouth={mouth} scale={scale} size={Math.round(av * 0.86)} expression="smile" />
+            <ParentFrameAvatar driver={avatarDriver} config={profile?.avatar} mouth={mouth} scale={scale} size={Math.round(av * 0.86)} expression="smile" />
           </View>
         </View>
         {/* 소리 막대 */}

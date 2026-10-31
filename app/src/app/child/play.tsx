@@ -1,3 +1,4 @@
+import { ParentFrameAvatar } from '@/components/ParentFrameAvatar';
 // 아이 태블릿 감각 놀이 (손 놀이) — 담당: 태희 (기획 3 "세 감각을 한 동작에 묶기" · "진동 원칙")
 // 순서: 쓸어내기(그림 드러내기) → 두드리기(북) → 끌어서 옮기기(정리 놀이). 판마다 짧게(약 40초 안) 자동으로 넘어감
 // 아이가 8초 동안 아무것도 안 하면 아바타가 다시 권하며 놀잇감이 살짝 흔들리고, 한 번 더 가만히 있으면 다음 판으로 (멈추지 않음)
@@ -8,7 +9,7 @@ import { router, useIsFocused, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { View } from 'react-native';
 
-import { Avatar, type AvatarExpression } from '@/components/Avatar';
+import { type AvatarExpression } from '@/components/Avatar';
 import { ParentExit } from '@/components/ParentExit';
 import { DrumStation, RevealStation, SortStation, type StationProps } from '@/components/child/SenseStations';
 import { AvatarPanel, ChunkyButton, CloseButton, HandIcon, K, KidScreen, SenseChip, TopBar, useKid, WhiteCard } from '@/components/child/design';
@@ -37,7 +38,7 @@ export default function Play() {
   const kid = useKid();
   const focused = useIsFocused();
   const { fav, basket, next } = useLocalSearchParams<{ fav?: string; basket?: string; next?: string }>();
-  const { speak, stop, mouth } = useSpeak(profile?.childId);
+  const { speak, stop, mouth, avatarDriver } = useSpeak(profile?.childId);
   const scale = useMouthScale(profile?.childId);
   const { name, me, english } = who(profile);
   const reduceMotion = !!profile?.settings.reduceMotion;
@@ -287,7 +288,7 @@ export default function Play() {
           line={line}
           avatar={(w, h) => (
             <NodBox nod={nod} reduceMotion={reduceMotion}>
-              <Avatar config={profile.avatar} mouth={mouth} scale={scale} size={Math.round(Math.min(w * 0.8, (h * 0.72) / 1.1))} expression={expr ?? 'smile'} />
+              <ParentFrameAvatar driver={avatarDriver} config={profile.avatar} mouth={mouth} scale={scale} size={Math.round(Math.min(w * 0.8, (h * 0.72) / 1.1))} expression={expr ?? 'smile'} />
             </NodBox>
           )}
         />

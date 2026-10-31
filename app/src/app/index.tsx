@@ -1,3 +1,4 @@
+import { FamilyAvatar } from '@/components/FamilyAvatar';
 // 앱 시작: 이 기기를 부모 폰으로 쓸지, 아이 태블릿으로 쓸지 + 서버 주소 설정 — 담당: 태희
 // 와이어프레임 1-1 은 "역할 선택 없이 부모만 가입". 아이 태블릿은 1-7 의 연결 코드로 붙음 → 여기서는 기기 용도만 고름
 import { Redirect, router } from 'expo-router';
@@ -68,6 +69,7 @@ export default function Entry() {
           onPress={() => choose('parent')}
           style={({ pressed }) => ({ gap: 6, paddingVertical: 22, paddingHorizontal: 20, borderRadius: 18, backgroundColor: C.primary, opacity: pressed ? 0.85 : 1 })}>
           <Text style={{ fontSize: 20, fontWeight: '800', color: C.text }}>부모 폰으로 쓰기</Text>
+          <FamilyAvatar role="parent" size={100} />
           <Text style={{ fontSize: 14, lineHeight: 21, color: C.text }}>가입하고, 밤에 리포트를 보고 내일 계획을 읽어 줘요.</Text>
         </Pressable>
         <Pressable
@@ -75,6 +77,7 @@ export default function Entry() {
           onPress={() => choose('child')}
           style={({ pressed }) => ({ gap: 6, paddingVertical: 22, paddingHorizontal: 20, borderRadius: 18, backgroundColor: C.white, borderWidth: 2, borderColor: C.border, opacity: pressed ? 0.85 : 1 })}>
           <Text style={{ fontSize: 20, fontWeight: '800', color: C.text }}>아이 태블릿으로 쓰기</Text>
+          <FamilyAvatar role="child" size={100} />
           <Text style={{ fontSize: 14, lineHeight: 21, color: C.sub }}>부모 폰에서 받은 연결 코드로 연결해요.</Text>
         </Pressable>
         <View style={{ flex: 1 }} />

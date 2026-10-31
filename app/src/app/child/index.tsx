@@ -1,3 +1,5 @@
+import { FamilyAvatar } from '@/components/FamilyAvatar';
+import { ParentFrameAvatar } from '@/components/ParentFrameAvatar';
 // 아이 홈 3-1: 아바타가 먼저 인사, 오늘 만날 친구들, 놀자·동화·소리만 (+ 처음 한 번 태블릿 연결) — 담당: 태희
 // 글자 최소. 들어오자마자 학습이 시작되지 않고 아이가 고름. 부모 모드는 오른쪽 위 "부모 · 3초 꾹" + PIN (민철 Design 보드 KidHome · TabLink)
 import { router, useFocusEffect } from 'expo-router';
@@ -7,7 +9,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import Svg, { Circle, Ellipse } from 'react-native-svg';
 
-import { Avatar } from '@/components/Avatar';
+
 import { Logo } from '@/components/Logo';
 import {
   AvatarCircle,
@@ -98,7 +100,7 @@ const TILE_COLORS: [string, string, string][] = [
 function Greeting() {
   const profile = useProfile();
   const { u, f, compact, height, insets } = useKid();
-  const { speak, stop, mouth } = useSpeak(profile?.childId);
+  const { speak, stop, mouth, avatarDriver } = useSpeak(profile?.childId);
   const scale = useMouthScale(profile?.childId);
   const { name, me } = who(profile);
   const day = dayOf(profile?.day ?? 1);
@@ -184,7 +186,7 @@ function Greeting() {
             <Bubble size={bubbleFont}>{line}</Bubble>
           </Animated.View>
           <AvatarCircle size={circle} border={u(8, 4)}>
-            <Avatar config={profile?.avatar} mouth={mouth} scale={scale} size={Math.round(circle * 0.86)} expression="smile" />
+            <ParentFrameAvatar driver={avatarDriver} config={profile?.avatar} mouth={mouth} scale={scale} size={Math.round(circle * 0.86)} expression="smile" />
           </AvatarCircle>
         </Pressable>
 
@@ -333,7 +335,7 @@ function LinkScreen({ onDone, canCancel }: { onDone: () => void; canCancel: bool
           }}>
           <View style={{ position: 'absolute', top: -av / 2, left: '50%', marginLeft: -av / 2 }}>
             <AvatarCircle size={av} border={u(6, 4)}>
-              <Avatar size={Math.round(av * 0.86)} expression="smile" />
+              <FamilyAvatar role="child" size={Math.round(av * 0.86)} />
             </AvatarCircle>
           </View>
           <Text style={{ fontSize: f(40, 20), fontWeight: '800', color: K.ink, textAlign: 'center' }}>아이 태블릿 연결하기</Text>

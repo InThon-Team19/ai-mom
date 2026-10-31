@@ -1,3 +1,4 @@
+import { ParentFrameAvatar } from '@/components/ParentFrameAvatar';
 // 아이 태블릿 "엄마랑 이야기하기" (학습이 끝난 뒤 자유 대화 — 가르치지 않고 정서 교감) — 담당: 태희
 // 아바타가 먼저 말을 걸고(에이전트 moment 'chat', child_text 없음 → 여는 말), 이후 녹음 버튼 없이 계속 들음 (useChildListener)
 // 아이 말 → 최근 대화(최대 6턴)와 함께 에이전트에 보냄 → 따뜻한 대답. 받아쓰기가 안 된 옹알이·웃음은 서버 없이 짧게 맞장구
@@ -8,7 +9,7 @@ import { router, useIsFocused, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { View } from 'react-native';
 
-import { Avatar, type AvatarExpression } from '@/components/Avatar';
+import { type AvatarExpression } from '@/components/Avatar';
 import { ParentExit } from '@/components/ParentExit';
 import { AvatarPanel, ChatIcon, ChunkyButton, CloseButton, K, KidScreen, ListeningMic, TopBar, useKid, WhiteCard } from '@/components/child/design';
 import { sleep, useDailyLimit, useMouthScale, who } from '@/components/child/kit';
@@ -45,7 +46,7 @@ export default function Chat() {
     fav?: string;
     basket?: string;
   }>();
-  const { speak, stop, mouth } = useSpeak(profile?.childId);
+  const { speak, stop, mouth, avatarDriver } = useSpeak(profile?.childId);
   const stopRef = useRef(stop); // 끼어들기 때 아바타 말 멈추기용
   useEffect(() => {
     stopRef.current = stop;
@@ -369,7 +370,7 @@ export default function Chat() {
           line={line}
           avatar={(w, h) => (
             <NodBox nod={nod} reduceMotion={reduceMotion}>
-              <Avatar config={profile?.avatar} mouth={mouth} scale={scale} size={Math.round(Math.min(w * 0.8, (h * 0.72) / 1.1))} expression={expression} />
+              <ParentFrameAvatar driver={avatarDriver} config={profile?.avatar} mouth={mouth} scale={scale} size={Math.round(Math.min(w * 0.8, (h * 0.72) / 1.1))} expression={expression} />
             </NodBox>
           )}
         />

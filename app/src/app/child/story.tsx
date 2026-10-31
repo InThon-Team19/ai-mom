@@ -1,3 +1,4 @@
+import { ParentFrameAvatar } from '@/components/ParentFrameAvatar';
 // 아이 태블릿 3-6 전래동화 (아바타가 읽어주고 장면 그림이 넘어감) — 담당: 태희 (민철 Design 보드 Story)
 // 보드: 머리줄(닫기 · 책 + 제목 · n / N장 · 부모) · 큰 흰 카드(위 장면 그림 + "읽어 주는 중" · 아래 문장) · 아래 이전 장 / 소리만 듣기 / 다음 장
 import { router, useFocusEffect, useIsFocused, useLocalSearchParams } from 'expo-router';
@@ -6,7 +7,7 @@ import { View } from 'react-native';
 import { FadeIn } from 'react-native-reanimated';
 import Svg, { Circle, Ellipse, Path, Rect } from 'react-native-svg';
 
-import { Avatar } from '@/components/Avatar';
+
 import { BookIcon, ChevIcon, ChunkyButton, CloseButton, K, KidScreen, SOFT2, SpeakerIcon, TopBar, useKid } from '@/components/child/design';
 import { sleep, useDailyLimit, useMouthScale, who } from '@/components/child/kit';
 import { ParentExit } from '@/components/ParentExit';
@@ -22,7 +23,7 @@ export default function Story() {
   const { fav, basket } = useLocalSearchParams<{ fav?: string; basket?: string }>();
   const { u, f, compact } = useKid();
   const focused = useIsFocused();
-  const { speak, stop, mouth, speaking } = useSpeak(profile?.childId);
+  const { speak, stop, mouth, avatarDriver, speaking } = useSpeak(profile?.childId);
   const scale = useMouthScale(profile?.childId);
   const { me, name } = who(profile);
   const story = dayOf(profile?.day ?? 1).story;
@@ -137,7 +138,7 @@ export default function Story() {
               gap: u(8, 5),
             }}>
             <View style={{ width: chip, height: chip, borderRadius: chip / 2, backgroundColor: K.peach, overflow: 'hidden', alignItems: 'center', justifyContent: 'flex-end' }}>
-              <Avatar config={profile?.avatar} mouth={mouth} scale={scale} size={chip} expression={speaking ? 'neutral' : 'smile'} />
+              <ParentFrameAvatar driver={avatarDriver} config={profile?.avatar} mouth={mouth} scale={scale} size={chip} expression={speaking ? 'neutral' : 'smile'} />
             </View>
             <Text style={{ fontSize: f(16, 12), fontWeight: '700', color: K.ink }}>{speaking ? '읽어 주는 중' : `${me}랑 동화`}</Text>
           </View>

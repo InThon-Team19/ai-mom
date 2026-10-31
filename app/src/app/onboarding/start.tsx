@@ -7,7 +7,7 @@ import { resetLocal, setRole } from '@/lib/store';
 import { View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Avatar, DEFAULT_AVATAR } from '@/components/Avatar';
+import { FamilyAvatar } from '@/components/FamilyAvatar';
 import { Logo } from '@/components/Logo';
 import { BigApple, Button } from '@/components/ui';
 import { C } from '@/theme';
@@ -47,7 +47,7 @@ export default function Start() {
             overflow: 'hidden',
           }}
           accessibilityLabel="엄마 아바타가 사과를 건네는 그림">
-          <Avatar config={{ ...DEFAULT_AVATAR, hair: 1, eyes: 1 }} size={art * 0.77} mouth={0.3} expression="smile" />
+          <FamilyAvatar size={art * 0.77} mouth={0.3} expression="smile" />
           <View style={{ position: 'absolute', right: '11%', bottom: art * 0.13 }}>
             <BigApple size={art * 0.21} />
           </View>

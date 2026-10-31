@@ -4,7 +4,7 @@ import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Pressable, View } from 'react-native';
 
-import { Avatar } from '@/components/Avatar';
+import { FamilyAvatar } from '@/components/FamilyAvatar';
 import { api } from '@/lib/api';
 import type { Profile } from '@/lib/store';
 import type { Gauge } from '@/lib/types';
@@ -51,7 +51,7 @@ export function PersonaCard({ profile }: { profile: Profile }) {
         accessibilityLabel={`내 아바타 확인 ${open ? '접기' : '자세히'}`}
         style={{ flexDirection: 'row', gap: 12, alignItems: 'center' }}>
         <View style={{ width: 52, height: 52, borderRadius: 26, backgroundColor: C.primarySoft, alignItems: 'center', justifyContent: 'flex-end', overflow: 'hidden' }}>
-          <Avatar config={profile.avatar} size={52} mouth={0.2} expression="smile" />
+          <FamilyAvatar config={profile.avatar} size={52} mouth={0.2} expression="smile" />
         </View>
         <View style={{ flex: 1, gap: 2 }}>
           <Text style={{ fontSize: 15, fontWeight: '800', color: C.text }}>

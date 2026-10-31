@@ -1,3 +1,4 @@
+import { FamilyAvatar } from '@/components/FamilyAvatar';
 // 온보딩 1-2 아이 정보 — 담당: 태희 (민철 와이어프레임 기준)
 // 이름·별명(아바타가 부를 때), 태어난 해·달(콘텐츠 난이도), 요즘 말하는 모습(시작 템포), 좋아하는 것(선택). 건강 정보·싫어하는 것은 받지 않음
 import { useLocalSearchParams } from 'expo-router';
@@ -90,6 +91,7 @@ function Form({ initial }: { initial: Profile['child'] }) {
       title="우리 아이를 소개해 주세요"
       subtitle="아바타가 아이 이름을 불러 주고, 아이에게 맞는 속도로 함께 놀아요."
       footer={<Button label="다음" disabled={!ready} onPress={next} />}>
+      <View style={{ alignItems: 'center' }}><FamilyAvatar role="child" size={120} /></View>
       <Field label="아이의 이름 또는 별명" hint="아바타가 이렇게 불러 줘요">
         <TextInput value={name} onChangeText={setName} placeholder="예: 지호, 콩이" placeholderTextColor={C.sub} style={input} />
       </Field>

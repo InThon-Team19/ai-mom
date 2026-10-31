@@ -1,3 +1,4 @@
+import { ParentFrameAvatar } from '@/components/ParentFrameAvatar';
 // 아이 태블릿 3-2 사과 · 3-3 바나나 · 3-5 과자 (누르는 놀이) + 3-4 따라 말하기 — 담당: 태희 (민철 와이어프레임 · 기획 2-3)
 // 기획 1-1 "세 감각을 한 동작에 묶는 방식": 아바타가 말함 → 사물이 툭 떨어짐 → 누르면 소리·진동·화면 반응 → 이름 → 따라 말하기 → 톡 튀며 칭찬
 // 기획 2-3 화면 구성: 왼쪽 약 40% 아바타(입모양 크게) · 오른쪽 약 60% 사물 무대(한 번에 하나) · 아래 오늘 모은 사물 바구니(글자 없이)
@@ -16,7 +17,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { View, useWindowDimensions, type HostInstance } from 'react-native';
 import Animated, { FadeIn, FadeOut, ZoomIn } from 'react-native-reanimated';
 
-import { Avatar, type AvatarExpression, type AvatarLook } from '@/components/Avatar';
+import { type AvatarExpression, type AvatarLook } from '@/components/Avatar';
 import type { FaceExpr, FaceFrame } from '@/components/FaceTracker';
 import { ParentExit } from '@/components/ParentExit';
 import {
@@ -125,7 +126,7 @@ export default function Session() {
   const { width, height } = useWindowDimensions();
   const kid = useKid();
   const focused = useIsFocused();
-  const { speak, stop, mouth, setSlow } = useSpeak(profile?.childId);
+  const { speak, stop, mouth, avatarDriver, setSlow } = useSpeak(profile?.childId);
   const stopRef = useRef(stop); // 끼어들기 때 아바타 말 멈추기용 (듣기 hook 보다 먼저 만들어짐)
   useEffect(() => {
     stopRef.current = stop;
@@ -979,7 +980,7 @@ export default function Session() {
             }}>
             <NodBox nod={nod} reduceMotion={motionLow}>
               <AvatarCircle size={u(108, 52)} border={u(4, 3)} borderColor={K.teal} shadow={false}>
-                <Avatar config={profile?.avatar} mouth={mouth} scale={scale} size={Math.round(u(108, 52) * 0.9)} expression={expression} look={look} />
+                <ParentFrameAvatar driver={avatarDriver} config={profile?.avatar} mouth={mouth} scale={scale} size={Math.round(u(108, 52) * 0.9)} expression={expression} look={look} />
               </AvatarCircle>
             </NodBox>
             <View style={{ flex: 1, minWidth: 0, gap: u(4, 0) }}>
@@ -1096,7 +1097,7 @@ export default function Session() {
             line={line}
             avatar={(w, h) => (
               <NodBox nod={nod} reduceMotion={motionLow}>
-                <Avatar config={profile?.avatar} mouth={mouth} scale={scale} size={Math.round(Math.min(w * 0.8, (h * 0.72) / 1.1))} expression={expression} look={look} />
+                <ParentFrameAvatar driver={avatarDriver} config={profile?.avatar} mouth={mouth} scale={scale} size={Math.round(Math.min(w * 0.8, (h * 0.72) / 1.1))} expression={expression} look={look} />
               </NodBox>
             )}
           />
