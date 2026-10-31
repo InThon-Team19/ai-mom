@@ -36,6 +36,15 @@ export async function getParentToken(): Promise<string | null> {
   }
 }
 
+/** 이 기기의 모드 (store.ts 의 'aibom.role'). 아이 모드에선 부모 토큰으로 바꿔 끼우면 안 됨 */
+export async function isParentDevice(): Promise<boolean> {
+  try {
+    return (await AsyncStorage.getItem('aibom.role')) === 'parent';
+  } catch {
+    return false;
+  }
+}
+
 /** 부모 모드로 들어갈 때: 요청 토큰을 부모 계정 토큰으로 되돌림 */
 export async function restoreParentToken(): Promise<boolean> {
   const p = await getParentToken();

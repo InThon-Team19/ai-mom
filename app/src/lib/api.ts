@@ -4,7 +4,7 @@ import { File } from 'expo-file-system';
 import { readAsStringAsync } from 'expo-file-system/legacy';
 
 import { getApiUrl } from './config';
-import { getParentToken, getToken, setToken } from './session';
+import { getParentToken, getToken, isParentDevice, setToken } from './session';
 import type {
   ActivityEvent,
   AnalysisOut,
@@ -42,9 +42,11 @@ export async function req<T>(path: string, init?: RequestInit): Promise<T> {
   let res = await fetch(`${getApiUrl()}${path}`, { ...init, headers });
   if ((res.status === 401 || res.status === 403) && !new Headers(init?.headers).has('Authorization')) {
     // 같은 폰을 아이 태블릿으로 연결했다가 끊긴(401)·부모 권한 없는(403) 기기 토큰이 남은 경우 → 부모 계정 토큰으로 한 번 더
+    // 서버는 부모 토큰으로 그 계정의 아이만 허용하므로 다른 가족 데이터엔 닿지 않음.
+    // 부모 모드면 토큰 자리를 부모 토큰으로 바꾸고, 아이 모드(같은 폰을 태블릿으로 쓸 때)면 이번 요청만 다시 시도 (기기 토큰 자리는 그대로)
     const p = await getParentToken();
     if (p && p !== t) {
-      await setToken(p);
+      if (await isParentDevice()) await setToken(p);
       headers.set('Authorization', `Bearer ${p}`);
       res = await fetch(`${getApiUrl()}${path}`, { ...init, headers });
     }

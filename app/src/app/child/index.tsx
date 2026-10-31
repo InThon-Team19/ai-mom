@@ -34,7 +34,8 @@ export default function ChildStart() {
       try {
         await api.getProfile(cur.childId);
       } catch (e) {
-        if (String(e).startsWith('Error: 401') || String(e).startsWith('401')) {
+        // 401: 기기 토큰 끊김. 404·403: 부모 토큰으로 다시 시도했지만 이 계정의 아이가 아님 → 둘 다 다시 연결해야 함
+        if (/^(Error: )?(401|403|404)\b/.test(String(e))) {
           await AsyncStorage.removeItem(LINKED_KEY).catch(() => {});
           await resetLocal();
           return;
