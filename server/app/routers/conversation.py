@@ -44,6 +44,7 @@ class TurnOut(BaseModel):
     text: str
     out_of_scope: bool = False
     blocked: str | None = None
+    alert: bool = False  # 아이 말에 위험 신호("아파" 등) → 앱이 리포트 위험 알림(alert)으로 기록
 
 
 @router.post("/turn", response_model=TurnOut)

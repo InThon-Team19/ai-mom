@@ -6,6 +6,7 @@ import { frames, type WordId } from '@/content/sensory/assets';
 import { hapticConfig, playSound, pulse, stopSound } from '@/content/sensory/feedback';
 import { initial, transition, type Input } from '@/content/sensory/machine';
 import { K, SOFT2 } from '@/components/child/design';
+import { logEvent } from '@/lib/sense';
 import { useProfile } from '@/lib/store';
 import { Text } from '@/components/AppText';
 
@@ -59,6 +60,7 @@ export function SensoryToy({ id, label }: { id: WordId; label: string }) {
     const next = transition(id, state.current, kind, Date.now());
     if (!next) return;
     state.current = next.state; setStep(next.state.step);
+    logEvent('touch', { action: kind, target: label, story: true }); // 부모 리포트 촉각에 동화 놀이도 남김
     if (timer.current) clearTimeout(timer.current);
     if (next.reset) timer.current = setTimeout(reset, next.reset);
     if (next.haptic) feedback(next.haptic);
@@ -90,7 +92,7 @@ export function SensoryToy({ id, label }: { id: WordId; label: string }) {
     const interval = Math.max(hapticConfig.rubMinInterval, hapticConfig.rubMaxInterval - speed * 100);
     if (now - last.pulse >= interval) { feedback('rough'); last.pulse = now; }
     last.x = e.translationX; last.y = e.translationY; last.time = now;
-    if (!rubStarted.current) { playSound(id, 'rub', true); rubStarted.current = true; }
+    if (!rubStarted.current) { playSound(id, 'rub', true); rubStarted.current = true; logEvent('touch', { action: 'rub', target: label, story: true }); }
     if (idle.current) clearTimeout(idle.current);
     idle.current = setTimeout(endRub, 180);
   };

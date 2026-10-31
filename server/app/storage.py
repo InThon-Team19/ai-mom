@@ -10,7 +10,7 @@ from contextvars import ContextVar
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-STATIC_DIR = ROOT / "static"
+STATIC_DIR = Path(os.getenv("STATIC_DIR", ROOT / "static"))  # 배포: /data/static (디스크) → 다시 배포해도 만든 엄마 목소리 mp3 가 남음
 DATA_DIR = Path(os.getenv("DATA_DIR", ROOT / "data"))
 
 # 공개 파일 URL 앞부분. 기본은 "요청이 들어온 주소" (LAN IP·터널 어디서든 맞게). PUBLIC_BASE_URL 로 고정 가능

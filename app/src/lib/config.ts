@@ -2,7 +2,7 @@
 // APK 는 주소가 박혀 나가므로 홈 화면에서 바꿀 수 있게 기기에 저장 (태희)
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const DEFAULT_API_URL = (process.env.EXPO_PUBLIC_API_URL ?? 'http://192.168.0.10:8000').replace(/\/$/, '');
+const DEFAULT_API_URL = (process.env.EXPO_PUBLIC_API_URL ?? 'https://aimom-server.onrender.com').replace(/\/$/, ''); // 값 없이 빌드해도 심사용 Render 서버로
 const KEY = 'aibom.apiUrl';
 let current = DEFAULT_API_URL;
 

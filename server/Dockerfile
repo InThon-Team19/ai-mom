@@ -17,8 +17,9 @@ COPY . .
 ENV TZ=Asia/Seoul \
     PYTHONUNBUFFERED=1 \
     DATA_DIR=/data/files \
+    STATIC_DIR=/data/static \
     DB_URL=sqlite:////data/aibom.db \
     ALLOW_LEGACY_API=true
 
 # 배포 서비스가 주는 PORT 사용 (없으면 8000)
-CMD ["sh", "-c", "mkdir -p /data/files && uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000} --proxy-headers --forwarded-allow-ips '*'"]
+CMD ["sh", "-c", "mkdir -p /data/files /data/static && uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000} --proxy-headers --forwarded-allow-ips '*'"]

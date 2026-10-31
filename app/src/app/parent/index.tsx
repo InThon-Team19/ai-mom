@@ -14,7 +14,7 @@ import { api } from '@/lib/api';
 import { useDevice } from '@/lib/layout';
 import { headline, josa, wordStatus } from '@/lib/progress';
 import { duration, loadSensory, type SensoryReport } from '@/lib/sensory';
-import { useProfile } from '@/lib/store';
+import { useProfile, refreshProfile } from '@/lib/store';
 import type { Gauge, Summary } from '@/lib/types';
 import { C, R, T } from '@/theme';
 import { Text } from '@/components/AppText';
@@ -119,6 +119,7 @@ export default function ParentHome() {
           setSensory(null);
           setLinked(false);
         });
+      refreshProfile().catch(() => {}); // 태블릿을 새로 연결했으면 기기 목록이 바뀜 → '태블릿 연결됨' 바로 반영
       api.voiceGauge(childId).then((g) => { if (alive) setVoice(g); }).catch(() => {});
       api.mouthGauge(childId).then((g) => { if (alive) setMouth(g); }).catch(() => {});
       return () => {
@@ -137,6 +138,8 @@ export default function ParentHome() {
   const rows = todayRows(summary, story, me);
   // 학습률 카드: 음성·입모양 둘 다 100% 가 되기 전까지 계속 보임 (와이어프레임: 다 배우면 숨김). 하나만 불러와도 보임
   const done = (g: Gauge | null) => !!g && g.progress >= 1;
+  // 태블릿 연결: 서버 응답 여부가 아니라 실제로 등록된 아이 기기가 있는지 (예전엔 태블릿 없이도 '연결됨')
+  const tablet = !!profile?.devices?.some((d) => d.role === 'child');
   const showLearn = !!(voice || mouth) && !(done(voice) && done(mouth));
   const canUse = !!voice?.usable && !!mouth?.usable;
 
@@ -169,8 +172,8 @@ export default function ParentHome() {
             <Text style={{ fontSize: 12, color: C.sub }}>
               {dateLabel()}
               {'  ·  '}
-              <Text style={{ color: linked ? C.ok : C.sub, fontWeight: '700' }}>
-                {linked === null ? '연결 확인 중' : linked ? '태블릿 연결됨' : '태블릿 연결 대기'}
+              <Text style={{ color: linked && tablet ? C.ok : C.sub, fontWeight: '700' }}>
+                {linked === null ? '연결 확인 중' : !linked ? '서버 연결 안 됨' : tablet ? '태블릿 연결됨' : '태블릿 연결 대기'}
               </Text>
             </Text>
           </View>

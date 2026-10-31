@@ -215,7 +215,7 @@ def coaching(child_id: str):
 
 
 # ---------- STT (부모·아이 공통) ----------
-ALERT_WORDS = ("아파", "아야", "무서워", "도와줘", "살려")
+from app.agent.safety import danger_in  # 위험 신호는 에이전트와 같은 검사 ("아파트"·"호박죽" 오탐 없게)
 
 
 class SttOut(BaseModel):
@@ -297,7 +297,7 @@ def _stt_from_path(src: Path, expected: str) -> SttOut:
         text=text,
         features=SpeechFeatures(**feats),
         matched=match_expected(text, expected) if expected else None,
-        alert=any(w in text for w in ALERT_WORDS),
+        alert=danger_in(text),
     )
 
 
@@ -526,7 +526,7 @@ def child_clip(body: ChildClipIn):
         text = ""  # "." 처럼 기호만 나오면 말 없음으로
     feats = speech_features(pcm, sr, text)
     matched = match_expected(text, body.expected) if body.expected and text else None
-    alert = any(w in text for w in ALERT_WORDS)
+    alert = danger_in(text)
     meta = {"id": clip_id, "at": _time.time(), "item": body.item, "phase": body.phase, "text": text,
             "matched": matched, "alert": alert, "features": feats}
     wav.with_suffix(".json").write_text(json.dumps(meta, ensure_ascii=False), encoding="utf-8")

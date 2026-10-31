@@ -131,7 +131,8 @@ export function useSpeak(childId: string | undefined) {
         try {
           if (!childId) throw new Error('no child');
           // 한 번 실패해도 바로 기기 음성(로봇 목소리)으로 바꾸지 않고 한 번 더 시도
-          const { url, env: v, env_ms } = await api.tts(childId, text).catch(async () => {
+          const { url, env: v, env_ms } = await api.tts(childId, text).catch(async (e) => {
+            if (/\b400\b/.test(String(e))) throw e; // 400 = 엄마 목소리 녹음이 아직 없음 → 다시 물어도 같아서 바로 기기 음성으로
             await new Promise((r) => setTimeout(r, 400));
             if (my !== gen.current) throw new Error('stale');
             return api.tts(childId, text);

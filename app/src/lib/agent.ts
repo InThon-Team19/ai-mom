@@ -27,6 +27,7 @@ export type TurnOut = {
   text: string; // 아바타가 말할 문장 (검증된 범위 안)
   out_of_scope?: boolean; // 아이 말이 학습 범위 밖 → 부모 확인 목록
   blocked?: string | null; // 출력 전 검사에서 막은 원래 문장 → 부모 확인 목록
+  alert?: boolean; // 아이 말에 위험 신호("아파" 등) → 리포트 위험 알림
 };
 
 let unavailableUntil = 0; // 404 면 1분 동안 묻지 않음 (예전엔 앱을 다시 켤 때까지 안 물어서 서버가 생겨도 고정 문장만 나왔음) // 한 번 404 면 이번 실행 동안 다시 안 물어봄 (아이 화면 지연 방지). 앱을 다시 불러오면 초기화
@@ -44,7 +45,8 @@ export async function agentSay(input: TurnIn, fallback: string): Promise<{ text:
       new Promise<never>((_, rej) => setTimeout(() => rej(new Error('timeout')), input.moment === 'chat' ? 6500 : 5500)),
     ]);
     if (res.blocked) logEvent('blocked', { text: res.blocked });
-    if (res.out_of_scope && input.child_text) logEvent('out_of_scope', { text: input.child_text });
+    // 위험 신호는 말소리 토막(useChildListener)이 이미 alert 로 기록 → 여기서 '범위 밖 질문'으로 또 남기지 않음
+    if (res.out_of_scope && !res.alert && input.child_text) logEvent('out_of_scope', { text: input.child_text });
     const text = res.text?.trim();
     return { text: text || fallback, outOfScope: !!res.out_of_scope };
   } catch (e) {

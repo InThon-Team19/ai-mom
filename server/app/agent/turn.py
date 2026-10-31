@@ -185,7 +185,7 @@ def make_chat(day: int, child_text: str, history: list[dict] | None, signals: di
     if not child_text:
         return {"text": fill(random.choice(CHAT_OPENERS)), "out_of_scope": False, "blocked": None}
     if safety.danger_in(child_text):
-        return {"text": f"괜찮아? 가까이 있는 어른한테 바로 말해 줘. {p['me']}도 금방 갈게.", "out_of_scope": True, "blocked": None}
+        return {"text": f"괜찮아? 가까이 있는 어른한테 바로 말해 줘. {p['me']}한테도 꼭 알려 둘게.", "out_of_scope": True, "blocked": None, "alert": True}
     msgs = []
     for h in (history or [])[-6:]:
         t = str(h.get("text", ""))[:120]  # 이야기하기 대답이 두세 문장이라 넉넉히
@@ -213,8 +213,9 @@ def make_chat(day: int, child_text: str, history: list[dict] | None, signals: di
         return {"text": fill(CHAT_MISS if miss else random.choice(CHAT_FALLBACKS)), "out_of_scope": False, "blocked": None}
     sensitive = bool(data.get("sensitive"))
     text = safety.clean(data["text"])
-    if safety.check_output(text, max_len=110):  # 이야기하기는 두세 문장(50~80자)이라 조금 길게 허용
-        return {"text": fill(CHAT_UNSURE), "out_of_scope": sensitive, "blocked": text[:120] or None}
+    why = safety.check_output(text, max_len=110)  # 이야기하기는 두세 문장(50~80자)이라 조금 길게 허용
+    if why:  # 길거나 빈 문장은 위험한 말이 아니라서 부모 '차단된 문장'에 올리지 않음
+        return {"text": fill(CHAT_UNSURE), "out_of_scope": sensitive, "blocked": None if why in safety.HARMLESS else text[:120] or None}
     return {"text": text, "out_of_scope": sensitive, "blocked": None}
 
 
@@ -230,7 +231,7 @@ def make_turn(day: int, item: str, moment: str, child_text: str | None, signals:
 
     # 1) 입력 안전 검사: 위험 신호는 LLM 에 보내지 않고 바로 달래며 부모 확인 목록으로
     if moment == "reply" and safety.danger_in(text_in):
-        return {"text": f"괜찮아? 가까이 있는 어른한테 바로 말해 줘. {p['me']}도 금방 갈게.", "out_of_scope": True, "blocked": None}
+        return {"text": f"괜찮아? 가까이 있는 어른한테 바로 말해 줘. {p['me']}한테도 꼭 알려 둘게.", "out_of_scope": True, "blocked": None, "alert": True}
 
     if moment == "reply" and not text_in:
         return {"text": _fallback("reply", item, p, False, mood), "out_of_scope": False, "blocked": None}
@@ -249,8 +250,10 @@ def make_turn(day: int, item: str, moment: str, child_text: str | None, signals:
         out_of_scope = False
     text = safety.clean(data["text"])
     # 2) 출력 검사: 걸리면 막고 정해진 문장. 막은 문장은 앱이 리포트 "차단된 문장"으로 기록
-    if safety.check_output(text):
-        return {"text": _fallback(moment, item, p, out_of_scope, mood), "out_of_scope": out_of_scope, "blocked": text[:120] or None}
+    why = safety.check_output(text)
+    if why:  # 길거나 빈 문장은 위험한 말이 아니라서 부모 '차단된 문장'에 올리지 않음
+        return {"text": _fallback(moment, item, p, out_of_scope, mood), "out_of_scope": out_of_scope,
+                "blocked": None if why in safety.HARMLESS else text[:120] or None}
     return {"text": text, "out_of_scope": out_of_scope, "blocked": None}
 
 
