@@ -1,6 +1,6 @@
 // 담당: 민주 — 서버 API 호출은 전부 여기에 모으기 (화면에서 fetch 직접 쓰지 않기)
 // ↓ 입력 파이프라인·아이 반응·프로필(임시) 부분: 태희
-import { File } from 'expo-file-system';
+import { File, UploadType } from 'expo-file-system';
 
 import { getApiUrl } from './config';
 import type {
@@ -28,16 +28,23 @@ const json = (method: string, body: unknown): RequestInit => ({
 });
 
 /** 로컬 파일(uri) + 폼 필드 → multipart 업로드.
- * Expo 58 기본 fetch(expo/fetch)는 RN 식 {uri} 첨부도, 네이티브 File 객체도 못 받음.
- * 받는 형식은 진짜 Blob 또는 bytes() 를 가진 객체 → 파일 내용을 읽어 bytes() 객체로 감싸 보냄 */
+ * Expo 58 기본 fetch(expo/fetch)는 RN 식 {uri} 첨부·네이티브 File 을 FormData 로 못 보냄
+ * → expo-file-system 네이티브 업로드 사용 (fetch·FormData 를 거치지 않음) */
 async function upload<T>(path: string, uri: string, type: string, fields: Record<string, string> = {}) {
-  const form = new FormData();
-  for (const [k, v] of Object.entries(fields)) form.append(k, v);
-  const name = uri.split('/').pop() || 'file';
-  const data = new Uint8Array(await new File(uri).arrayBuffer());
-  const part = { name, type, size: data.byteLength, bytes: async () => data };
-  form.append('file', part as unknown as Blob, name);
-  return req<T>(path, { method: 'POST', body: form });
+  try {
+    const res = await new File(uri).upload(`${getApiUrl()}${path}`, {
+      httpMethod: 'POST',
+      uploadType: UploadType.MULTIPART,
+      fieldName: 'file',
+      mimeType: type,
+      parameters: fields,
+    });
+    if (res.status >= 400) throw new Error(`${res.status} ${path}: ${res.body}`);
+    return JSON.parse(res.body) as T;
+  } catch (e) {
+    console.warn(`[upload] ${path} 실패:`, e); // 개발 서버 터미널에 표시
+    throw e;
+  }
 }
 
 function form<T>(path: string, fields: Record<string, string>) {
