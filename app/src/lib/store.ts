@@ -11,7 +11,16 @@ export type Profile = {
   child: { name: string; nickname: string; birth: string; level: '한 단어' | '두 단어' | '짧은 문장'; likes: string[] };
   parent: { title: string; tone: '다정한' | '장난스러운' | '차분한'; goals: string[] };
   avatar: AvatarConfig;
-  settings: { consentBio: boolean; consentChild: boolean; start: string; end: string; dailyLimitMin: number; vibration: boolean };
+  settings: {
+    consentBio: boolean;
+    consentChild: boolean;
+    start: string;
+    end: string;
+    dailyLimitMin: number;
+    vibration: boolean;
+    reduceMotion?: boolean; // 기획 2-3: 움직임 줄이기 (튀는 횟수 1번)
+    volume?: number; // 기획 2-5: 소리 크기 0~1 (기본 0.8)
+  };
   day: number; // 진행 일차 (낭독 완료 시 +1)
   feedback: { day: number; issues: string[]; note: string; review: string[]; newWords: string }[];
   onboarded: boolean;
@@ -32,7 +41,7 @@ export const newProfile = (): Profile => ({
   child: { name: '', nickname: '', birth: '', level: '한 단어', likes: [] },
   parent: { title: '엄마', tone: '다정한', goals: [] },
   avatar: DEFAULT_AVATAR,
-  settings: { consentBio: false, consentChild: false, start: '09:00', end: '18:00', dailyLimitMin: 30, vibration: true },
+  settings: { consentBio: false, consentChild: false, start: '09:00', end: '18:00', dailyLimitMin: 30, vibration: true, reduceMotion: false, volume: 0.8 },
   day: 1,
   feedback: [],
   onboarded: false,
