@@ -27,9 +27,9 @@ export type TurnOut = {
   blocked?: string | null; // 출력 전 검사에서 막은 원래 문장 → 부모 확인 목록
 };
 
-let unavailable = false; // 한 번 404 면 이번 실행 동안 다시 안 물어봄 (아이 화면 지연 방지)
+let unavailable = false; // 한 번 404 면 이번 실행 동안 다시 안 물어봄 (아이 화면 지연 방지). 앱을 다시 불러오면 초기화
 
-/** 에이전트 대사. fallback 은 지금 커리큘럼 문장 (에이전트가 없거나 2.5초 안에 답이 없으면 사용) */
+/** 에이전트 대사. fallback 은 지금 커리큘럼 문장 (에이전트가 없거나 3.5초 안에 답이 없으면 사용. 서버는 AI 를 3초까지 기다림) */
 export async function agentSay(input: TurnIn, fallback: string): Promise<{ text: string; outOfScope: boolean }> {
   if (unavailable) return { text: fallback, outOfScope: false };
   try {
@@ -39,7 +39,7 @@ export async function agentSay(input: TurnIn, fallback: string): Promise<{ text:
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(input),
       }),
-      new Promise<never>((_, rej) => setTimeout(() => rej(new Error('timeout')), 2500)),
+      new Promise<never>((_, rej) => setTimeout(() => rej(new Error('timeout')), 3500)),
     ]);
     if (res.blocked) logEvent('blocked', { text: res.blocked });
     if (res.out_of_scope && input.child_text) logEvent('out_of_scope', { text: input.child_text });
