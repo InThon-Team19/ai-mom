@@ -91,7 +91,8 @@ export function useReadAloud({
       const ok = v.quality.ok && (!m || m.ok);
       setMessage(!v.quality.ok ? v.quality.message : m && !m.ok ? m.message : '좋아요!');
       setDone((d) => ({ ...d, [index]: ok ? 'done' : 'retry' }));
-      if (ok) setIndex((i) => Math.min(i + 1, sentences.length - 1));
+      // 학습(signup): 끝까지 읽으면 처음으로 — 학습률이 덜 찼으면 이어서 더 읽을 수 있게. 내일 계획 낭독(plan)은 마지막에서 멈춤
+      if (ok) setIndex((i) => (kind === 'signup' ? (i + 1) % sentences.length : Math.min(i + 1, sentences.length - 1)));
     } catch (e) {
       reportError('readAloud', e);
       setMessage(friendlyError(e, '녹음을 보내지 못했어요. 다시 눌러 읽어 주세요.'));
