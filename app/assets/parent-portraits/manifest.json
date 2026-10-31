@@ -1,0 +1,232 @@
+{
+  "version": 2,
+  "canvas": [
+    512,
+    512
+  ],
+  "exportCanvas": [
+    1024,
+    1024
+  ],
+  "runtime": "full-avatar PNG frame swaps; eye-only blink/gaze overlays",
+  "variants": {
+    "mother-0-0": {
+      "character": "mother",
+      "hair": 0,
+      "outfit": 0,
+      "anchor": [
+        256.5,
+        261.0
+      ],
+      "mouthRoi": [
+        226.0,
+        244.0,
+        287.0,
+        279.0
+      ],
+      "frames": {
+        "neutral": "mother-0-0-normal-neutral.png",
+        "closed": "mother-0-0-normal-closed.png",
+        "open": "mother-0-0-normal-open.png",
+        "wide": "mother-0-0-normal-wide.png",
+        "round": "mother-0-0-normal-round.png",
+        "narrow": "mother-0-0-normal-narrow.png"
+      }
+    },
+    "mother-0-1": {
+      "character": "mother",
+      "hair": 0,
+      "outfit": 1,
+      "anchor": [
+        256.5,
+        261.0
+      ],
+      "mouthRoi": [
+        226.0,
+        244.0,
+        287.0,
+        279.0
+      ],
+      "frames": {
+        "neutral": "mother-0-1-normal-neutral.png",
+        "closed": "mother-0-1-normal-closed.png",
+        "open": "mother-0-1-normal-open.png",
+        "wide": "mother-0-1-normal-wide.png",
+        "round": "mother-0-1-normal-round.png",
+        "narrow": "mother-0-1-normal-narrow.png"
+      }
+    },
+    "mother-1-0": {
+      "character": "mother",
+      "hair": 1,
+      "outfit": 0,
+      "anchor": [
+        256.5,
+        261.0
+      ],
+      "mouthRoi": [
+        226.0,
+        244.0,
+        287.0,
+        279.0
+      ],
+      "frames": {
+        "neutral": "mother-1-0-normal-neutral.png",
+        "closed": "mother-1-0-normal-closed.png",
+        "open": "mother-1-0-normal-open.png",
+        "wide": "mother-1-0-normal-wide.png",
+        "round": "mother-1-0-normal-round.png",
+        "narrow": "mother-1-0-normal-narrow.png"
+      }
+    },
+    "mother-1-1": {
+      "character": "mother",
+      "hair": 1,
+      "outfit": 1,
+      "anchor": [
+        256.5,
+        261.0
+      ],
+      "mouthRoi": [
+        226.0,
+        244.0,
+        287.0,
+        279.0
+      ],
+      "frames": {
+        "neutral": "mother-1-1-normal-neutral.png",
+        "closed": "mother-1-1-normal-closed.png",
+        "open": "mother-1-1-normal-open.png",
+        "wide": "mother-1-1-normal-wide.png",
+        "round": "mother-1-1-normal-round.png",
+        "narrow": "mother-1-1-normal-narrow.png"
+      }
+    },
+    "father-0-0": {
+      "character": "father",
+      "hair": 0,
+      "outfit": 0,
+      "anchor": [
+        256.5,
+        268.0
+      ],
+      "mouthRoi": [
+        224.0,
+        250.0,
+        289.0,
+        288.0
+      ],
+      "frames": {
+        "neutral": "father-0-0-normal-neutral.png",
+        "closed": "father-0-0-normal-closed.png",
+        "open": "father-0-0-normal-open.png",
+        "wide": "father-0-0-normal-wide.png",
+        "round": "father-0-0-normal-round.png",
+        "narrow": "father-0-0-normal-narrow.png"
+      }
+    },
+    "father-0-1": {
+      "character": "father",
+      "hair": 0,
+      "outfit": 1,
+      "anchor": [
+        256.5,
+        268.0
+      ],
+      "mouthRoi": [
+        224.0,
+        250.0,
+        289.0,
+        288.0
+      ],
+      "frames": {
+        "neutral": "father-0-1-normal-neutral.png",
+        "closed": "father-0-1-normal-closed.png",
+        "open": "father-0-1-normal-open.png",
+        "wide": "father-0-1-normal-wide.png",
+        "round": "father-0-1-normal-round.png",
+        "narrow": "father-0-1-normal-narrow.png"
+      }
+    },
+    "father-1-0": {
+      "character": "father",
+      "hair": 1,
+      "outfit": 0,
+      "anchor": [
+        256.5,
+        268.0
+      ],
+      "mouthRoi": [
+        224.0,
+        250.0,
+        289.0,
+        288.0
+      ],
+      "frames": {
+        "neutral": "father-1-0-normal-neutral.png",
+        "closed": "father-1-0-normal-closed.png",
+        "open": "father-1-0-normal-open.png",
+        "wide": "father-1-0-normal-wide.png",
+        "round": "father-1-0-normal-round.png",
+        "narrow": "father-1-0-normal-narrow.png"
+      }
+    },
+    "father-1-1": {
+      "character": "father",
+      "hair": 1,
+      "outfit": 1,
+      "anchor": [
+        256.5,
+        268.0
+      ],
+      "mouthRoi": [
+        224.0,
+        250.0,
+        289.0,
+        288.0
+      ],
+      "frames": {
+        "neutral": "father-1-1-normal-neutral.png",
+        "closed": "father-1-1-normal-closed.png",
+        "open": "father-1-1-normal-open.png",
+        "wide": "father-1-1-normal-wide.png",
+        "round": "father-1-1-normal-round.png",
+        "narrow": "father-1-1-normal-narrow.png"
+      }
+    }
+  },
+  "sources": [
+    {
+      "file": "mother-bob-peach-neutral.png",
+      "sha256": "a997cd8daee8824d92303da66171be8c9abc05c8c6ba736f7949d525a87ca40a"
+    },
+    {
+      "file": "mother-bob-cardigan-neutral.png",
+      "sha256": "5d8c4c5f8fa296d3c50da2d4f8318c348a233222423114057edf62f2373f5ed3"
+    },
+    {
+      "file": "mother-ponytail-peach-neutral.png",
+      "sha256": "f5f4090bb8e69e52c10fd020e10367946053bbea42b63b0d6a855570eea15254"
+    },
+    {
+      "file": "mother-ponytail-cardigan-neutral.png",
+      "sha256": "3d2087888dc5cd37131e5257544ca298e876a9ffa0212a3afb33145631006c70"
+    },
+    {
+      "file": "father-sidepart-cream-neutral.png",
+      "sha256": "a40f77aa5634bbfbc22df690be4a396d0f9d120d097f86eb223a5c353d136c0c"
+    },
+    {
+      "file": "father-sidepart-sage-neutral.png",
+      "sha256": "fff795790ff1a2937f5b76c96b81c6bafeefdf5df6eef460fb311a9372eca4c6"
+    },
+    {
+      "file": "father-wavy-cream-neutral.png",
+      "sha256": "a2333990898f564996c5502d1e178702e1d8720fb1f67dd04449fdfe6dbd006f"
+    },
+    {
+      "file": "father-wavy-sage-neutral.png",
+      "sha256": "dac48cdb6185d84806f824f34f82cf451925f0596e89e1a4db2d6d32f3790b73"
+    }
+  ]
+}
