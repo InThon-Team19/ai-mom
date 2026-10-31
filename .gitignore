@@ -1,0 +1,17 @@
+# env / secrets
+.env
+.env.*
+!.env.example
+
+# python
+server/.venv/
+__pycache__/
+*.pyc
+server/*.db
+server/models/
+server/static/*
+!server/static/.gitkeep
+
+# node / expo (app/.gitignore 도 있음)
+node_modules/
+.DS_Store

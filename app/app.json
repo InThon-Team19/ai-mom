@@ -1,0 +1,66 @@
+{
+  "expo": {
+    "name": "아이봄",
+    "slug": "aibom",
+    "version": "1.0.0",
+    "orientation": "default",
+    "icon": "./assets/images/icon.png",
+    "scheme": "aibom",
+    "userInterfaceStyle": "automatic",
+    "ios": {
+      "icon": "./assets/expo.icon",
+      "bundleIdentifier": "com.team19.aibom",
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#E6F4FE",
+        "foregroundImage": "./assets/images/android-icon-foreground.png",
+        "backgroundImage": "./assets/images/android-icon-background.png",
+        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false,
+      "package": "com.team19.aibom"
+    },
+    "web": {
+      "output": "server",
+      "favicon": "./assets/images/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#208AEF",
+          "image": "./assets/images/splash-icon.png",
+          "imageWidth": 76
+        }
+      ],
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "아이의 따라 말하기와 부모 목소리 등록에 마이크를 사용해요."
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "아이의 화면 응시와 입모양 따라 하기를 확인해요.",
+          "microphonePermission": "아이 목소리를 듣기 위해 마이크를 사용해요.",
+          "recordAudioAndroid": true
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "cameraPermission": "부모 입모양 영상을 촬영해요.",
+          "microphonePermission": "낭독 영상의 목소리를 녹음해요."
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    }
+  }
+}
