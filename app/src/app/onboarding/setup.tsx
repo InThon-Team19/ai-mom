@@ -139,6 +139,9 @@ function Form({ initial, code, profile }: { initial: Profile['settings']; code: 
       <Section label="데이터 동의">
         <Check checked={consentBio} onPress={() => setConsentBio((v) => !v)} label="내 목소리와 입모양 수치로 아바타를 만드는 데 동의해요 (얼굴 영상은 저장하지 않아요)" />
         <Check checked={consentChild} onPress={() => setConsentChild((v) => !v)} label="보호자로서 아이의 목소리·표정·터치 반응을 기록하는 데 동의해요" />
+        <Pressable onPress={() => router.push('/terms')} accessibilityRole="link" hitSlop={8} style={{ alignSelf: 'flex-start', minHeight: 36, justifyContent: 'center' }}>
+          <Text style={{ fontSize: 13, color: C.link, textDecorationLine: 'underline' }}>자세히 보기: 이용약관 · 개인정보 처리 안내</Text>
+        </Pressable>
       </Section>
 
       <Section label="대화 시간">

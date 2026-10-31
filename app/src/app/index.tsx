@@ -111,6 +111,9 @@ export default function Entry() {
             />
           </View>
         )}
+        <Pressable onPress={() => router.push('/terms')} accessibilityRole="link" hitSlop={8} style={{ alignSelf: 'center', minHeight: 36, justifyContent: 'center' }}>
+          <Text style={{ fontSize: 13, color: C.link, textDecorationLine: 'underline' }}>이용약관 · 개인정보 처리 안내</Text>
+        </Pressable>
       </ScrollView>
     </SafeAreaView>
   );

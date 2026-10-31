@@ -511,7 +511,7 @@ export function AvatarPanel({ line, avatar }: { line?: string; avatar: (w: numbe
       {!!line && (
         <View style={{ position: 'absolute', top: u(24, 8), left: u(24, 8), right: u(24, 8), padding: u(20, 8), borderRadius: u(24, 12), backgroundColor: K.white }}>
           <Text numberOfLines={3} style={{ fontSize: f(28, 14), lineHeight: Math.round(f(28, 14) * 1.4), fontWeight: '800', color: K.ink, textAlign: 'center' }}>
-            {line}
+            {line.replace(/([?!])\s+(?=\S)/g, '$1\n') /* "볼까? 바나나!" → 물음표·느낌표 뒤에서 줄바꿈 */}
           </Text>
         </View>
       )}

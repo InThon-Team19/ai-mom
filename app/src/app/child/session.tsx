@@ -701,7 +701,7 @@ export default function Session() {
   };
 
   /** 따라 말하기 결과에 응답 */
-  const respond = async (t: number, r: ClipResult) => {
+  const respond = async (t: number, r: ClipResult, tries = 1) => {
     if (!item) return;
     const res = r.res;
     const raw = res?.text?.trim() ?? '';
@@ -710,6 +710,21 @@ export default function Session() {
     // 진짜 그 단어로 인식됐을 때만 칭찬하고 넘어감 (사용자 요청: 말하지 않았는데·잡음에 넘어가지 않게).
     // 아니면 틀렸다는 표시 없이 다시 권하고 계속 기다림. 넘어가고 싶으면 다음 버튼
     const praised = res?.matched === true;
+    // 막힘 방지: 말은 했는데 3번 다 인식이 안 되면(발음이 어렵거나 서버 말 인식이 안 될 때) 시도를 칭찬하고 넘어감.
+    // 서버에 아예 닿지 않으면(res 없음) 한 번만 기다림
+    const stuck = !praised && (tries >= 3 || (!res && tries >= 1));
+    if (stuck) {
+      react([
+        ['praise', 1600],
+        ['smile', 800],
+      ]);
+      playSfx('pop');
+      await talk(fill('열심히 말해 줬구나! 잘했어, 우리 {name}.', { name, me }));
+      if (t !== run.current) return;
+      await sleep(300);
+      if (t === run.current) doLeave();
+      return;
+    }
     if (praised) {
       // 성공: 사물이 크게 튀고 별이 퍼지며 아바타가 활짝 웃음 + "잘했어!" + 짧은 진동
       sig.current.repeated = true;
@@ -753,7 +768,7 @@ export default function Session() {
         await talk(nudges[i % nudges.length]);
         if (t !== run.current) return;
       }
-      await respond(t, next);
+      await respond(t, next, tries + 1);
       return;
     }
     if (sig.current.voices >= ENGAGED_VOICES && !sig.current.voiceModeled) {

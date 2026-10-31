@@ -9,5 +9,5 @@
 | 동화책 | 3-6 전래동화 (해님 달님 요약) | `app/src/content/curriculum.ts` | 전래동화 (공유 저작물), 문장은 팀이 새로 씀 | 공유 저작물 |
 | 학습 범위 자료 | 시연 커리큘럼 (사과·바나나·과자) | `app/src/content/curriculum.ts` | 팀 작성 (누리과정 기준 검토 예정) | 팀 자체 제작 |
 | 얼굴 인식 모델 | 입모양·응시 | CDN / `server/models/` | MediaPipe Face Landmarker (Google) | Apache 2.0 |
-| 글꼴 | 큰 글자·굵은 글자 | `app/assets/fonts/Hakgyoansim Dunggeunmiso OTF B.otf` | 학교안심 둥근미소 Bold | 무료 글꼴 (배포처 라이선스 따름) |
+| 글꼴 | 큰 글자·굵은 글자 | `app/assets/fonts/Hakgyoansim-Dunggeunmiso-B.otf` | 학교안심 둥근미소 Bold | 무료 글꼴 (배포처 라이선스 따름) |
 | 글꼴 | 본문·작은 글자 | `app/assets/fonts/Cafe24SsurroundAir-v1.1.ttf` | 카페24 써라운드 에어 (fonts.cafe24.com) | 카페24 무료 글꼴 라이선스 |
