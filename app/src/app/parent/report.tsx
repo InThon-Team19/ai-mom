@@ -4,12 +4,12 @@ import { router, useFocusEffect, type Href } from 'expo-router';
 import { useCallback, useState, type ReactNode } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Svg, { Circle, G, Path, Rect, Text as SvgText } from 'react-native-svg';
+import Svg, { Circle, G, Text as SvgText } from 'react-native-svg';
 
 import { Avatar } from '@/components/Avatar';
 import { ChecksBox } from '@/components/ChecksBox';
 import { StatusChip } from '@/components/SensoryCard';
-import { BigButton, Bubble, Panel } from '@/components/ui';
+import { Art, BigButton, Bubble, MicIcon, Panel, artOf } from '@/components/ui';
 import { ITEMS, dayOf, type Item } from '@/content/curriculum';
 import { useDevice } from '@/lib/layout';
 import { josa } from '@/lib/progress';
@@ -86,19 +86,6 @@ function Donut({ counts, size = 112 }: { counts: Record<SenseKey, number>; size?
   );
 }
 
-const ClockIcon = () => (
-  <Svg width={34} height={34} viewBox="0 0 24 24">
-    <Circle cx={12} cy={12} r={9} stroke={C.text} strokeWidth={2} fill="none" />
-    <Path d="M12 7v5l3 2" stroke={C.text} strokeWidth={2} fill="none" strokeLinecap="round" strokeLinejoin="round" />
-  </Svg>
-);
-const MicIcon = () => (
-  <Svg width={18} height={18} viewBox="0 0 24 24">
-    <Rect x={9} y={3} width={6} height={11} rx={3} stroke={C.text} strokeWidth={2} fill="none" />
-    <Path d="M5 11a7 7 0 0 0 14 0M12 18v3" stroke={C.text} strokeWidth={2} fill="none" strokeLinecap="round" />
-  </Svg>
-);
-
 /** 감각 머리: 색 테두리 알약 + 설명 */
 const SenseHead = ({ k, desc }: { k: SenseKey; desc: string }) => (
   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
@@ -115,7 +102,7 @@ const Tile = ({ label, icon, value }: { label: string; icon: ReactNode; value: s
     <Text style={{ fontSize: 11, color: C.sub, textAlign: 'center' }} numberOfLines={1}>
       {label}
     </Text>
-    <View style={{ height: 34, justifyContent: 'center' }}>{typeof icon === 'string' ? <Text style={{ fontSize: 26 }}>{icon}</Text> : icon}</View>
+    <View style={{ height: 34, justifyContent: 'center' }}>{icon}</View>
     <Text style={{ fontSize: 14, fontWeight: '800', color: C.text, textAlign: 'center' }} numberOfLines={2}>
       {value}
     </Text>
@@ -229,19 +216,19 @@ export default function Report() {
             <View style={{ gap: 8 }}>
               <SenseHead k="visual" desc="보고 반응한 것" />
               <View style={{ flexDirection: 'row', gap: 8 }}>
-                <Tile label="바라본 시간" icon={<ClockIcon />} value={duration(s.gaze_s)} />
-                <Tile label="좋아한 사물" icon={fav?.emoji ?? '👀'} value={fav?.ko ?? '아직 없어요'} />
-                <Tile label="웃음·놀람" icon="😊" value={`${smiles}번`} />
+                <Tile label="바라본 시간" icon={<Art name="clock" />} value={duration(s.gaze_s)} />
+                <Tile label="좋아한 사물" icon={<Art name={artOf(fav?.id) ?? 'eye'} />} value={fav?.ko ?? '아직 없어요'} />
+                <Tile label="웃음·놀람" icon={<Art name="smile" />} value={`${smiles}번`} />
               </View>
             </View>
 
             <View style={{ gap: 8 }}>
               <SenseHead k="touch" desc="만지고 눌러 본 것" />
               <View style={{ flexDirection: 'row', gap: 8 }}>
-                <Tile label="가장 많이 터치한" icon={fav?.emoji ?? '✋'} value={fav?.ko ?? '아직 없어요'} />
+                <Tile label="가장 많이 터치한" icon={<Art name={artOf(fav?.id) ?? 'hand'} />} value={fav?.ko ?? '아직 없어요'} />
                 <Tile
                   label="터치 · 평균 반응"
-                  icon="✋"
+                  icon={<Art name="hand" />}
                   value={`${s.touches}번${s.reaction_ms > 0 ? ` · ${(s.reaction_ms / 1000).toFixed(1)}초` : ''}`}
                 />
               </View>
@@ -250,16 +237,16 @@ export default function Report() {
             <View style={{ gap: 8 }}>
               <SenseHead k="audio" desc="듣고 따라 말한 것" />
               <View style={{ flexDirection: 'row', gap: 8 }}>
-                <Tile label="따라 말한 단어" icon={word?.emoji ?? '🗣️'} value={s.words.length ? s.words.join(', ') : '아직 없어요'} />
-                <Tile label="따라 말하기" icon="🔁" value={s.repeats > 0 ? `${s.repeats}번 중 ${s.repeat_ok}번` : '-'} />
-                <Tile label="들은 시간" icon="👂" value={(s.listen_s ?? 0) > 0 ? duration(s.listen_s ?? 0) : '-'} />
+                <Tile label="따라 말한 단어" icon={<Art name={artOf(word?.id) ?? 'talk'} />} value={s.words.length ? s.words.join(', ') : '아직 없어요'} />
+                <Tile label="따라 말하기" icon={<Art name="repeat" />} value={s.repeats > 0 ? `${s.repeats}번 중 ${s.repeat_ok}번` : '-'} />
+                <Tile label="들은 시간" icon={<Art name="ear" />} value={(s.listen_s ?? 0) > 0 ? duration(s.listen_s ?? 0) : '-'} />
               </View>
             </View>
           </>
         ) : (
           state !== 'loading' && (
             <View style={{ alignItems: 'center', gap: 6, paddingVertical: 18, paddingHorizontal: 14, borderRadius: 16, borderWidth: 2, borderStyle: 'dashed', borderColor: C.border, backgroundColor: C.white }}>
-              <Text style={{ fontSize: 28 }}>🌱</Text>
+              <Art name="sprout" />
               <Text style={[T.body, { fontWeight: '700', textAlign: 'center' }]}>아직 오늘 대화 기록이 없어요</Text>
               <Text style={[T.small, { textAlign: 'center' }]}>
                 {name}

@@ -2,6 +2,7 @@
 import { setAudioModeAsync, useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
 import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
+import Svg, { Path, Rect } from 'react-native-svg';
 
 import { ITEMS } from '@/content/curriculum';
 import { api } from '@/lib/api';
@@ -14,8 +15,8 @@ const time = (at: number) => {
 };
 
 const itemLabel = (id: string) => {
-  const it = (ITEMS as Record<string, { ko: string; emoji: string } | undefined>)[id];
-  return it ? `${it.emoji} ${it.ko}` : id;
+  const it = (ITEMS as Record<string, { ko: string } | undefined>)[id];
+  return it ? `${it.ko} 놀이` : id;
 };
 
 export function ClipList({ childId, clips, state }: { childId: string; clips: ChildClip[]; state: 'loading' | 'ok' | 'fail' }) {
@@ -56,40 +57,45 @@ export function ClipList({ childId, clips, state }: { childId: string; clips: Ch
       {clips.map((c) => {
         const active = isActive(c.id);
         return (
+          // 디자인 Recordings: 흰 카드 · 2px 연한 테두리 · 노랑 재생 원 · "말" · 놀이 · ✓ · 시각
           <View
             key={c.id}
             style={{
               flexDirection: 'row',
               alignItems: 'center',
               gap: 10,
-              padding: 10,
+              paddingVertical: 10,
+              paddingHorizontal: 12,
               borderRadius: R.md,
-              backgroundColor: c.alert ? C.white : active ? C.primarySoft : C.card,
-              borderWidth: c.alert ? 1.5 : 0,
-              borderColor: C.warn,
-            }}
-          >
+              borderWidth: 2,
+              borderColor: c.alert ? C.warn : active ? C.primaryStrong : C.border,
+              backgroundColor: c.alert ? C.warnSoft : active ? C.primarySoft : C.white,
+            }}>
             <Pressable
               onPress={() => void toggle(c)}
               accessibilityRole="button"
-              accessibilityLabel={active ? '멈추기' : '듣기'}
-              hitSlop={8}
-              style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: C.primary, alignItems: 'center', justifyContent: 'center' }}
-            >
-              <Text style={{ fontSize: 18, color: C.onPrimary, fontWeight: '800' }}>{active ? '❚❚' : '▶'}</Text>
+              accessibilityLabel={active ? '멈추기' : '재생'}
+              hitSlop={6}
+              style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: C.primary, alignItems: 'center', justifyContent: 'center' }}>
+              <Svg width={12} height={12} viewBox="0 0 12 12">
+                {active ? (
+                  <>
+                    <Rect x={2} y={1} width={3} height={10} rx={1} fill={C.text} />
+                    <Rect x={7} y={1} width={3} height={10} rx={1} fill={C.text} />
+                  </>
+                ) : (
+                  <Path d="M3 1 L11 6 L3 11 Z" fill={C.text} />
+                )}
+              </Svg>
             </Pressable>
-            <View style={{ flex: 1, gap: 2 }}>
-              <Text style={T.small}>
-                {time(c.at)}
-                {c.item ? ` · ${itemLabel(c.item)}` : ''}
-                {c.duration_s ? ` · ${c.duration_s.toFixed(1)}초` : ''}
-              </Text>
-              <Text style={{ fontSize: 16, fontWeight: '700', color: c.alert ? C.warn : C.text }}>
-                {c.alert ? '⚠ ' : ''}
-                {c.text ? `"${c.text}"` : '(말소리)'}
-                {c.matched ? <Text style={{ color: C.ok }}>{'  ✓'}</Text> : null}
-              </Text>
-            </View>
+            <Text style={{ flex: 1, fontSize: 14, color: c.alert ? C.warn : C.text, fontWeight: c.alert ? '700' : '400' }} numberOfLines={2}>
+              {c.alert ? '⚠ ' : ''}
+              {c.text ? `"${c.text}"` : '(말소리)'}
+              {c.item ? ` · ${itemLabel(c.item)}` : ''}
+              {c.duration_s ? <Text style={{ color: C.sub, fontSize: 12 }}>{` · ${c.duration_s.toFixed(1)}초`}</Text> : null}
+            </Text>
+            {c.matched ? <Text style={{ fontSize: 14, fontWeight: '700', color: '#3F6212' }}>✓</Text> : null}
+            <Text style={{ fontSize: 12, color: C.sub }}>{time(c.at)}</Text>
           </View>
         );
       })}

@@ -5,13 +5,13 @@ import { router, useFocusEffect, useIsFocused, type Href } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Svg, { Path, Rect } from 'react-native-svg';
+import Svg, { Path } from 'react-native-svg';
 
 import { Avatar, AVATAR_OPTIONS, type AvatarCategory, type AvatarConfig } from '@/components/Avatar';
 import { FaceGuide, ReadingText, doneSignal, useReadingWord } from '@/components/FaceGuide';
 import type { FaceFrame } from '@/components/FaceTracker';
 import { RingGauge } from '@/components/RingGauge';
-import { BigButton, Panel, PillChip } from '@/components/ui';
+import { BigButton, MicButton, Panel, PillChip } from '@/components/ui';
 import { MOUTH_SENTENCES, VOICE_SENTENCES, fill } from '@/content/curriculum';
 import { useReadAloud } from '@/hooks/useReadAloud';
 import { useDevice } from '@/lib/layout';
@@ -34,13 +34,6 @@ const CameraIcon = ({ color = C.text, size = 44 }: { color?: string; size?: numb
   <Svg width={size} height={size} viewBox="0 0 24 24">
     <Path d="M4 8h3l1.5-2h7L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z" stroke={color} strokeWidth={1.8} fill="none" strokeLinejoin="round" />
     <Path d="M12 16.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z" stroke={color} strokeWidth={1.8} fill="none" />
-  </Svg>
-);
-
-const MicIcon = ({ color = C.text, size = 30 }: { color?: string; size?: number }) => (
-  <Svg width={size} height={size} viewBox="0 0 24 24">
-    <Rect x={9} y={3} width={6} height={11} rx={3} stroke={color} strokeWidth={2} fill="none" />
-    <Path d="M5 11a7 7 0 0 0 14 0M12 18v3" stroke={color} strokeWidth={2} fill="none" strokeLinecap="round" />
   </Svg>
 );
 
@@ -96,7 +89,7 @@ function GaugeCard({ label, g, color }: { label: string; g: Gauge; color?: strin
   const left = Math.max(0, Math.round((1 - g.progress) * 100));
   return (
     <Panel style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10, padding: 12 }}>
-      <RingGauge progress={g.progress} baseline={g.baseline} size={48} stroke={6} color={color} showBaselineText={false} />
+      <RingGauge progress={g.progress} baseline={g.baseline} size={58} stroke={7} color={color} showTick={false} showBaselineText={false} fontScale={0.24} />
       <View style={{ flex: 1, gap: 2 }}>
         <Text style={{ fontSize: 15, fontWeight: '800', color: C.text }}>{label}</Text>
         <Text style={{ fontSize: 12, color: g.usable ? C.ok : C.sub, fontWeight: g.usable && left === 0 ? '700' : '400' }}>
@@ -193,6 +186,8 @@ function Learn({ profile, onLock }: { profile: Profile; onLock: (v: boolean) => 
               onError={setCamError}
               recording={ra.recording}
               doneCount={doneSignal(ra.statuses, ra.allDone)}
+              overlay
+              caption="얼굴은 저장하지 않고 입 벌림 수치만 남겨요"
               style={{ ...device.camera, borderRadius: 18, backgroundColor: '#3A3128', overflow: 'hidden' }}
             />
           ) : (
@@ -204,7 +199,7 @@ function Learn({ profile, onLock }: { profile: Profile; onLock: (v: boolean) => 
             </View>
           )}
         </View>
-        <Text style={{ fontSize: 12, color: C.sub, textAlign: 'center' }}>얼굴은 저장하지 않고 입 벌림 수치만 남겨요</Text>
+        {!showCam && <Text style={{ fontSize: 12, color: C.sub, textAlign: 'center' }}>얼굴은 저장하지 않고 입 벌림 수치만 남겨요</Text>}
         {showCam && (
           <Pressable
             onPress={endCam}
@@ -215,7 +210,7 @@ function Learn({ profile, onLock }: { profile: Profile; onLock: (v: boolean) => 
             <Text style={{ fontSize: 14, fontWeight: '700', color: C.text }}>촬영 끝내기</Text>
           </Pressable>
         )}
-        {!!camError && <Text style={{ fontSize: 12, color: C.warn }}>카메라 오류: {camError.slice(0, 60)}</Text>}
+        {!!camError && <Text style={{ fontSize: 12, color: C.warn }}>카메라를 켜지 못했어요. 카메라 권한을 확인해 주세요.</Text>}
       </View>
 
       <Panel tone="yellow" style={{ gap: 4, padding: 12 }}>
@@ -243,25 +238,7 @@ function Learn({ profile, onLock }: { profile: Profile; onLock: (v: boolean) => 
           style={{ minWidth: 84, height: 44, justifyContent: 'center', opacity: !showCam || lock || ra.index === 0 ? 0.4 : 1 }}>
           <Text style={{ fontSize: 15, color: C.sub }}>이전 문장</Text>
         </Pressable>
-        <Pressable
-          onPress={ra.toggle}
-          disabled={!showCam || ra.busy}
-          accessibilityRole="button"
-          accessibilityLabel={ra.recording ? '읽기 멈추고 보내기' : '읽으며 학습 시작'}
-          style={({ pressed }) => ({
-            width: 72,
-            height: 72,
-            borderRadius: 36,
-            alignItems: 'center',
-            justifyContent: 'center',
-            backgroundColor: ra.recording ? '#E5484D' : C.primary,
-            borderBottomWidth: 4,
-            borderBottomColor: ra.recording ? '#B4282D' : C.primaryDeep,
-            opacity: !showCam || ra.busy ? 0.5 : 1,
-            transform: [{ translateY: pressed ? 2 : 0 }],
-          })}>
-          {ra.recording ? <View style={{ width: 22, height: 22, borderRadius: 4, backgroundColor: C.white }} /> : <MicIcon />}
-        </Pressable>
+        <MicButton recording={ra.recording} onPress={ra.toggle} disabled={!showCam || ra.busy} size={72} shadow />
         <Pressable
           onPress={() => move(1)}
           disabled={!showCam || lock || ra.index >= sentences.length - 1}

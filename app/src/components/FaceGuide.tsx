@@ -45,12 +45,18 @@ export function FaceGuide({
   recording,
   doneCount,
   style,
+  overlay,
+  caption,
+  captionAlign = 'center',
 }: {
   onFrame: (f: FaceFrame) => void;
   onError?: (msg: string) => void;
   recording: boolean; // 낭독 녹음 중
   doneCount: number; // 늘어나면 "한 문장 완료" 표시 (doneSignal)
   style?: ViewStyle; // 카메라 상자 크기·모양
+  overlay?: boolean; // 디자인 AvatarLearn·Mouth·Plan: 상태 알약을 카메라 왼쪽 위에 겹쳐 표시
+  caption?: string; // 카메라 아래쪽에 겹치는 작은 안내 (overlay 일 때)
+  captionAlign?: 'center' | 'right';
 }) {
   const [size, setSize] = useState({ w: 0, h: 0 });
   const [live, setLive] = useState<{ state: Exclude<GuideState, 'done'>; reason?: Reason }>({ state: 'searching' });
@@ -123,6 +129,25 @@ export function FaceGuide({
     [state, lips, w, h],
   );
 
+  const pill = (
+    <View
+      accessibilityLiveRegion="polite"
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        alignSelf: 'flex-start',
+        maxWidth: overlay ? '64%' : '100%', // 오른쪽 위 '인식 카메라' 표시와 겹치지 않게
+        gap: 8,
+        paddingHorizontal: 12,
+        paddingVertical: 7,
+        borderRadius: R.pill,
+        backgroundColor: good ? C.greenSoft : C.primarySoft,
+      }}>
+      <View style={{ width: 9, height: 9, borderRadius: 5, backgroundColor: good ? C.ok : C.primaryStrong }} />
+      <Text style={{ flexShrink: 1, fontSize: overlay ? 12 : 14, fontWeight: '700', color: good ? C.ok : C.onPrimary }}>{message}</Text>
+    </View>
+  );
+
   return (
     <View style={{ gap: 8 }}>
       <View style={[{ overflow: 'hidden', backgroundColor: '#000' }, style]} onLayout={onLayout}>
@@ -170,24 +195,21 @@ export function FaceGuide({
             )}
           </View>
         )}
+        {overlay && (
+          <View pointerEvents="none" style={{ position: 'absolute', top: 12, left: 12, right: 12 }}>
+            {pill}
+          </View>
+        )}
+        {overlay && !!caption && (
+          <Text
+            pointerEvents="none"
+            style={{ position: 'absolute', bottom: 10, left: 12, right: 12, textAlign: captionAlign, fontSize: 12, color: C.border, textShadowColor: 'rgba(0,0,0,0.6)', textShadowRadius: 3 }}>
+            {caption}
+          </Text>
+        )}
       </View>
 
-      <View
-        accessibilityLiveRegion="polite"
-        style={{
-          flexDirection: 'row',
-          alignItems: 'center',
-          alignSelf: 'flex-start',
-          maxWidth: '100%',
-          gap: 8,
-          paddingHorizontal: 12,
-          paddingVertical: 7,
-          borderRadius: R.pill,
-          backgroundColor: good ? C.greenSoft : C.primarySoft,
-        }}>
-        <View style={{ width: 9, height: 9, borderRadius: 5, backgroundColor: good ? C.ok : C.primaryStrong }} />
-        <Text style={{ flexShrink: 1, fontSize: 14, fontWeight: '700', color: good ? C.ok : C.onPrimary }}>{message}</Text>
-      </View>
+      {!overlay && pill}
     </View>
   );
 }

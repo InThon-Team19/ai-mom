@@ -4,10 +4,10 @@ import { router, type Href } from 'expo-router';
 import { useMemo, useState, type ReactNode } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Svg, { Path, Rect } from 'react-native-svg';
+import Svg, { Path } from 'react-native-svg';
 
 import { Avatar } from '@/components/Avatar';
-import { BigButton, Bubble } from '@/components/ui';
+import { BigButton, Bubble, MicIcon } from '@/components/ui';
 import { DAYS, ITEMS, dayOf, fill } from '@/content/curriculum';
 import { useDevice } from '@/lib/layout';
 import { josa, readToday } from '@/lib/progress';
@@ -17,12 +17,6 @@ import { C, R } from '@/theme';
 const ISSUES = ['말이 빨라요', '질문이 어려워요', '진동이 세요', '더 기다려 주세요'];
 const PLAN_PREFIX = '내일 해 보고 싶은 것: ';
 
-const MicIcon = ({ color = C.text }: { color?: string }) => (
-  <Svg width={18} height={18} viewBox="0 0 24 24">
-    <Rect x={9} y={3} width={6} height={11} rx={3} stroke={color} strokeWidth={2} fill="none" />
-    <Path d="M5 11a7 7 0 0 0 14 0M12 18v3" stroke={color} strokeWidth={2} fill="none" strokeLinecap="round" />
-  </Svg>
-);
 const ReviewIcon = () => (
   <Svg width={18} height={18} viewBox="0 0 24 24">
     <Path d="M20 12a8 8 0 1 1-2.34-5.66" stroke={C.text} strokeWidth={2.2} fill="none" strokeLinecap="round" />
@@ -163,11 +157,11 @@ function FeedbackForm({ profile }: { profile: Profile }) {
       </View>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView contentContainerStyle={[{ padding: 20, paddingBottom: 28, gap: 20, flexGrow: 1 }, frame]} keyboardShouldPersistTaps="handled">
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-            <View style={{ width: 88, height: 101, alignItems: 'center', justifyContent: 'flex-end' }} accessibilityLabel={`${profile.parent.title} 아바타`}>
-              <Avatar config={profile.avatar} size={88} expression="smile" />
+          <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 12 }}>
+            <View style={{ width: 96, height: 96, alignItems: 'center', justifyContent: 'flex-end', overflow: 'hidden' }} accessibilityLabel={`${profile.parent.title} 아바타`}>
+              <Avatar config={profile.avatar} size={96} expression="smile" />
             </View>
-            <Bubble>
+            <Bubble style={{ alignSelf: 'stretch' }}>
               <Text style={{ fontSize: 14, fontWeight: '700', lineHeight: 22, color: C.text }}>
                 내일 내가 아이에게 할 말을 정해 주세요. 남겨 주신 내용은 내일 대화에 바로 반영돼요.
               </Text>

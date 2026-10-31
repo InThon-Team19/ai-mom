@@ -12,6 +12,8 @@ export function RingGauge({
   label,
   showBaselineText = true,
   color = C.primary,
+  showTick = true,
+  fontScale = 0.2,
 }: {
   progress: number; // 0~1
   baseline?: number; // 최소 기준 위치 0~1
@@ -20,6 +22,8 @@ export function RingGauge({
   label?: string;
   showBaselineText?: boolean;
   color?: string; // 채움 색 (기본 노랑)
+  showTick?: boolean; // 최소 기준 눈금 (디자인: 작은 링은 눈금 없음)
+  fontScale?: number; // 가운데 % 글자 크기 비율 (디자인: 작은 링일수록 큼)
 }) {
   const r = (size - stroke) / 2;
   const cx = size / 2;
@@ -46,14 +50,14 @@ export function RingGauge({
             strokeDasharray={`${len * p} ${len}`}
             transform={`rotate(-90 ${cx} ${cx})`}
           />
-          <Line x1={t1.x} y1={t1.y} x2={t2.x} y2={t2.y} stroke={C.text} strokeWidth={3} strokeLinecap="round" />
+          {showTick && <Line x1={t1.x} y1={t1.y} x2={t2.x} y2={t2.y} stroke={C.text} strokeWidth={3} strokeLinecap="round" />}
         </Svg>
         <View style={{ position: 'absolute', inset: 0, alignItems: 'center', justifyContent: 'center' }}>
-          <Text style={{ fontSize: size * 0.2, fontWeight: '800', color: C.text }}>{Math.round(p * 100)}%</Text>
+          <Text style={{ fontSize: size * fontScale, fontWeight: '800', color: C.text }}>{Math.round(p * 100)}%</Text>
         </View>
       </View>
       {!!label && <Text style={{ fontSize: 14, color: C.text }}>{label}</Text>}
-      {showBaselineText && !label && <Text style={{ fontSize: 11, color: C.sub }}>최소 기준</Text>}
+      {showBaselineText && showTick && !label && <Text style={{ fontSize: 11, color: C.sub }}>최소 기준</Text>}
     </View>
   );
 }

@@ -1,19 +1,19 @@
-// 온보딩 1-7 동의·설정·연결 — 담당: 태희 (민철 와이어프레임 기준)
-// 페르소나 확정 카드(기획 2-1-1 ⑦) + 데이터 동의 2개(필수), 대화 시간대, 하루 사용 상한, 진동 사용, 태블릿 연결 코드(= profile.childId)
+// 온보딩 1-7 동의·설정·연결 — 담당: 태희 (민철 디자인 Setup 보드 기준)
+// 페르소나 확정 카드(기획 2-1-1 ⑦) + 부모 PIN + 데이터 동의 2개(필수), 대화 시간대·하루 사용 상한, 진동 사용, 태블릿 연결 코드
 import { router } from 'expo-router';
 import { useState, type ReactNode } from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
 
 import { PersonaCard } from '@/components/PersonaCard';
-import { Button, OnboardingScaffold } from '@/components/ui';
-import { api } from '@/lib/api';
+import { Button, OnboardingScaffold, Toggle, fieldStyle } from '@/components/ui';
+import { api, friendlyError } from '@/lib/api';
 import { pinHash, validPin } from '@/lib/pin';
 import { prefetchDay } from '@/lib/prefetch';
 import { registerThisDevice } from '@/lib/device';
 import { updateProfile, useProfile, type Profile } from '@/lib/store';
 import { C, R, T } from '@/theme';
 
-const inputStyle = { fontSize: 16, borderWidth: 1, borderColor: C.border, borderRadius: R.sm, paddingHorizontal: 12, paddingVertical: 12, color: C.text } as const;
+const inputStyle = { ...fieldStyle, minHeight: 46, fontSize: 16 } as const;
 
 const hours = (from: number, to: number) => Array.from({ length: to - from + 1 }, (_, i) => `${String(from + i).padStart(2, '0')}:00`);
 const START_TIMES = hours(6, 14);
@@ -24,7 +24,7 @@ const LIMITS = [
   { min: 60, label: '1시간' },
 ];
 
-/** "18:00" → "오후 06:00" (와이어프레임 표기) */
+/** "18:00" → "오후 06:00" (펼친 목록 표기) */
 function ampm(t: string) {
   const [h, m] = t.split(':').map(Number);
   const h12 = h % 12 === 0 ? 12 : h % 12;
@@ -44,7 +44,7 @@ function Form({ initial, code, profile }: { initial: Profile['settings']; code: 
   const [end, setEnd] = useState(initial.end);
   const [limit, setLimit] = useState(initial.dailyLimitMin);
   const [vibration, setVibration] = useState(initial.vibration);
-  const [open, setOpen] = useState<'start' | 'end' | 'limit' | null>(null);
+  const [open, setOpen] = useState<'time' | 'limit' | null>(null);
   const [saving, setSaving] = useState(false);
 
   const [error, setError] = useState('');
@@ -66,11 +66,12 @@ function Form({ initial, code, profile }: { initial: Profile['settings']; code: 
       onboarded: true,
     });
     try {
-      await api.putProfile(p.childId, p); // 가입 완료를 서버에 확실히 저장 (태블릿 연결은 가입 완료 뒤에만 됨)
+      // 이 화면에서 정한 것만 서버에 확실히 저장 (태블릿 연결은 가입 완료 뒤에만 됨)
+      await api.putProfile(p.childId, { settings: p.settings, pinHash: p.pinHash, onboarded: true });
       const r = await api.reissueLinkCode(p.childId); // 지금 쓸 수 있는 연결 코드 (10분 유효)
       setIssued(r.linkCode);
     } catch (e) {
-      setError(`서버에 저장하지 못했어요: ${String(e).slice(0, 100)}`);
+      setError(friendlyError(e, '서버에 저장하지 못했어요. 인터넷 연결을 확인하고 다시 눌러 주세요.'));
       setSaving(false);
       return;
     }
@@ -79,10 +80,16 @@ function Form({ initial, code, profile }: { initial: Profile['settings']; code: 
     setSaving(false);
   };
 
-  const toggleOpen = (k: 'start' | 'end' | 'limit') => setOpen((o) => (o === k ? null : k));
+  const toggleOpen = (k: 'time' | 'limit') => setOpen((o) => (o === k ? null : k));
+  const limitLabel = LIMITS.find((l) => l.min === limit)?.label ?? `${limit}분`;
 
+  // 디자인 Setup: 페르소나 요약 · PIN 두 칸 · 데이터 동의 · 대화 시간 두 칸 + 진동 토글 · 노랑 점선 연결 코드 상자
   return (
-    <OnboardingScaffold step={7} title="마지막으로 몇 가지만 정해 주세요" footer={
+    <OnboardingScaffold
+      step={7}
+      titleSize={24}
+      title="마지막으로 몇 가지만 정해 주세요"
+      footer={
         issued ? (
           <Button label="부모 앱으로" onPress={() => router.replace('/parent')} />
         ) : (
@@ -91,168 +98,167 @@ function Form({ initial, code, profile }: { initial: Profile['settings']; code: 
       }>
       <PersonaCard profile={profile} />
 
-
       <Section label="부모 PIN (숫자 4자리)">
-        <Text style={T.small}>아이 모드에서 부모 모드로 돌아올 때 써요. 로그인 비밀번호와 다른 숫자 4자리로, 아이가 모르게 정해 주세요.</Text>
         <View style={{ flexDirection: 'row', gap: 8 }}>
-          <TextInput value={pin} onChangeText={(t) => setPin(t.replace(/\D/g, '').slice(0, 4))} keyboardType="number-pad" secureTextEntry maxLength={4} placeholder="PIN" placeholderTextColor={C.muted} style={[inputStyle, { flex: 1 }]} />
-          <TextInput value={pin2} onChangeText={(t) => setPin2(t.replace(/\D/g, '').slice(0, 4))} keyboardType="number-pad" secureTextEntry maxLength={4} placeholder="PIN 확인" placeholderTextColor={C.muted} style={[inputStyle, { flex: 1 }]} />
+          <TextInput
+            value={pin}
+            onChangeText={(t) => setPin(t.replace(/\D/g, '').slice(0, 4))}
+            keyboardType="number-pad"
+            secureTextEntry
+            maxLength={4}
+            placeholder="PIN"
+            placeholderTextColor={C.sub}
+            accessibilityLabel="부모 PIN"
+            style={[inputStyle, { flex: 1 }]}
+          />
+          <TextInput
+            value={pin2}
+            onChangeText={(t) => setPin2(t.replace(/\D/g, '').slice(0, 4))}
+            keyboardType="number-pad"
+            secureTextEntry
+            maxLength={4}
+            placeholder="PIN 확인"
+            placeholderTextColor={C.sub}
+            accessibilityLabel="부모 PIN 확인"
+            style={[inputStyle, { flex: 1 }]}
+          />
         </View>
-        {pin2.length === 4 && pin !== pin2 && <Text style={{ color: C.warn }}>PIN이 서로 달라요.</Text>}
+        {pin2.length === 4 && pin !== pin2 ? (
+          <Text style={{ fontSize: 12, color: C.warn }}>PIN이 서로 달라요.</Text>
+        ) : (
+          <Text style={{ fontSize: 12, lineHeight: 18, color: C.sub }}>아이 모드에서 부모 모드로 돌아올 때 써요. 로그인 비밀번호와는 달라요.</Text>
+        )}
       </Section>
+
       <Section label="데이터 동의">
         <Check checked={consentBio} onPress={() => setConsentBio((v) => !v)} label="내 목소리와 입모양 수치로 아바타를 만드는 데 동의해요 (얼굴 영상은 저장하지 않아요)" />
         <Check checked={consentChild} onPress={() => setConsentChild((v) => !v)} label="보호자로서 아이의 목소리·표정·터치 반응을 기록하는 데 동의해요" />
       </Section>
 
       <Section label="대화 시간">
-        <View style={{ flexDirection: 'row', gap: 8, alignItems: 'flex-start' }}>
-          <View style={{ flex: 1, gap: 4 }}>
-            <Text style={T.small}>시작</Text>
-            <Select
-              value={ampm(start)}
-              open={open === 'start'}
-              onToggle={() => toggleOpen('start')}
-              options={START_TIMES.map((t) => ({ key: t, label: ampm(t) }))}
-              selected={start}
-              onSelect={(k) => {
-                setStart(k);
-                setOpen(null);
-              }}
-            />
-          </View>
-          <View style={{ flex: 1, gap: 4 }}>
-            <Text style={T.small}>끝</Text>
-            <Select
-              value={ampm(end)}
-              open={open === 'end'}
-              onToggle={() => toggleOpen('end')}
-              options={END_TIMES.map((t) => ({ key: t, label: ampm(t) }))}
-              selected={end}
-              onSelect={(k) => {
-                setEnd(k);
-                setOpen(null);
-              }}
-            />
-          </View>
+        <View style={{ flexDirection: 'row', gap: 8 }}>
+          <BoxButton label={`${start} ~ ${end}`} open={open === 'time'} onPress={() => toggleOpen('time')} a11y="대화 시간대 고르기" />
+          <BoxButton label={`하루 ${limitLabel}`} open={open === 'limit'} onPress={() => toggleOpen('limit')} a11y="하루 사용 상한 고르기" />
         </View>
-        {!timeOk && <Text style={{ fontSize: 13, color: C.warn }}>끝 시간은 시작 시간보다 늦어야 해요</Text>}
-        <Text style={[T.small, { marginTop: 4 }]}>하루 사용 상한</Text>
-        <Select
-          value={LIMITS.find((l) => l.min === limit)?.label ?? `${limit}분`}
-          open={open === 'limit'}
-          onToggle={() => toggleOpen('limit')}
-          options={LIMITS.map((l) => ({ key: String(l.min), label: l.label }))}
-          selected={String(limit)}
-          onSelect={(k) => {
-            setLimit(Number(k));
-            setOpen(null);
-          }}
-        />
+        {open === 'time' && (
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            <View style={{ flex: 1, gap: 4 }}>
+              <Text style={T.small}>시작</Text>
+              <OptionList options={START_TIMES.map((t) => ({ key: t, label: ampm(t) }))} selected={start} onSelect={setStart} />
+            </View>
+            <View style={{ flex: 1, gap: 4 }}>
+              <Text style={T.small}>끝</Text>
+              <OptionList options={END_TIMES.map((t) => ({ key: t, label: ampm(t) }))} selected={end} onSelect={setEnd} />
+            </View>
+          </View>
+        )}
+        {open === 'limit' && (
+          <OptionList
+            options={LIMITS.map((l) => ({ key: String(l.min), label: `하루 ${l.label}` }))}
+            selected={String(limit)}
+            onSelect={(k) => {
+              setLimit(Number(k));
+              setOpen(null);
+            }}
+          />
+        )}
+        {!timeOk && <Text style={{ fontSize: 12, color: C.warn }}>끝 시간은 시작 시간보다 늦어야 해요</Text>}
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 6, gap: 12 }}>
+          <Text style={{ flex: 1, fontSize: 14, color: C.text }}>진동 쓰기 (짧고 약하게만)</Text>
+          <Toggle value={vibration} onChange={setVibration} label="진동 쓰기" />
+        </View>
       </Section>
 
-      <Check checked={vibration} onPress={() => setVibration((v) => !v)} label="진동 쓰기 (짧고 약하게만)" />
-
-      <View style={{ borderWidth: 1, borderColor: C.border, borderRadius: R.md, padding: 16, gap: 8 }}>
-        <Text style={{ fontSize: 16, fontWeight: '800', color: C.text }}>아이 태블릿 연결</Text>
+      <View style={{ borderRadius: 14, borderWidth: 2, borderStyle: 'dashed', borderColor: C.primaryStrong, backgroundColor: C.primarySoft, padding: 12, alignItems: 'center', gap: 4 }}>
         {issued ? (
           <>
-            <Text style={T.small}>아이 태블릿에서 아이맘을 열고 이 코드를 입력하세요. 10분 동안 한 번만 쓸 수 있어요. 지나면 설정 탭에서 새로 받으면 돼요.</Text>
-            <View style={{ backgroundColor: C.card, borderRadius: R.sm, paddingVertical: 14, alignItems: 'center' }}>
-              <Text selectable style={{ fontSize: 30, fontWeight: '800', letterSpacing: 6, color: C.text }}>
-                {issued.slice(0, 3)} {issued.slice(3)}
-              </Text>
-            </View>
+            <Text style={{ fontSize: 12, color: C.sub, textAlign: 'center' }}>아이 태블릿에서 이 코드를 입력해 주세요 · 10분 동안 한 번만</Text>
+            <Text selectable style={{ fontSize: 28, fontWeight: '900', letterSpacing: 6, color: C.text }}>
+              {issued}
+            </Text>
+            <Text style={{ fontSize: 11, color: C.sub, textAlign: 'center' }}>시간이 지나면 설정 탭에서 새로 받으면 돼요.</Text>
           </>
         ) : (
-          <Text style={T.small}>“시작하기”를 누르면 가입이 저장되고 여기에 태블릿 연결 코드가 나와요.</Text>
+          <Text style={{ fontSize: 12, lineHeight: 18, color: C.sub, textAlign: 'center' }}>
+            {'"시작하기"를 누르면 가입이 저장되고\n여기에 아이 태블릿 연결 코드가 나와요.'}
+          </Text>
         )}
-        {!!error && <Text style={{ color: C.warn }}>{error}</Text>}
       </View>
+      {!!error && <Text style={{ fontSize: 13, color: C.warn }}>{error}</Text>}
     </OnboardingScaffold>
   );
 }
 
 function Section({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <View style={{ gap: 10 }}>
-      <Text style={{ fontSize: 15, fontWeight: '700', color: C.text }}>{label}</Text>
+    <View style={{ gap: 8 }}>
+      <Text style={{ fontSize: 14, fontWeight: '800', color: C.text }}>{label}</Text>
       {children}
     </View>
   );
 }
 
+/** 동의 체크 (디자인: 20px 노랑 네모) */
 function Check({ checked, onPress, label }: { checked: boolean; onPress: () => void; label: string }) {
   return (
-    <Pressable
-      onPress={onPress}
-      accessibilityRole="checkbox"
-      accessibilityState={{ checked }}
-      style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 10 }}>
+    <Pressable onPress={onPress} accessibilityRole="checkbox" accessibilityState={{ checked }} hitSlop={4} style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8 }}>
       <View
         style={{
-          width: 24,
-          height: 24,
+          width: 20,
+          height: 20,
+          marginTop: 1,
           borderRadius: 5,
-          borderWidth: 2,
-          borderColor: checked ? C.primaryStrong : C.sub,
+          borderWidth: checked ? 0 : 2,
+          borderColor: C.border,
           backgroundColor: checked ? C.primary : C.white,
           alignItems: 'center',
           justifyContent: 'center',
         }}>
-        {checked && <Text style={{ color: C.onPrimary, fontSize: 15, fontWeight: '900', lineHeight: 18 }}>✓</Text>}
+        {checked && <Text style={{ color: C.onPrimary, fontSize: 13, fontWeight: '900', lineHeight: 16 }}>✓</Text>}
       </View>
-      <Text style={{ flex: 1, fontSize: 15, color: C.text, lineHeight: 22 }}>{label}</Text>
+      <Text style={{ flex: 1, fontSize: 13, lineHeight: 20, color: C.text }}>{label}</Text>
     </Pressable>
   );
 }
 
-/** 드롭다운 대신 누르면 아래로 펼쳐지는 목록 (새 의존성 없이) */
-function Select({
-  value,
-  open,
-  onToggle,
-  options,
-  selected,
-  onSelect,
-}: {
-  value: string;
-  open: boolean;
-  onToggle: () => void;
-  options: { key: string; label: string }[];
-  selected: string;
-  onSelect: (key: string) => void;
-}) {
+/** 대화 시간 칸 (디자인: 흰 바탕 · 1px 테두리 · 가운데 글자). 누르면 아래 목록이 펼쳐짐 */
+function BoxButton({ label, open, onPress, a11y }: { label: string; open: boolean; onPress: () => void; a11y: string }) {
   return (
-    <View>
-      <Pressable
-        onPress={onToggle}
-        accessibilityRole="button"
-        style={{
-          minHeight: 50,
-          borderWidth: open ? 2 : 1,
-          borderColor: open ? C.primaryStrong : C.sub,
-          borderRadius: R.sm,
-          paddingHorizontal: 14,
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-        }}>
-        <Text style={{ fontSize: 16, color: C.text }}>{value}</Text>
-        <Text style={{ fontSize: 14, color: C.text }}>{open ? '▴' : '▾'}</Text>
-      </Pressable>
-      {open && (
-        <View style={{ marginTop: 4, borderWidth: 1, borderColor: C.border, borderRadius: R.sm, overflow: 'hidden' }}>
-          {options.map((o) => (
-            <Pressable
-              key={o.key}
-              onPress={() => onSelect(o.key)}
-              style={{ paddingHorizontal: 14, paddingVertical: 11, backgroundColor: o.key === selected ? C.primarySoft : C.white }}>
-              <Text style={{ fontSize: 15, color: C.text, fontWeight: o.key === selected ? '700' : '400' }}>{o.label}</Text>
-            </Pressable>
-          ))}
-        </View>
-      )}
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={a11y}
+      accessibilityState={{ expanded: open }}
+      style={{
+        flex: 1,
+        minHeight: 44,
+        padding: 10,
+        borderRadius: R.sm,
+        borderWidth: open ? 2 : 1,
+        borderColor: open ? C.primaryStrong : C.border,
+        backgroundColor: open ? C.primarySoft : C.white,
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}>
+      <Text style={{ fontSize: 14, color: C.text, fontWeight: open ? '700' : '400' }}>{label}</Text>
+    </Pressable>
+  );
+}
+
+/** 펼친 선택 목록 (새 의존성 없이) */
+function OptionList({ options, selected, onSelect }: { options: { key: string; label: string }[]; selected: string; onSelect: (key: string) => void }) {
+  return (
+    <View style={{ borderWidth: 1, borderColor: C.border, borderRadius: R.sm, overflow: 'hidden', backgroundColor: C.white }}>
+      {options.map((o) => (
+        <Pressable
+          key={o.key}
+          onPress={() => onSelect(o.key)}
+          accessibilityRole="button"
+          accessibilityState={{ selected: o.key === selected }}
+          style={{ paddingHorizontal: 14, paddingVertical: 10, backgroundColor: o.key === selected ? C.primarySoft : C.white }}>
+          <Text style={{ fontSize: 14, color: C.text, fontWeight: o.key === selected ? '700' : '400' }}>{o.label}</Text>
+        </Pressable>
+      ))}
     </View>
   );
 }

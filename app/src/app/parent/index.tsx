@@ -8,7 +8,7 @@ import Svg, { Circle, Path } from 'react-native-svg';
 import { Avatar } from '@/components/Avatar';
 import { ChecksBox } from '@/components/ChecksBox';
 import { RingGauge } from '@/components/RingGauge';
-import { BigButton, Bubble, Panel } from '@/components/ui';
+import { Art, BigButton, Bubble, Panel, artOf, type ArtName } from '@/components/ui';
 import { ITEMS, dayOf, type Item } from '@/content/curriculum';
 import { api } from '@/lib/api';
 import { useDevice } from '@/lib/layout';
@@ -41,10 +41,10 @@ const HomeBadge = () => (
   </View>
 );
 
-type Row = { key: string; icon: string; before?: string; bold: string; after: string };
+type Row = { key: string; icon: ArtName; before?: string; bold: string; after: string };
 
 /** '오늘 {이름}는…' 줄: 실제 활동 기록으로만 만듦 (없는 일을 지어내지 않음) */
-function todayRows(s: Summary | null, story: { title: string; emoji: string } | null, me: string): Row[] {
+function todayRows(s: Summary | null, story: { title: string } | null, me: string): Row[] {
   if (!s) return [];
   const rows: Row[] = [];
   const fav = (s.favorites ?? []).map(findItem).find((x): x is Item => !!x);
@@ -52,35 +52,43 @@ function todayRows(s: Summary | null, story: { title: string; emoji: string } | 
   if (fav) {
     rows.push(
       smiles > 0
-        ? { key: 'fav', icon: fav.emoji, bold: fav.ko, after: `${josa(fav.ko, '을', '를')} 보고 웃었어요` }
-        : { key: 'fav', icon: fav.emoji, bold: fav.ko, after: `${josa(fav.ko, '을', '를')} 가장 좋아했어요` },
+        ? { key: 'fav', icon: artOf(fav.id) ?? 'smile', bold: fav.ko, after: `${josa(fav.ko, '을', '를')} 보고 웃었어요` }
+        : { key: 'fav', icon: artOf(fav.id) ?? 'eye', bold: fav.ko, after: `${josa(fav.ko, '을', '를')} 가장 좋아했어요` },
     );
   } else if (smiles > 0) {
-    rows.push({ key: 'smile', icon: '😊', bold: `${smiles}번`, after: ' 웃었어요' });
+    rows.push({ key: 'smile', icon: 'smile', bold: `${smiles}번`, after: ' 웃었어요' });
   }
   const word = s.words.map(findItem).find((x): x is Item => !!x);
   if (word || s.words.length) {
     const w = word?.ko ?? s.words[0];
     rows.push({
       key: 'word',
-      icon: word?.emoji ?? '🗣️',
+      icon: artOf(word?.id) ?? 'talk',
       bold: w,
       after: s.repeat_ok > 1 ? `${josa(w, '을', '를')} ${s.repeat_ok}번 따라 말했어요` : `${josa(w, '을', '를')} 따라 말했어요`,
     });
   } else if (s.repeats > 0) {
-    rows.push({ key: 'word', icon: '🗣️', before: '따라 말하기를 ', bold: `${s.repeats}번`, after: ' 해 봤어요' });
+    rows.push({ key: 'word', icon: 'repeat', before: '따라 말하기를 ', bold: `${s.repeats}번`, after: ' 해 봤어요' });
   }
   const listen = s.listen_s ?? 0;
   if (story && listen > 0) {
-    rows.push({ key: 'story', icon: story.emoji, before: '전래동화 ', bold: story.title, after: `${josa(story.title, '을', '를')} 들었어요` });
+    rows.push({ key: 'story', icon: 'story', before: '전래동화 ', bold: story.title, after: `${josa(story.title, '을', '를')} 들었어요` });
   } else if (listen > 0) {
-    rows.push({ key: 'listen', icon: '👂', before: `${me} 목소리를 `, bold: duration(listen), after: ' 들었어요' });
+    rows.push({ key: 'listen', icon: 'ear', before: `${me} 목소리를 `, bold: duration(listen), after: ' 들었어요' });
   } else if (s.gaze_s > 0) {
-    rows.push({ key: 'gaze', icon: '👀', before: '화면을 ', bold: duration(s.gaze_s), after: ' 바라봤어요' });
+    rows.push({ key: 'gaze', icon: 'eye', before: '화면을 ', bold: duration(s.gaze_s), after: ' 바라봤어요' });
   }
-  if (s.touches > 0 && rows.length < 3) rows.push({ key: 'touch', icon: '✋', before: '화면을 ', bold: `${s.touches}번`, after: ' 눌러 봤어요' });
+  if (s.touches > 0 && rows.length < 3) rows.push({ key: 'touch', icon: 'hand', before: '화면을 ', bold: `${s.touches}번`, after: ' 눌러 봤어요' });
   return rows.slice(0, 3);
 }
+
+/** 학습률 작은 링 (디자인 Home: 48px · 눈금 없음 · 아래 굵은 이름) */
+const MiniRing = ({ g, label, color }: { g: Gauge | null; label: string; color?: string }) => (
+  <View style={{ alignItems: 'center', gap: 2 }}>
+    <RingGauge progress={g?.progress ?? 0} baseline={g?.baseline} size={48} stroke={6} color={color} showTick={false} showBaselineText={false} fontScale={0.26} />
+    <Text style={{ fontSize: 12, fontWeight: '700', color: C.text }}>{label}</Text>
+  </View>
+);
 
 export default function ParentHome() {
   const profile = useProfile();
@@ -124,7 +132,7 @@ export default function ParentHome() {
   const st = wordStatus(today.day, summary);
   // "오늘은 사과를 배웠어요" → "지호는 오늘 사과를 배웠어요"
   const line = headline(st).replace(/^오늘은 /, `${name}${josa(name, '은', '는')} 오늘 `);
-  const story = today.story ? { title: today.story.title, emoji: today.story.pages[0]?.emoji ?? '📖' } : null;
+  const story = today.story ? { title: today.story.title } : null;
   const rows = todayRows(summary, story, me);
   // 학습률 카드: 둘 다 아이에게 쓸 수 있으면 숨김 (불러오기 전에는 보이지 않게)
   const showLearn = !!(voice && mouth) && !(voice.usable && mouth.usable);
@@ -141,8 +149,8 @@ export default function ParentHome() {
               <Text style={{ fontSize: 12, color: C.sub }}>100%가 되면 {name}에게 더 자연스럽게 말해요</Text>
             </View>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
-              <RingGauge progress={voice?.progress ?? 0} baseline={voice?.baseline} size={48} stroke={6} label="음성" />
-              <RingGauge progress={mouth?.progress ?? 0} baseline={mouth?.baseline} size={48} stroke={6} label="입모양" color={C.green} />
+              <MiniRing g={voice} label="음성" />
+              <MiniRing g={mouth} label="입모양" color={C.green} />
               <View style={{ flex: 1 }} />
               <BigButton small label="학습하러 가기" onPress={() => go('/parent/avatar')} />
             </View>
@@ -209,7 +217,7 @@ export default function ParentHome() {
                 key={r.key}
                 style={{ flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 8, paddingLeft: 8, paddingRight: 14, borderRadius: 16, borderWidth: 2, borderColor: C.border, backgroundColor: C.white }}>
                 <View style={{ width: 48, height: 48, borderRadius: 12, backgroundColor: C.card, alignItems: 'center', justifyContent: 'center' }}>
-                  <Text style={{ fontSize: 28 }}>{r.icon}</Text>
+                  <Art name={r.icon} size={34} />
                 </View>
                 <Text style={{ flex: 1, fontSize: 15, color: C.text }}>
                   {r.before}
@@ -220,7 +228,7 @@ export default function ParentHome() {
             ))
           ) : (
             <View style={{ alignItems: 'center', gap: 6, paddingVertical: 18, paddingHorizontal: 14, borderRadius: 16, borderWidth: 2, borderStyle: 'dashed', borderColor: C.border, backgroundColor: C.white }}>
-              <Text style={{ fontSize: 28 }}>🌱</Text>
+              <Art name="sprout" size={34} />
               <Text style={[T.body, { textAlign: 'center', fontWeight: '700' }]}>
                 {linked === false ? '서버에 연결하지 못했어요' : '아직 오늘 놀이 기록이 없어요'}
               </Text>

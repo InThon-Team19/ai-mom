@@ -4,7 +4,7 @@ import { useLocalSearchParams } from 'expo-router';
 import { useState, type ReactNode } from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
 
-import { Button, Chip, OnboardingScaffold } from '@/components/ui';
+import { Button, Chip, OnboardingScaffold, fieldStyle } from '@/components/ui';
 import { updateProfile, useProfile, type Profile } from '@/lib/store';
 import { goNext } from '@/lib/nav';
 import { C, R } from '@/theme';
@@ -85,11 +85,12 @@ function Form({ initial }: { initial: Profile['child'] }) {
   return (
     <OnboardingScaffold
       step={2}
+      titleSize={24}
       title="우리 아이를 소개해 주세요"
       subtitle="아바타가 아이 이름을 불러 주고, 아이에게 맞는 속도로 함께 놀아요."
       footer={<Button label="다음" disabled={!ready} onPress={next} />}>
       <Field label="아이의 이름 또는 별명" hint="아바타가 이렇게 불러 줘요">
-        <TextInput value={name} onChangeText={setName} placeholder="예: 지호, 콩이" placeholderTextColor={C.muted} style={input} />
+        <TextInput value={name} onChangeText={setName} placeholder="예: 지호, 콩이" placeholderTextColor={C.sub} style={input} />
       </Field>
 
       <Field label="태어난 해와 달">
@@ -99,7 +100,7 @@ function Form({ initial }: { initial: Profile['child'] }) {
               value={year}
               onChangeText={(t) => setYear(t.replace(/\D/g, ''))}
               placeholder="2022"
-              placeholderTextColor={C.muted}
+              placeholderTextColor={C.sub}
               keyboardType="number-pad"
               maxLength={4}
               accessibilityLabel="태어난 해"
@@ -112,7 +113,7 @@ function Form({ initial }: { initial: Profile['child'] }) {
               value={month}
               onChangeText={(t) => setMonth(t.replace(/\D/g, ''))}
               placeholder="5"
-              placeholderTextColor={C.muted}
+              placeholderTextColor={C.sub}
               keyboardType="number-pad"
               maxLength={2}
               accessibilityLabel="태어난 달"
@@ -121,8 +122,8 @@ function Form({ initial }: { initial: Profile['child'] }) {
             <Text style={unitText}>월</Text>
           </View>
         </View>
-        {touched && !!problem && <Text style={{ fontSize: 13, lineHeight: 19, color: C.warn }}>{problem}</Text>}
-        {!problem && <Text style={{ fontSize: 13, color: C.sub }}>{ageText(year, month)}</Text>}
+        {touched && !!problem && <Text style={{ fontSize: 12, lineHeight: 18, color: C.warn }}>{problem}</Text>}
+        {!problem && <Text style={{ fontSize: 12, color: C.sub }}>{ageText(year, month)}</Text>}
       </Field>
 
       <Field label="요즘 말하는 모습" hint="가장 가까운 것을 골라 주세요">
@@ -136,14 +137,10 @@ function Form({ initial }: { initial: Profile['child'] }) {
       <Field label="좋아하는 것" hint="(선택 · 여러 개 골라도 돼요)">
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
           {[...LIKE_PRESETS, ...extra].map((l) => (
-            <Chip key={l} label={l} selected={likes.includes(l)} onPress={() => toggleLike(l)} />
+            <Chip small key={l} label={l} selected={likes.includes(l)} onPress={() => toggleLike(l)} />
           ))}
           {!adding && (
-            <Pressable
-              onPress={() => setAdding(true)}
-              style={{ paddingHorizontal: 16, minHeight: 42, justifyContent: 'center', borderRadius: R.pill, borderWidth: 1, borderStyle: 'dashed', borderColor: C.sub }}>
-              <Text style={{ fontSize: 15, color: C.text }}>+ 직접 적기</Text>
-            </Pressable>
+            <Chip small dashed label="+ 직접 적기" onPress={() => setAdding(true)} />
           )}
         </View>
         {adding && (
@@ -154,38 +151,30 @@ function Form({ initial }: { initial: Profile['child'] }) {
               onChangeText={setDraft}
               onSubmitEditing={addLike}
               placeholder="예: 버스, 바다"
-              placeholderTextColor={C.muted}
+              placeholderTextColor={C.sub}
               style={[input, { flex: 1 }]}
             />
-            <Button label="추가" variant="outline" onPress={addLike} style={{ minHeight: 50 }} />
+            <Button label="추가" variant="outline" onPress={addLike} style={{ minHeight: 46 }} />
           </View>
         )}
-        <Text style={{ fontSize: 12, color: C.sub }}>건강 정보나 싫어하는 것은 받지 않아요.</Text>
+        <Text style={{ fontSize: 11, color: C.sub }}>건강 정보나 싫어하는 것은 받지 않아요.</Text>
       </Field>
     </OnboardingScaffold>
   );
 }
 
-const input = {
-  minHeight: 50,
-  borderWidth: 1,
-  borderColor: C.sub,
-  borderRadius: R.sm,
-  paddingHorizontal: 14,
-  fontSize: 16,
-  color: C.text,
-} as const;
+const input = { ...fieldStyle, minHeight: 46, fontSize: 16 } as const;
 
 const unitBox = { flexDirection: 'row', alignItems: 'center', gap: 6 } as const;
-const unitInput = { flex: 1, fontSize: 17, lineHeight: 24, color: C.text, paddingVertical: 10, paddingHorizontal: 0 } as const;
+const unitInput = { flex: 1, fontSize: 16, lineHeight: 22, color: C.text, paddingVertical: 8, paddingHorizontal: 0 } as const;
 const unitText = { fontSize: 16, lineHeight: 24, color: C.text } as const;
 
 function Field({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
   return (
-    <View style={{ gap: 8 }}>
-      <Text style={{ fontSize: 15, lineHeight: 22, fontWeight: '700', color: C.text }}>
+    <View style={{ gap: 6 }}>
+      <Text style={{ fontSize: 14, lineHeight: 21, fontWeight: '700', color: C.text }}>
         {label}
-        {!!hint && <Text style={{ fontSize: 13, fontWeight: '400', color: C.sub }}>  {hint}</Text>}
+        {!!hint && <Text style={{ fontSize: 12, fontWeight: '400', color: C.sub }}> {hint}</Text>}
       </Text>
       {children}
     </View>
@@ -200,20 +189,18 @@ function LevelRow({ item, selected, onPress }: { item: (typeof LEVELS)[number]; 
       accessibilityRole="radio"
       accessibilityState={{ selected }}
       style={{
-        minHeight: 56,
-        paddingHorizontal: 14,
-        paddingVertical: 10,
-        gap: 2,
+        minHeight: 44,
+        paddingHorizontal: 12,
+        paddingVertical: 7,
         borderRadius: R.sm,
         borderWidth: selected ? 2 : 1,
-        borderColor: selected ? C.primaryStrong : C.sub,
+        borderColor: selected ? C.primaryStrong : C.border,
         backgroundColor: selected ? C.primarySoft : C.white,
       }}>
-      <Text style={{ fontSize: 16, lineHeight: 22, fontWeight: '700', color: C.text }}>
-        {item.value}
-        <Text style={{ fontSize: 14, fontWeight: '400' }}>  {item.desc}</Text>
+      <Text style={{ fontSize: 14, lineHeight: 20, color: C.text }}>
+        <Text style={{ fontWeight: '800' }}>{item.value}</Text> {item.desc}
       </Text>
-      <Text style={{ fontSize: 13, color: C.sub }}>예: {item.example}</Text>
+      <Text style={{ fontSize: 12, color: C.sub }}>예: {item.example}</Text>
     </Pressable>
   );
 }

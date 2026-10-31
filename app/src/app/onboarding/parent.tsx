@@ -4,7 +4,7 @@ import { useLocalSearchParams } from 'expo-router';
 import { useState, type ReactNode } from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
 
-import { Button, Chip, OnboardingScaffold } from '@/components/ui';
+import { Button, Chip, OnboardingScaffold, fieldStyle } from '@/components/ui';
 import { updateProfile, useProfile, type Profile } from '@/lib/store';
 import { goNext } from '@/lib/nav';
 import { C, R } from '@/theme';
@@ -51,6 +51,7 @@ function Form({ initial, childName }: { initial: Profile['parent']; childName: s
   return (
     <OnboardingScaffold
       step={3}
+      titleSize={24}
       title="평소 아이에게 어떻게 말해 주시나요?"
       subtitle="아바타가 평소 말투와 비슷하게 말할 수 있게 도와줘요."
       footer={<Button label="다음" disabled={!ready} onPress={next} />}>
@@ -71,9 +72,9 @@ function Form({ initial, childName }: { initial: Profile['parent']; childName: s
             value={customText}
             onChangeText={setCustomText}
             placeholder="예: 할머니, 이모"
-            placeholderTextColor={C.muted}
+            placeholderTextColor={C.sub}
             maxLength={8}
-            style={{ minHeight: 50, borderWidth: 1, borderColor: C.sub, borderRadius: R.sm, paddingHorizontal: 14, fontSize: 16, color: C.text }}
+            style={{ ...fieldStyle, minHeight: 46, fontSize: 16 }}
           />
         )}
       </Section>
@@ -81,8 +82,8 @@ function Form({ initial, childName }: { initial: Profile['parent']; childName: s
       <Section label="말투">
         {TONES.map(({ tone: t, example }) => (
           <Box key={t} selected={tone === t} onPress={() => setTone(t)} card>
-            <Text style={{ fontSize: 16, fontWeight: '800', color: C.text }}>{t}</Text>
-            <Text style={{ fontSize: 14, color: C.sub }}>{example.replaceAll('{name}', name)}</Text>
+            <Text style={{ fontSize: 15, fontWeight: '700', color: C.text }}>{t}</Text>
+            <Text style={{ fontSize: 13, color: C.sub }}>{`"${example.replaceAll('{name}', name)}"`}</Text>
           </Box>
         ))}
       </Section>
@@ -90,7 +91,7 @@ function Form({ initial, childName }: { initial: Profile['parent']; childName: s
       <Section label="바라는 방향" hint="(여러 개 골라도 돼요)">
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
           {GOALS.map((g) => (
-            <Chip key={g} label={g} selected={goals.includes(g)} onPress={() => toggleGoal(g)} />
+            <Chip small key={g} label={g} selected={goals.includes(g)} onPress={() => toggleGoal(g)} />
           ))}
         </View>
       </Section>
@@ -102,8 +103,8 @@ const boxText = (selected: boolean) => ({ fontSize: 15, fontWeight: selected ? (
 
 function Section({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
   return (
-    <View style={{ gap: 8 }}>
-      <Text style={{ fontSize: 15, fontWeight: '700', color: C.text }}>
+    <View style={{ gap: 6 }}>
+      <Text style={{ fontSize: 14, fontWeight: '800', color: C.text }}>
         {label}
         {!!hint && <Text style={{ fontWeight: '400', color: C.sub }}> {hint}</Text>}
       </Text>
@@ -129,11 +130,12 @@ function Box({
   return (
     <Pressable
       onPress={onPress}
+      accessibilityRole="button"
       accessibilityState={{ selected }}
       style={{
         flex: card ? undefined : 1,
-        minHeight: card ? 60 : 50,
-        paddingHorizontal: 16,
+        minHeight: card ? 56 : 46,
+        paddingHorizontal: 14,
         paddingVertical: card ? 10 : 0,
         gap: 2,
         alignItems: card ? 'flex-start' : 'center',
@@ -141,7 +143,7 @@ function Box({
         borderRadius: R.sm,
         borderWidth: selected ? 2 : 1,
         borderStyle: dashed && !selected ? 'dashed' : 'solid',
-        borderColor: selected ? C.primaryStrong : C.sub,
+        borderColor: selected ? C.primaryStrong : dashed ? C.muted : C.border,
         backgroundColor: selected ? C.primarySoft : C.white,
       }}>
       {children}

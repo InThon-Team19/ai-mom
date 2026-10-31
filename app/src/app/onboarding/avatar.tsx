@@ -42,8 +42,9 @@ function Maker({ initial }: { initial: AvatarConfig }) {
       subtitle="실제 얼굴이 아닌 캐릭터예요. 입은 부모님 입모양 수치대로 움직여요."
       footer={<Button label="다음" onPress={next} />}>
       <View
-        style={{ height: 220, borderRadius: R.md, backgroundColor: C.card, alignItems: 'center', justifyContent: 'flex-end', overflow: 'hidden' }}>
-        <Avatar config={config} size={180} />
+        style={{ height: 220, borderRadius: R.md, backgroundColor: C.primarySoft, alignItems: 'center', justifyContent: 'flex-end', overflow: 'hidden' }}
+        accessibilityLabel="아바타 미리보기">
+        <Avatar config={config} size={200} />
       </View>
 
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
@@ -64,20 +65,23 @@ function Maker({ initial }: { initial: AvatarConfig }) {
                   accessibilityLabel={cat === 'color' ? `피부색 ${i + 1}` : label}
                   accessibilityState={{ selected }}
                   onPress={() => setConfig((c) => ({ ...c, [cat]: i }))}
+                  accessibilityRole="button"
                   style={{
                     flex: 1,
-                    aspectRatio: 0.9,
+                    height: 76,
                     borderRadius: R.sm,
                     borderWidth: selected ? 2 : 1,
-                    borderColor: selected ? C.primaryStrong : C.sub,
+                    borderColor: selected ? C.primaryStrong : C.border,
                     backgroundColor: selected ? C.primarySoft : C.white,
                     alignItems: 'center',
                     justifyContent: 'center',
                     overflow: 'hidden',
                   }}>
-                  <Avatar config={{ ...config, [cat]: i }} size={52} />
-                  {cat !== 'color' && (
-                    <Text numberOfLines={1} style={{ fontSize: 11, color: C.sub }}>
+                  {/* 디자인: 글자만 (색은 고를 색이 보이게 작은 아바타) */}
+                  {cat === 'color' ? (
+                    <Avatar config={{ ...config, [cat]: i }} size={52} />
+                  ) : (
+                    <Text numberOfLines={1} style={{ fontSize: 12, fontWeight: selected ? '700' : '400', color: C.text }}>
                       {label}
                     </Text>
                   )}

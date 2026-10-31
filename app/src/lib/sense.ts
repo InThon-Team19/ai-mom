@@ -4,7 +4,7 @@ import { createAudioPlayer, type AudioPlayer } from 'expo-audio';
 import * as Haptics from 'expo-haptics';
 import { Platform, Vibration } from 'react-native';
 
-import { api } from '@/lib/api';
+import { api, trace } from '@/lib/api';
 import type { ActivityEvent, ActivityType } from '@/lib/types';
 
 const SOURCES = {
@@ -55,8 +55,30 @@ const ANDROID_MS: Record<HapticKind, number | number[]> = {
   soft: [0, 25, 170, 25, 170, 25],
 };
 
+/** 진동 진단: 종류마다 처음 한 번만 서버 기록에 남김 (진동이 안 느껴질 때 불렸는지·설정에 막혔는지 확인용) */
+const hapticSeen = new Set<string>();
+const hapticTrace = (key: string, msg: string) => {
+  if (hapticSeen.has(key)) return;
+  hapticSeen.add(key);
+  trace(`haptic ${msg}`);
+};
+
+/** 화면 흔들기 구독 (components/HapticShake 가 구독). 진동이 안 되는 기기에서도 눈으로 촉각 신호를 받게 */
+const shakeListeners = new Set<(kind: HapticKind) => void>();
+export function onHapticShake(fn: (kind: HapticKind) => void) {
+  shakeListeners.add(fn);
+  return () => {
+    shakeListeners.delete(fn);
+  };
+}
+
 export function haptic(kind: HapticKind) {
-  if (!vibrationOn) return;
+  if (!vibrationOn) return void hapticTrace('off', `${kind} 막힘: 앱 설정에서 진동이 꺼져 있음`);
+  shakeListeners.forEach((fn) => {
+    try {
+      fn(kind);
+    } catch {}
+  });
   if (kind === 'tick') {
     const now = Date.now();
     if (now - lastTick < TICK_GAP_MS) return;
@@ -64,7 +86,11 @@ export function haptic(kind: HapticKind) {
   }
   try {
     // Android: 이 Expo Go 에는 expo-haptics 가 없어서(… is not available on android) 기본 진동으로
-    if (Platform.OS === 'android') return void Vibration.vibrate(ANDROID_MS[kind]);
+    if (Platform.OS === 'android') {
+      Vibration.vibrate(ANDROID_MS[kind]);
+      return void hapticTrace(kind, `${kind} android Vibration ${JSON.stringify(ANDROID_MS[kind])}ms`);
+    }
+    hapticTrace(kind, `${kind} ios Haptics`);
     const quiet = () => {};
     if (kind === 'tick') Haptics.selectionAsync().catch(quiet);
     else if (kind === 'strong') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(quiet);
@@ -78,7 +104,9 @@ export function haptic(kind: HapticKind) {
           } catch {}
         }, ms),
       );
-  } catch {}
+  } catch (e) {
+    hapticTrace(`err-${kind}`, `${kind} 실패: ${String(e).slice(0, 120)}`);
+  }
 }
 
 // ---------- 아이 반응 기록: 모아서 3초마다 서버로 ----------

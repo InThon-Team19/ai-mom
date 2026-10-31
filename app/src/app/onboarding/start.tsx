@@ -8,8 +8,8 @@ import { Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Avatar, DEFAULT_AVATAR } from '@/components/Avatar';
-import { Button, H1, Sub } from '@/components/ui';
-import { C, R } from '@/theme';
+import { BigApple, Button } from '@/components/ui';
+import { C } from '@/theme';
 import { useDevice } from '@/lib/layout';
 
 export default function Start() {
@@ -29,29 +29,33 @@ export default function Start() {
     router.replace((await parentEntry()) as Href);
   };
 
+  // 디자인 Main: 크림 바탕 · 높이 300 노랑 그림 칸(아바타 + 사과) · 아이맘 30px · 설명 · 아래 노랑 버튼 56 + 로그인 글자 링크
+  const art = Math.min(300, Math.max(200, height * 0.36));
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: C.bg, paddingVertical: 24, paddingHorizontal: gutter }}>
-      <View style={{ flex: 1, gap: 20, paddingTop: 40 }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: C.bg, paddingHorizontal: gutter }}>
+      <View style={{ flex: 1, gap: 20, paddingTop: 32 }}>
         <View
           style={{
             width: '100%',
-            aspectRatio: 4 / 3,
-            maxHeight: Math.max(200, height * 0.42), // 태블릿 가로(높이 820)에서 그림이 너무 커 버튼이 밀려나지 않게
-            borderRadius: R.md,
+            height: art,
+            borderRadius: 16,
             backgroundColor: C.primarySoft,
             alignItems: 'center',
             justifyContent: 'flex-end',
             overflow: 'hidden',
-          }}>
-          <Avatar config={{ ...DEFAULT_AVATAR, hair: 1, eyes: 1 }} size={170} mouth={0.3} />
-          <Text style={{ position: 'absolute', right: '18%', bottom: '14%', fontSize: 52 }}>🍎</Text>
+          }}
+          accessibilityLabel="엄마 아바타가 사과를 건네는 그림">
+          <Avatar config={{ ...DEFAULT_AVATAR, hair: 1, eyes: 1 }} size={art * 0.77} mouth={0.3} expression="smile" />
+          <View style={{ position: 'absolute', right: '11%', bottom: art * 0.13 }}>
+            <BigApple size={art * 0.21} />
+          </View>
         </View>
         <View style={{ gap: 8 }}>
-          <H1>아이맘</H1>
-          <Sub>일하는 동안에도 내 아바타가 아이의 눈, 귀, 손을 깨워줘요.</Sub>
+          <Text style={{ fontSize: 30, fontWeight: '900', color: C.text }}>아이맘</Text>
+          <Text style={{ fontSize: 15, lineHeight: 24, color: C.sub }}>일하는 동안에도 내 아바타가 아이의 눈, 귀, 손을 깨워 줘요.</Text>
         </View>
       </View>
-      <View style={{ gap: 8 }}>
+      <View style={{ gap: 4, paddingBottom: 24 }}>
         <Button label="시작하기" onPress={start} />
         <Button label="이미 계정이 있어요 · 로그인" variant="ghost" onPress={() => router.push('/onboarding/login' as Href)} />
       </View>
