@@ -1,0 +1,81 @@
+아이맘 부모 2D 아바타 통합 결과 (2026-11-01)
+
+1. 반영 범위
+엄마/아빠 각각 헤어 2종과 의상 2종, 총 8개 조합을 선택할 수 있습니다.
+각 조합에 neutral/closed/open/wide/round/narrow 6개 완성형 이미지가 있습니다.
+원본 생성 파일은 보존하고 입 영역만 코드로 정렬·합성했습니다.
+입 크기 보정 3단계를 포함한 앱용 이미지는 144개(512×512 RGBA)입니다.
+별도 눈깜박임·시선 오버레이 16개를 사용합니다. 런타임 입 레이어 합성은 없습니다.
+기존 SVG 커스텀과 별도 3D 실험 파일은 보존했습니다.
+
+2. 앱 연결
+가입 아바타 화면과 부모 설정 화면에서 같은 커스텀 선택기를 사용합니다.
+기존 프로필은 SVG 설정을 유지하며, 새 프로필은 일러스트 스타일로 시작합니다.
+일러스트/SVG 전환 시 기존 숫자형 커스텀 필드를 보존합니다.
+부모 설정 저장은 서버 완료를 기다리고 실패 시 재시도 안내를 표시합니다.
+연결된 아이 기기는 다음 프로필 새로고침 시 선택을 받습니다(즉시 푸시 동기화 아님).
+입모양 전환에는 Animated.Value와 ref를 사용하며 매 틱 React state를 갱신하지 않습니다.
+활성 조합의 이미지 6장을 먼저 불러오며 크로스페이드 없이 전환합니다.
+일러스트의 neutral/smile/praise는 같은 차분한 기본 표정을 사용합니다.
+기존 SVG의 표정 기능은 그대로 남아 있습니다.
+
+3. 실제 실행하고 통과한 검사
+- TypeScript: tsc --noEmit
+- Expo lint
+- Node 자동 테스트 16/16: 립싱크 시간표·중지·버퍼링·프레임 선택,
+  8개 조합 리소스·렌더러 구독·React state 비갱신·정리,
+  저장/재시작·서버 실패 전달·아빠 SVG 기본값 호환성
+- 서버 통합 테스트 1/1: 실제 FastAPI 인증/프로필 라우터와 격리 SQLite로
+  8개 조합 저장/조회, 연결된 아이 토큰 조회, 로그인 재조회,
+  기존 SVG 필드 유지, 아이 토큰 쓰기 차단(403)
+- 이미지 자동 검사: 144개 프레임의 크기/RGBA/투명도,
+  조합별 입 영역 밖 픽셀 및 알파 고정, 6개 입모양 구분,
+  눈 오버레이가 입 영역을 침범하지 않음
+- 회귀 스크립트 6종: 부모 경로, 동화 12쪽 흐름/취소, 오디오 재생 취소,
+  아이 음성 수신, 감각 놀이 98항목, 웹/네이티브 녹음 업로드
+- Expo SDK 58: iOS/Android/Web export 성공
+- git diff --check 통과, 미해결 병합 파일 없음
+
+검사 명령 예시 (app 폴더):
+  node --test scripts/lipsync.test.mjs scripts/parent-frames.test.mjs scripts/parent-portraits.test.mjs
+  python scripts/verify-parent-portraits.py
+  npx tsc --noEmit
+  npx expo lint
+  npx expo export --platform all
+
+빌드는 커밋된 소스 스냅샷에 최종 아빠 기본값 수정까지 반영하여 실행했습니다.
+기존 설치 node_modules를 재사용했으므로 완전한 신규 설치 검증은 아닙니다.
+결과: ../output/parent-avatar-final-check/build
+로그: ../output/parent-avatar-final-check/final-export.log
+Expo export는 번들 생성 검사입니다. APK/IPA 설치 또는 기기 실행 성공을 뜻하지 않습니다.
+
+4. 미검증 및 립싱크 한계
+사용자 요청에 따라 실제 화면 클릭, 기기 실행, 스피커 음성 재생은 검증하지 않았습니다.
+실기기 FPS/메모리, 실제 운영 서버 연결과 아이 기기 반영도 미검증입니다.
+가상 프레임 전환과 실제 TTS 타임스탬프 데이터 검증은 분리했습니다.
+묶음 TTS 샘플의 실제 이벤트 시간표가 WAV 길이 안에 있는지는 자동 검사했습니다.
+이는 부모 복제 음성 재생 검증이 아닙니다.
+일반 TTS에 실제 Viseme 타임스탬프가 없으면 텍스트/오디오 기반 근사 방식입니다.
+정확한 발음 동기화를 달성했다고 주장하지 않습니다.
+
+5. 주요 파일
+app/src/components/IllustratedAvatar.tsx: 완성형 6프레임 렌더러
+app/src/components/ParentAppearancePicker.tsx: 엄마/아빠·헤어·의상 선택
+app/src/components/FamilyAvatar.tsx, ParentFrameAvatar.tsx: 기존 화면 연결
+app/src/lib/portraitConfig.ts, portraitAssets.ts: 프로필 호환·정적 이미지 매핑
+app/src/lib/store.ts: 선택 저장과 서버 완료 대기
+app/src/app/onboarding/avatar.tsx, parent/avatar.tsx: 가입·부모 설정
+app/src/app/avatar-parent-lab.tsx: 가상/샘플 TTS 진단 화면
+app/scripts/build-parent-portraits.py: 원본 보존 이미지 생성 파이프라인
+app/scripts/verify-parent-portraits.py: 픽셀 정렬 검사
+app/scripts/parent-portraits.test.mjs: 렌더러/저장 호환 테스트
+server/tests/test_avatar_profile_sync.py: 인증·프로필 왕복 통합 테스트
+
+6. Git 및 보존
+확인한 origin/main 7f50d9f까지 pull/rebase했고 충돌 없이 반영했습니다.
+관련 로컬 커밋: 10ef9f4(에셋), abfe8c8(UI/저장/립싱크 연결).
+추가 기본값 호환 수정과 이 문서도 로컬 커밋에 포함합니다. Push하지 않았습니다.
+기존 별도 실험과 패키지 변경은 이번 커밋에 포함하지 않았습니다.
+백업: ../output/parent-avatar-integration-backup
+기존 실험 보존용 Git stash는 삭제하지 않았습니다.
+공용 docs/api.md, lib/types.ts, models.py, .env.example은 수정하지 않았습니다.

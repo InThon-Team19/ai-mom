@@ -17,8 +17,9 @@ export const DAD_AVATAR: AvatarConfig = { ...DEFAULT_AVATAR, hair: 4, outfit: 1 
 
 /** 보여 줄 아바타: 꾸민 적 없으면 호칭에 맞는 기본 (아빠 → 짧은 머리) */
 export function avatarFor(config: AvatarConfig | undefined, title?: string): AvatarConfig {
-  const untouched = !config || JSON.stringify(config) === JSON.stringify(DEFAULT_AVATAR);
-  return untouched ? (title === '아빠' ? DAD_AVATAR : DEFAULT_AVATAR) : config;
+  const untouched = !config || (Object.keys(DEFAULT_AVATAR) as (keyof typeof DEFAULT_AVATAR)[])
+    .every(key => config[key] === DEFAULT_AVATAR[key]);
+  return untouched ? { ...config, ...(title === '아빠' ? DAD_AVATAR : DEFAULT_AVATAR) } : config;
 }
 
 // 1-4 카테고리별 선택지 (8개씩 — 와이어프레임 4x2 그리드). 어떤 선택을 해도 둥근 얼굴·큰 눈·또렷한 입은 유지

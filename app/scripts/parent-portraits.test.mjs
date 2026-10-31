@@ -46,6 +46,17 @@ test('old SVG profiles are preserved; all eight illustration IDs and calibrated 
   assert.equal(portraitId({ style: 'illustration', portrait: { character: 'bad', hair: -4, outfit: 99 } }, '아빠'), 'father-0-0');
 });
 
+test('illustration metadata does not break the existing father SVG default or overwrite customized SVG fields', () => {
+  const load = loader({ react: {}, 'react/jsx-runtime': {}, 'react-native-svg': {} });
+  const { avatarFor, DEFAULT_AVATAR } = load('src/components/Avatar.tsx');
+  const portrait = { version: 1, character: 'father', hair: 1, outfit: 1 };
+  const dad = avatarFor({ ...DEFAULT_AVATAR, style: 'illustration', portrait }, '아빠');
+  assert.equal(dad.hair, 4); assert.equal(dad.outfit, 1);
+  assert.equal(dad.style, 'illustration'); assert.equal(dad.portrait, portrait);
+  const custom = { ...DEFAULT_AVATAR, face: 3, hair: 2, style: 'svg', portrait };
+  assert.equal(avatarFor(custom, '아빠'), custom);
+});
+
 function nodes(tree) {
   if (Array.isArray(tree)) return tree.flatMap(nodes);
   if (!tree || typeof tree !== 'object') return [];
