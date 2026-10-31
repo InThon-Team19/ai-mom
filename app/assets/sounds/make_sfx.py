@@ -5,8 +5,8 @@ out = sys.argv[1]; sr = 22050; rng = np.random.default_rng(7)
 def env(n, a=0.005, d=0.15):
     t = np.arange(n) / sr
     return np.minimum(1, t / a) * np.exp(-t / d)
-def save(name, x):
-    x = x / (np.abs(x).max() + 1e-9) * 0.35
+def save(name, x, peak=0.35):
+    x = x / (np.abs(x).max() + 1e-9) * peak
     with wave.open(f"{out}/{name}.wav", "wb") as w:
         w.setnchannels(1); w.setsampwidth(2); w.setframerate(sr)
         w.writeframes((x * 32767).astype(np.int16).tobytes())
@@ -34,4 +34,12 @@ save("pop", np.sin(2 * np.pi * np.cumsum(f) / sr) * env(n, 0.004, 0.08))
 # 둥 (북)
 n = int(sr * 0.6); t = np.arange(n) / sr
 save("drum", np.sin(2 * np.pi * (90 + 40 * np.exp(-t * 20)) * t) * env(n, 0.003, 0.18))
+# 통 (사물이 바닥에 닿음): 낮고 부드러운 음이 살짝 내려감 — 더 작게(0.22)
+n = int(sr * 0.22); t = np.arange(n) / sr
+tong = np.sin(2 * np.pi * np.cumsum(170 + 90 * np.exp(-t * 30)) / sr) * env(n, 0.003, 0.06)
+tong += np.convolve(rng.normal(0, 1, n), np.ones(30) / 30, "same") * env(n, 0.001, 0.015) * 0.6
+save("tong", tong, 0.22)
+# 쏙 (바구니에 들어감): 짧게 올라가는 부드러운 음 — 작게(0.22)
+n = int(sr * 0.16); t = np.arange(n) / sr; f = 380 + 900 * (t / t[-1]) ** 1.6
+save("ssok", np.sin(2 * np.pi * np.cumsum(f) / sr) * np.abs(np.sin(np.pi * t / t[-1])) ** 1.5, 0.22)
 print("ok")

@@ -9,8 +9,9 @@ import { dayOf, fill, ITEMS } from '@/content/curriculum';
 import { useSpeak } from '@/hooks/useSpeak';
 import { logEvent } from '@/lib/sense';
 import { useProfile } from '@/lib/store';
+import { ParentExit } from '@/components/ParentExit';
 
-const BG = '#21242B';
+const BG = '#2A2219'; // 어둡게 (스크린 타임 대응) — 따뜻한 진한 갈색
 
 export default function AudioOnly() {
   const profile = useProfile();
@@ -70,6 +71,7 @@ export default function AudioOnly() {
 
   return (
     <View style={{ flex: 1, backgroundColor: BG, alignItems: 'center', justifyContent: 'center', gap: 36, paddingTop: insets.top, paddingBottom: insets.bottom }}>
+      <ParentExit dark />
       <Waveform level={mouth} />
       <Text style={{ fontSize: 32, fontWeight: '800', color: '#FFFFFF' }}>{me} 목소리를 들어봐요</Text>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 24 }}>
@@ -82,7 +84,7 @@ export default function AudioOnly() {
             else router.replace('/child');
           }}
         />
-        <RoundButton label="다음" size={88} color="#9BB0F2" onPress={() => skip()}>
+        <RoundButton label="다음" size={88} onPress={() => skip()}>
           <SkipIcon size={30} color={BG} />
         </RoundButton>
       </View>

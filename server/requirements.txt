@@ -11,3 +11,4 @@ python-dotenv==1.2.4
 imageio-ffmpeg==0.7.0
 pytest==9.2.0
 anthropic==2.3.0
+ormsgpack==1.13.0

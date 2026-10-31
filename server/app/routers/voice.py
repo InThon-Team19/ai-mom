@@ -338,25 +338,40 @@ class TtsOut(BaseModel):
     url: str
 
 
+def _reference_samples(child_id: str, n: int = 4) -> list[dict]:
+    """즉석 복제용 참고 음성: 품질 좋은 녹음 중 말한 시간이 긴 것 (가입 녹음 우선, 밤 낭독 포함)."""
+    ss = [s for s in samples(child_id) if s["quality"]["ok"] and s.get("text")]
+    ss.sort(key=lambda s: (s["kind"] != "signup", -s["features"]["speech_s"]))
+    return ss[:n]
+
+
 @router.post("/tts", response_model=TtsOut)
 def tts(body: TtsIn):
-    """부모 목소리로 문장 읽기 → mp3 URL. 같은 문장은 캐시."""
+    """부모 목소리로 문장 읽기 → mp3 URL. 같은 문장은 캐시.
+    목소리 모델이 있으면 모델로, 없으면(무료 등급) 부모 녹음을 함께 보내 즉석 복제."""
     try:
         id_file = _voice_id_file(body.child_id)
     except ValueError:
         raise HTTPException(400, "child_id 형식 오류")
-    if not id_file.exists():
-        raise HTTPException(400, "목소리 등록을 먼저 해 주세요 (/voice/register)")
-    model_id = id_file.read_text(encoding="utf-8").strip()
-    key = hashlib.sha1(f"{model_id}:{body.text}".encode()).hexdigest()[:16]
+    model_id = id_file.read_text(encoding="utf-8").strip() if id_file.exists() else ""
+    refs = [] if model_id else _reference_samples(body.child_id)
+    if not model_id and not refs:
+        raise HTTPException(400, "부모 목소리 녹음이 아직 없어요 (가입 1-5 목소리 등록)")
+    voice_key = model_id or "inline:" + ",".join(r["wav"].name for r in refs)
+    key = hashlib.sha1(f"{voice_key}:{body.text}".encode()).hexdigest()[:16]
     out = public_dir(body.child_id, "tts") / f"{key}.mp3"
     if not out.exists():
         try:
-            fish.synthesize(body.text, model_id, out)
+            if model_id:
+                fish.synthesize(body.text, model_id, out)
+            else:
+                fish.synthesize_inline(body.text, [(r["wav"].read_bytes(), r["text"]) for r in refs], out)
         except RuntimeError as e:
             raise HTTPException(503, str(e))
         except httpx.HTTPStatusError as e:
+            out.unlink(missing_ok=True)
             raise HTTPException(502, f"Fish Audio 오류: {e.response.text[:200]}")
         except httpx.RequestError:
+            out.unlink(missing_ok=True)
             raise HTTPException(502, "Fish Audio에 연결할 수 없어요. 잠시 후 다시 시도해 주세요")
     return TtsOut(url=public_url(out))

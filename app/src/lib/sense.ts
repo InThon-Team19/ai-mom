@@ -12,6 +12,8 @@ const SOURCES = {
   snap: require('@/assets/sounds/snap.wav'),
   pop: require('@/assets/sounds/pop.wav'),
   drum: require('@/assets/sounds/drum.wav'),
+  tong: require('@/assets/sounds/tong.wav'), // 사물이 바닥에 닿음 (2-3)
+  ssok: require('@/assets/sounds/ssok.wav'), // 바구니에 쏙 (2-3)
 };
 export type Sfx = keyof typeof SOURCES;
 

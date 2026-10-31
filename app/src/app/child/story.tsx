@@ -12,10 +12,11 @@ import { useSpeak } from '@/hooks/useSpeak';
 import { logEvent } from '@/lib/sense';
 import { useProfile } from '@/lib/store';
 import { C, R } from '@/theme';
+import { ParentExit } from '@/components/ParentExit';
 
 export default function Story() {
   const profile = useProfile();
-  const { fav } = useLocalSearchParams<{ fav?: string }>();
+  const { fav, basket } = useLocalSearchParams<{ fav?: string; basket?: string }>();
   const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();
   const focused = useIsFocused();
@@ -29,8 +30,8 @@ export default function Story() {
 
   const toEnd = useCallback(() => {
     stop();
-    router.replace({ pathname: '/child/end', params: fav ? { fav } : {} });
-  }, [stop, fav]);
+    router.replace({ pathname: '/child/end', params: { ...(fav ? { fav } : {}), ...(basket ? { basket } : {}) } }); // 바구니는 마무리까지 넘김
+  }, [stop, fav, basket]);
 
   useDailyLimit(profile?.settings.dailyLimitMin, focused, toEnd);
 
@@ -68,11 +69,12 @@ export default function Story() {
     }, [story, page, speak, stop, me, name, toEnd]),
   );
 
-  if (!story) return <View style={{ flex: 1, backgroundColor: C.primarySoft }} />;
+  if (!story) return <View style={{ flex: 1, backgroundColor: C.bg }} />;
   const cur = story.pages[page];
 
   return (
-    <View style={{ flex: 1, backgroundColor: C.primarySoft, gap: 16, paddingTop: 16 + insets.top, paddingBottom: 16 + insets.bottom, paddingLeft: 40 + insets.left, paddingRight: 40 + insets.right }}>
+    <View style={{ flex: 1, backgroundColor: C.bg, gap: 16, paddingTop: 16 + insets.top, paddingBottom: 16 + insets.bottom, paddingLeft: 68 + insets.left, paddingRight: 40 + insets.right }}>
+      <ParentExit />
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: 52 }}>
         <View style={{ backgroundColor: C.primary, borderRadius: R.pill, paddingHorizontal: 18, paddingVertical: 10 }}>
           <Text style={{ color: C.onPrimary, fontSize: 18, fontWeight: '800' }}>{story.title}</Text>
@@ -88,11 +90,11 @@ export default function Story() {
       </View>
 
       <View style={{ flex: 1, flexDirection: 'row', gap: 20 }}>
-        <View style={{ flex: 26, backgroundColor: C.white, borderRadius: R.lg, alignItems: 'center', justifyContent: 'center', gap: 12 }}>
-          <Avatar config={profile?.avatar} mouth={mouth} scale={scale} size={Math.min(height * 0.28, width * 0.16)} />
+        <View style={{ flex: 26, backgroundColor: C.white, borderRadius: R.lg, borderWidth: 2, borderColor: C.border, alignItems: 'center', justifyContent: 'center', gap: 12 }}>
+          <Avatar config={profile?.avatar} mouth={mouth} scale={scale} size={Math.min(height * 0.3, width * 0.17)} expression={speaking ? 'neutral' : 'smile'} />
           <Text style={{ fontSize: 15, color: C.sub }}>{speaking ? '읽어주는 중' : ' '}</Text>
         </View>
-        <View style={{ flex: 74, backgroundColor: '#EEF0F3', borderRadius: R.lg, borderWidth: 1.5, borderColor: C.muted, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+        <View style={{ flex: 74, backgroundColor: C.greenSoft, borderRadius: R.lg, borderWidth: 2, borderColor: C.green, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
           <Animated.Text
             key={page}
             entering={FadeIn.duration(700)}
@@ -119,7 +121,7 @@ export default function Story() {
           ))}
         </View>
         <RoundButton label="이전 장" color={C.card} onPress={() => setPage(Math.max(0, page - 1))}>
-          <ChevronIcon left color={C.sub} size={34} />
+          <ChevronIcon left color={C.onPrimary} size={34} />
         </RoundButton>
         <RoundButton label="다음 장" onPress={() => (page + 1 < story.pages.length ? setPage(page + 1) : toEnd())}>
           <ChevronIcon size={34} />
