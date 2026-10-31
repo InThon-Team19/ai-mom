@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 
 import { DEFAULT_AVATAR, type AvatarConfig } from '@/components/Avatar';
 import { api } from '@/lib/api';
+import type { DeviceInfo } from '@/lib/types';
 
 export type Profile = {
   childId: string; // = 태블릿 연결 코드
@@ -14,6 +15,8 @@ export type Profile = {
   day: number; // 진행 일차 (낭독 완료 시 +1)
   feedback: { day: number; issues: string[]; note: string; review: string[]; newWords: string }[];
   onboarded: boolean;
+  linkCode?: string; // 태블릿 연결 코드 (재발급 가능, 서버가 관리)
+  devices?: DeviceInfo[]; // 등록된 기기 (서버가 관리)
 };
 
 const KEY = 'aibom.profile';
@@ -63,7 +66,7 @@ export async function updateProfile(patch: Partial<Profile>) {
 
 /** 아이 태블릿: 연결 코드로 서버에서 프로필 받아오기 */
 export async function linkTablet(code: string) {
-  const p = (await api.getProfile(code.trim().toUpperCase())) as Profile;
+  const p = (await api.link(code.trim().toUpperCase())) as Profile;
   current = { ...newProfile(), ...p };
   listeners.forEach((l) => l(current!));
   try {
@@ -109,3 +112,19 @@ export const setRole = async (r: Role) => {
     await AsyncStorage.setItem(ROLE_KEY, r);
   } catch {}
 };
+
+/** 이 기기의 프로필·모드 지우기 (설정 탭 "처음부터 다시" / 아이 태블릿 연결 해제) */
+export async function resetLocal() {
+  current = newProfile();
+  listeners.forEach((l) => l(current!));
+  try {
+    await AsyncStorage.multiRemove([KEY, ROLE_KEY]);
+  } catch {}
+}
+
+/** 아이 태블릿을 부모 폰 모드로 바꿀 때: 프로필은 그대로 두고 모드만 지움 */
+export async function clearRole() {
+  try {
+    await AsyncStorage.removeItem(ROLE_KEY);
+  } catch {}
+}

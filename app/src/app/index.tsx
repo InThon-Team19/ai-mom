@@ -39,7 +39,9 @@ export default function Entry() {
 
   const choose = async (r: Role) => {
     await setRole(r);
-    router.replace(r === 'parent' ? '/onboarding/start' : '/child');
+    const p = await loadProfile();
+    // 이미 가입한 기기를 부모 모드로 되돌리면 가입을 다시 하지 않음
+    router.replace(r === 'parent' ? (p.onboarded ? '/parent' : '/onboarding/start') : '/child');
   };
 
   return (

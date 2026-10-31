@@ -1,7 +1,7 @@
 // 온보딩 1-6 입모양 등록 — 담당: 태희 (민철 와이어프레임 기준)
 // 문장을 읽으며 정면 촬영. 영상은 저장·전송하지 않고 기기 안에서 0.05초마다 잰 입모양 수치만 서버로 → 학습률 상승.
 // 실제 부모 얼굴은 이 화면의 실시간 카메라 미리보기에만 보임. 표정 샘플은 "나중에"
-import { router } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
@@ -11,9 +11,11 @@ import { Button, Card, OnboardingScaffold } from '@/components/ui';
 import { MOUTH_SENTENCES, fill } from '@/content/curriculum';
 import { useReadAloud } from '@/hooks/useReadAloud';
 import { updateProfile, useProfile } from '@/lib/store';
+import { goNext } from '@/lib/nav';
 import { C, R } from '@/theme';
 
 export default function MouthSignup() {
+  const edit = useLocalSearchParams<{ edit?: string }>().edit === '1';
   const p = useProfile();
   const name = p?.child.nickname || p?.child.name;
   const me = p?.parent.title;
@@ -34,7 +36,7 @@ export default function MouthSignup() {
 
   const leave = async () => {
     await updateProfile({}); // 진행 상태 동기화 (입모양 수치는 이미 서버에 저장됨)
-    router.push('/onboarding/setup');
+    goNext(edit, '/onboarding/setup');
   };
   const onNext = () => {
     if (ra.recording || ra.busy) return;

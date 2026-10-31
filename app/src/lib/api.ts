@@ -7,6 +7,8 @@ import { getApiUrl } from './config';
 import type {
   ActivityEvent,
   AnalysisOut,
+  DeviceInfo,
+  History,
   Gauge,
   MouthProfile,
   MouthTrackOut,
@@ -113,5 +115,13 @@ export const api = {
 
   // (임시) 프로필·태블릿 연결 — 민주 children API 생기면 교체
   getProfile: (childId: string) => req<Record<string, unknown>>(`/profile/${childId}`),
+  /** 태블릿: 연결 코드로 프로필 받기 (재발급된 이전 코드는 404) */
+  link: (code: string) => req<Record<string, unknown>>(`/link/${encodeURIComponent(code)}`),
+  reissueLinkCode: (childId: string) => req<{ linkCode: string }>(`/profile/${childId}/link-code`, { method: 'POST' }),
+  registerDevice: (childId: string, d: { device_id: string; role: 'parent' | 'child'; name: string }) =>
+    req<{ devices: DeviceInfo[] }>(`/profile/${childId}/devices`, json('POST', d)),
+  removeDevice: (childId: string, deviceId: string) =>
+    req<{ devices: DeviceInfo[] }>(`/profile/${childId}/devices/${encodeURIComponent(deviceId)}`, { method: 'DELETE' }),
+  history: (childId: string) => req<History>(`/profile/${childId}/history`),
   putProfile: (childId: string, body: unknown) => req<Record<string, unknown>>(`/profile/${childId}`, json('PUT', body)),
 };

@@ -1,7 +1,7 @@
 // 온보딩 1-5 목소리 등록 — 담당: 태희 (민철 와이어프레임 기준)
 // 문장 낭독 녹음 → 서버 품질 확인 → 원형 학습률(최소 기준 눈금) 상승 → 다음 문장.
 // 3문장 이상 읽으면 AI 특성 분석 + 의사소통 피드백 (기획 2-1-1 ⑤⑥). 떠날 때 TTS 목소리 등록 요청(실패 무시)
-import { router } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
@@ -12,11 +12,13 @@ import { useReadAloud, type SentenceStatus } from '@/hooks/useReadAloud';
 import { api } from '@/lib/api';
 import { useProfile } from '@/lib/store';
 import type { AnalysisOut } from '@/lib/types';
+import { goNext } from '@/lib/nav';
 import { C, R } from '@/theme';
 
 const STATUS_LABEL: Record<SentenceStatus, string> = { done: '읽음', now: '지금', todo: '남음', retry: '다시' };
 
 export default function VoiceSignup() {
+  const edit = useLocalSearchParams<{ edit?: string }>().edit === '1';
   const p = useProfile();
   const childId = p?.childId;
   const name = p?.child.nickname || p?.child.name;
@@ -40,7 +42,7 @@ export default function VoiceSignup() {
 
   const leave = () => {
     if (childId) api.registerVoice(childId).catch(() => {});
-    router.push('/onboarding/mouth');
+    goNext(edit, '/onboarding/mouth');
   };
   const onNext = () => {
     if (ra.recording || ra.busy) return;

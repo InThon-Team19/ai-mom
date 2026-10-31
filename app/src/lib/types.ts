@@ -110,3 +110,12 @@ export type ChildFrameOut = {
   mouth: { open: number; width: number } | null;
   gaze: { yaw: number; pitch: number; iris: number; looking: boolean } | null;
 };
+
+// 설정 탭 (태희) — server/app/routers/profile.py
+export type DeviceInfo = { device_id: string; role: 'parent' | 'child'; name: string; linked_at: number; last_seen: number };
+
+export type History = {
+  voice: { kind: 'signup' | 'plan'; text: string; at: number; ok: boolean; speech_s: number }[];
+  mouth: { kind: 'signup' | 'plan'; text: string; at: number; ok: boolean; face_s: number }[];
+  days: { day: string; sessions: number; touches: number; repeats: number; repeat_ok: number; words: string[]; gaze_s: number }[];
+};

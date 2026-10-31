@@ -1,11 +1,12 @@
 // 온보딩 1-3 부모 성향·교육 방향 — 담당: 태희 (민철 와이어프레임 기준)
 // 호칭 → 아바타의 자기 호칭, 말투 → 대화 문체, 바라는 방향(복수) → 콘텐츠 제안
-import { router } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { useState, type ReactNode } from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
 
 import { Button, Chip, OnboardingScaffold } from '@/components/ui';
 import { updateProfile, useProfile, type Profile } from '@/lib/store';
+import { goNext } from '@/lib/nav';
 import { C, R } from '@/theme';
 
 type Tone = Profile['parent']['tone'];
@@ -23,6 +24,7 @@ export default function ParentInfo() {
 }
 
 function Form({ initial, childName }: { initial: Profile['parent']; childName: string }) {
+  const edit = useLocalSearchParams<{ edit?: string }>().edit === '1';
   const preset = initial.title === '엄마' || initial.title === '아빠';
   const [title, setTitle] = useState(preset ? initial.title : '엄마');
   const [custom, setCustom] = useState(!preset);
@@ -43,7 +45,7 @@ function Form({ initial, childName }: { initial: Profile['parent']; childName: s
   const next = async () => {
     if (!ready) return;
     await updateProfile({ parent: { title: finalTitle, tone, goals } });
-    router.push('/onboarding/avatar');
+    goNext(edit, '/onboarding/avatar');
   };
 
   return (

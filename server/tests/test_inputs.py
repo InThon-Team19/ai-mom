@@ -164,7 +164,22 @@ def test_activity_and_profile_api():
     assert client.get("/activity/pytest/summary").json()["touches"] == 1
     assert client.get("/profile/nobody").status_code == 404
     client.put("/profile/pytest", json={"child": {"name": "지호"}, "day": 1})
-    assert client.put("/profile/pytest", json={"day": 2}).json() == {"child": {"name": "지호"}, "day": 2}
+    p = client.put("/profile/pytest", json={"day": 2}).json()
+    assert p["child"] == {"name": "지호"} and p["day"] == 2 and p["linkCode"] == "pytest"
+
+
+def test_link_code_devices_history():
+    client.put("/profile/LINKME", json={"child": {"name": "지호"}})
+    assert client.get("/link/linkme").json()["child"]["name"] == "지호"  # 처음 코드 = child_id
+    client.post("/profile/LINKME/devices", json={"device_id": "tab1", "role": "child", "name": "태블릿"})
+    client.post("/profile/LINKME/devices", json={"device_id": "ph1", "role": "parent", "name": "폰"})
+    new = client.post("/profile/LINKME/link-code").json()["linkCode"]
+    assert len(new) == 6 and client.get("/link/LINKME").status_code == 404  # 이전 코드 무효
+    p = client.get(f"/link/{new}").json()
+    assert [d["device_id"] for d in p["devices"]] == ["ph1"]  # 아이 기기 연결 해제
+    assert client.delete("/profile/LINKME/devices/ph1").json()["devices"] == []
+    h = client.get("/profile/pytest/history").json()
+    assert h["voice"] and h["mouth"] and isinstance(h["days"], list)
 
 
 def test_child_frame_no_face():

@@ -1,12 +1,13 @@
 // 온보딩 1-4 아바타 만들기 — 담당: 태희 (민철 와이어프레임 기준)
 // 실제 얼굴 대신 부모가 직접 고른 아바타 (기획 4장). 카테고리 칩 + 4x2 선택지 + 미리보기
-import { router } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
 import { Avatar, AVATAR_OPTIONS, type AvatarCategory, type AvatarConfig } from '@/components/Avatar';
 import { Button, Chip, OnboardingScaffold } from '@/components/ui';
 import { updateProfile, useProfile } from '@/lib/store';
+import { goNext } from '@/lib/nav';
 import { C, R } from '@/theme';
 
 const CATEGORIES: { key: AvatarCategory; label: string }[] = [
@@ -24,13 +25,14 @@ export default function AvatarMaker() {
 }
 
 function Maker({ initial }: { initial: AvatarConfig }) {
+  const edit = useLocalSearchParams<{ edit?: string }>().edit === '1';
   const [config, setConfig] = useState<AvatarConfig>(initial);
   const [cat, setCat] = useState<AvatarCategory>('face');
   const options: readonly string[] = AVATAR_OPTIONS[cat];
 
   const next = async () => {
     await updateProfile({ avatar: config });
-    router.push('/onboarding/voice');
+    goNext(edit, '/onboarding/voice');
   };
 
   return (

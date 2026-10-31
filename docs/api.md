@@ -102,7 +102,13 @@
 | POST | `/voice/stt` | `file`, `expected`('사과\|apple'), `who` | `text, features, matched, alert` | 3-4 따라 말하기 |
 | POST | `/activity/{child_id}` | JSON `{events:[{type, t, data}]}` type: touch·gaze·smile·imitate·repeat·voice·listen·out_of_scope·alert·session | `ok` | 아이 태블릿 (3초마다 묶어서) |
 | GET | `/activity/{child_id}/summary?day=` | | `sessions, touches, reaction_ms, gaze_s, smiles, repeats, repeat_ok, words, favorites, balance{visual,audio,touch}, out_of_scope, alerts` | 2-1 홈, 2-2 리포트 |
-| GET/PUT | `/profile/{child_id}` | (임시) 가입 정보·설정·일차·피드백 JSON | 프로필 | 태블릿 연결(코드 = child_id) |
+| GET/PUT | `/profile/{child_id}` | (임시) 가입 정보·설정·일차·피드백 JSON (`linkCode`·`devices`는 아래 전용 API로만 바뀜) | 프로필 | 부모 앱 |
+| GET | `/link/{code}` | 태블릿 연결 키 | 프로필 (재발급된 이전 키는 404) | 아이 태블릿 연결 |
+| POST | `/profile/{child_id}/link-code` | | `{linkCode}` 새 키, 이전 키 무효 + 아이 기기 연결 해제 | 설정 탭 |
+| POST | `/profile/{child_id}/devices` | `{device_id, role(parent\|child), name}` | `{devices}` | 기기 등록 (부모 앱 열 때·태블릿 연결 때) |
+| DELETE | `/profile/{child_id}/devices/{device_id}` | | `{devices}` | 설정 탭 연결 해제, 태블릿 어른 메뉴 |
+| GET | `/profile/{child_id}/history` | | `{voice[], mouth[], days[]}` 최근 낭독·아이 하루 요약 | 설정 탭 학습 이력 |
+| POST | `/debug/log` | 텍스트 | `{ok}` | 앱 오류를 서버 터미널에 출력 (원인 추적용) |
 
 ## TTS (민주, Fish Audio 초안 태희) — `routers/voice.py`, `tts/fish.py`
 | POST | `/voice/register` | `child_id` | `model_id, state, sample_count` | 품질 좋은 최근 20문장 + 대본으로 목소리 등록/갱신 |

@@ -6,6 +6,7 @@ import { Pressable, Text, View } from 'react-native';
 
 import { PersonaCard } from '@/components/PersonaCard';
 import { Button, OnboardingScaffold } from '@/components/ui';
+import { registerThisDevice } from '@/lib/device';
 import { updateProfile, useProfile, type Profile } from '@/lib/store';
 import { C, R, T } from '@/theme';
 
@@ -47,7 +48,8 @@ function Form({ initial, code, profile }: { initial: Profile['settings']; code: 
   const finish = async () => {
     if (!ready) return;
     setSaving(true);
-    await updateProfile({ settings: { consentBio, consentChild, start, end, dailyLimitMin: limit, vibration }, onboarded: true });
+    const p = await updateProfile({ settings: { consentBio, consentChild, start, end, dailyLimitMin: limit, vibration }, onboarded: true });
+    setTimeout(() => registerThisDevice(p.childId, 'parent'), 800); // 프로필 저장(PUT)이 먼저 끝나게
     router.replace('/parent');
   };
 
