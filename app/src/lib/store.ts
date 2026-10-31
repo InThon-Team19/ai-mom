@@ -44,7 +44,7 @@ export const newProfile = (): Profile => ({
   childId: makeCode(),
   child: { name: '', nickname: '', birth: '', level: '한 단어', likes: [] },
   parent: { title: '엄마', tone: '다정한', goals: [] },
-  avatar: DEFAULT_AVATAR,
+  avatar: { ...DEFAULT_AVATAR, style: 'illustration' },
   settings: { consentBio: false, consentChild: false, start: '09:00', end: '18:00', dailyLimitMin: 30, vibration: true, reduceMotion: false, volume: 0.8 },
   day: 1,
   feedback: [],
@@ -66,7 +66,7 @@ export async function loadProfile(): Promise<Profile> {
 }
 
 /** 일부 수정 → 기기 저장 + 서버 동기화(실패해도 계속) */
-export async function updateProfile(patch: Partial<Profile>) {
+export async function updateProfile(patch: Partial<Profile>, options?: { awaitRemote?: boolean }) {
   const p = { ...(await loadProfile()), ...patch };
   current = p;
   listeners.forEach((l) => l(p));
@@ -79,7 +79,9 @@ export async function updateProfile(patch: Partial<Profile>) {
   void _d;
   void _l;
   if (Object.keys(body).length) {
-    api.putProfile(p.childId, body).catch(() => {});
+    const sync = api.putProfile(p.childId, body);
+    if (options?.awaitRemote) await sync;
+    else sync.catch(() => {});
     import('./account').then(({ syncAccountProfile }) => syncAccountProfile(p, body)).catch(() => {});
   }
   return p;

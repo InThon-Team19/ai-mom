@@ -4,6 +4,8 @@ import type { ComponentProps } from 'react';
 
 import { Avatar, avatarFor } from './Avatar';
 import { useProfile } from '@/lib/store';
+import { portraitId } from '@/lib/portraitConfig';
+import { IllustratedAvatar } from './IllustratedAvatar';
 
 const childPortrait = require('../../assets/child-2d/neutral.png');
 
@@ -12,5 +14,8 @@ export function FamilyAvatar({ role = 'parent', size = 160, config, ...rest }: C
   if (role === 'child') {
     return <Image source={childPortrait} accessibilityLabel="아이 아바타" style={{ width: size, height: size * 1.1 }} contentFit="contain" transition={0} />;
   }
-  return <Avatar {...rest} size={size} config={avatarFor(config ?? profile?.avatar, profile?.parent.title)} />;
+  const appearance = config ?? profile?.avatar;
+  const id = portraitId(appearance, profile?.parent.title);
+  if (id) return <IllustratedAvatar {...rest} id={id} size={size} blink={rest.blink ?? !profile?.settings.reduceMotion} />;
+  return <Avatar {...rest} size={size} config={avatarFor(appearance, profile?.parent.title)} />;
 }

@@ -1,20 +1,31 @@
-// 아이 화면의 말하는 부모 아바타 — 부모가 꾸민 캐릭터(Avatar, 실제 얼굴 X)에 입모양 신호(driver: 아·이·오·우·닫힘)를 입힘. 담당: 태희
-// driver 는 소리 재생 시계에 맞춰 입모양이 바뀔 때만 알려 줌 (바뀔 때만 이 아바타만 다시 그림)
-// (팀원이 만든 고정 일러스트 6장 방식은 꾸미기·아빠 아바타가 안 돼서 사용자 요청으로 되돌림. 그림 파일은 assets/parent-2d 에 남겨 둠)
+// Keep the customizable SVG renderer; selected parent illustrations use fixed full-image frames.
+// Both consume the same TTS-clock driver. Illustration swaps update refs, not React state.
 import { memo, useEffect, useState, type ComponentProps } from 'react';
 
 import { Avatar, avatarFor } from './Avatar';
 import { useProfile } from '@/lib/store';
 import type { MouthPose } from '@/lib/lipsync';
 import type { ParentFrame, ParentFrameDriver } from '@/lib/parentFrames';
+import { IllustratedAvatar } from './IllustratedAvatar';
+import { portraitId } from '@/lib/portraitConfig';
 
-export const ParentFrameAvatar = memo(function ParentFrameAvatar({
+type Props = ComponentProps<typeof Avatar> & { driver: ParentFrameDriver; mouthPose?: MouthPose; onReady?: () => void };
+
+export const ParentFrameAvatar = memo(function ParentFrameAvatar(props: Props) {
+  const profile = useProfile();
+  const config = props.config ?? profile?.avatar;
+  const id = portraitId(config, profile?.parent.title);
+  if (id) return <IllustratedAvatar {...props} id={id} blink={props.blink ?? !profile?.settings.reduceMotion} />;
+  return <SvgParentAvatar {...props} config={config} />;
+});
+
+function SvgParentAvatar({
   driver,
   onReady,
   mouthPose: _mouthPose,
   config,
   ...rest
-}: ComponentProps<typeof Avatar> & { driver: ParentFrameDriver; mouthPose?: MouthPose; onReady?: () => void }) {
+}: Props) {
   const title = useProfile()?.parent.title;
   const [pose, setPose] = useState<ParentFrame>(driver.current);
   useEffect(() => driver.subscribe(setPose), [driver]);
@@ -22,4 +33,4 @@ export const ParentFrameAvatar = memo(function ParentFrameAvatar({
     onReady?.(); // SVG 라 불러올 그림이 없음 → 바로 준비됨
   }, [onReady]);
   return <Avatar {...rest} config={avatarFor(config, title)} pose={pose} />;
-});
+}

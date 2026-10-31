@@ -7,11 +7,12 @@ import { Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 
-import { Avatar, AVATAR_OPTIONS, avatarFor, type AvatarCategory, type AvatarConfig } from '@/components/Avatar';
+import { avatarFor, type AvatarConfig } from '@/components/Avatar';
+import { ParentAppearancePicker } from '@/components/ParentAppearancePicker';
 import { FaceGuide, ReadingText, doneSignal, useReadingWord } from '@/components/FaceGuide';
 import type { FaceFrame } from '@/components/FaceTracker';
 import { RingGauge } from '@/components/RingGauge';
-import { BigButton, MicButton, Panel, PillChip } from '@/components/ui';
+import { BigButton, MicButton, Panel } from '@/components/ui';
 import { MOUTH_SENTENCES, VOICE_SENTENCES, fill } from '@/content/curriculum';
 import { useReadAloud } from '@/hooks/useReadAloud';
 import { useDevice } from '@/lib/layout';
@@ -21,14 +22,6 @@ import { C, R } from '@/theme';
 import { Text } from '@/components/AppText';
 
 type Mode = 'learn' | 'edit';
-
-const CATEGORIES: { key: AvatarCategory; label: string }[] = [
-  { key: 'face', label: '얼굴형' },
-  { key: 'hair', label: '머리' },
-  { key: 'eyes', label: '눈' },
-  { key: 'outfit', label: '옷' },
-  { key: 'color', label: '색' },
-];
 
 /** 카메라 아이콘 (촬영 시작 카드) */
 const CameraIcon = ({ color = C.text, size = 44 }: { color?: string; size?: number }) => (
@@ -257,18 +250,21 @@ function Learn({ profile, onLock }: { profile: Profile; onLock: (v: boolean) => 
 
 function Edit({ profile }: { profile: Profile }) {
   const [config, setConfig] = useState<AvatarConfig>(avatarFor(profile.avatar, profile.parent.title));
-  const [cat, setCat] = useState<AvatarCategory>('face');
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState('');
-  const options: readonly string[] = AVATAR_OPTIONS[cat];
+  const [needsRetry, setNeedsRetry] = useState(false);
   const changed = JSON.stringify(config) !== JSON.stringify(profile.avatar);
 
   const save = async () => {
     if (saving) return;
     setSaving(true);
     try {
-      await updateProfile({ avatar: config });
-      setMsg('저장했어요. 아이 화면에도 바로 반영돼요.');
+      await updateProfile({ avatar: config }, { awaitRemote: profile.onboarded });
+      setNeedsRetry(false);
+      setMsg(profile.onboarded ? '저장했어요. 아이 기기에서 다음 화면을 열면 반영돼요.' : '이 기기에 저장했어요. 가입을 완료하면 연결 기기에도 반영돼요.');
+    } catch {
+      setNeedsRetry(true);
+      setMsg('이 기기에 저장했어요. 서버 연결을 확인하고 다시 저장해 주세요.');
     } finally {
       setSaving(false);
     }
@@ -276,58 +272,7 @@ function Edit({ profile }: { profile: Profile }) {
 
   return (
     <>
-      <View style={{ height: 200, borderRadius: 18, backgroundColor: C.primarySoft, alignItems: 'center', justifyContent: 'flex-end', overflow: 'hidden' }} accessibilityLabel="아바타 미리보기">
-        <Avatar config={config} size={160} expression="smile" />
-      </View>
-
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-        {CATEGORIES.map((c) => (
-          <PillChip key={c.key} label={c.label} selected={cat === c.key} onPress={() => setCat(c.key)} />
-        ))}
-      </View>
-
-      <View style={{ gap: 8 }}>
-        {[0, 1].map((row) => (
-          <View key={row} style={{ flexDirection: 'row', gap: 8 }}>
-            {options.slice(row * 4, row * 4 + 4).map((label, j) => {
-              const i = row * 4 + j;
-              const selected = config[cat] === i;
-              return (
-                <Pressable
-                  key={`${cat}-${i}`}
-                  accessibilityRole="button"
-                  accessibilityLabel={cat === 'color' ? `피부색 ${i + 1}` : label}
-                  accessibilityState={{ selected }}
-                  onPress={() => {
-                    setMsg('');
-                    setConfig((c) => ({ ...c, [cat]: i }));
-                  }}
-                  style={{
-                    flex: 1,
-                    minHeight: 68,
-                    paddingVertical: 4,
-                    borderRadius: 14,
-                    borderWidth: 2,
-                    borderBottomWidth: 4,
-                    borderColor: selected ? C.primaryStrong : C.border,
-                    backgroundColor: selected ? C.primarySoft : C.white,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    overflow: 'hidden',
-                  }}>
-                  {cat === 'color' ? (
-                    <Avatar config={{ ...config, [cat]: i }} size={44} blink={false} />
-                  ) : (
-                    <Text numberOfLines={1} style={{ fontSize: 13, fontWeight: selected ? '700' : '400', color: C.text }}>
-                      {label}
-                    </Text>
-                  )}
-                </Pressable>
-              );
-            })}
-          </View>
-        ))}
-      </View>
+      <ParentAppearancePicker config={config} title={profile.parent.title} onChange={(value) => { setConfig(value); setMsg(''); }} />
 
       <Pressable
         onPress={() => router.push('/onboarding/parent?edit=1' as Href)}
@@ -341,7 +286,7 @@ function Edit({ profile }: { profile: Profile }) {
 
       <View style={{ flex: 1, minHeight: 4 }} />
       {!!msg && <Text style={{ fontSize: 14, fontWeight: '700', color: C.ok, textAlign: 'center' }}>{msg}</Text>}
-      <BigButton label={saving ? '저장 중...' : '저장하기'} disabled={saving || !changed} onPress={save} />
+      <BigButton label={saving ? '저장 중...' : '저장하기'} disabled={saving || (!changed && !needsRetry)} onPress={save} />
     </>
   );
 }

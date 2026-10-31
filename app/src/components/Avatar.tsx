@@ -8,8 +8,10 @@ import { useEffect, useState, type ReactNode } from 'react';
 import Svg, { Circle, Ellipse, G, Path, Rect } from 'react-native-svg';
 
 import type { ParentFrame } from '@/lib/parentFrames';
+import type { PortraitConfig } from '@/lib/portraitConfig';
+import type { MouthPose } from '@/lib/lipsync';
 
-export type AvatarConfig = { face: number; hair: number; eyes: number; outfit: number; color: number };
+export type AvatarConfig = { face: number; hair: number; eyes: number; outfit: number; color: number } & PortraitConfig;
 export const DEFAULT_AVATAR: AvatarConfig = { face: 0, hair: 0, eyes: 0, outfit: 0, color: 0 };
 export const DAD_AVATAR: AvatarConfig = { ...DEFAULT_AVATAR, hair: 4, outfit: 1 }; // 짧은 머리 · 셔츠
 
@@ -63,11 +65,13 @@ export function Avatar({
   close = false,
   expression = 'neutral',
   look = 'center',
-  pose,
+  pose: explicitPose,
+  mouthPose,
   blink = true,
 }: {
   config?: AvatarConfig;
   pose?: ParentFrame; // 말할 때 입모양 (neutral 이면 표정 입). 있으면 mouth 보다 우선
+  mouthPose?: MouthPose; // Existing local lip-sync lab compatibility.
   blink?: boolean; // 몇 초마다 눈 깜빡임 (작은 선택지 미리보기에서는 끔)
   mouth?: number; // 0 닫힘 ~ 1 크게 벌림 (TTS 음량 등)
   scale?: number; // 부모 입모양 크기 반영 (기본 1)
@@ -76,6 +80,8 @@ export function Avatar({
   expression?: AvatarExpression;
   look?: AvatarLook;
 }) {
+  const pose = explicitPose ?? (mouthPose ? mouthPose.press > .5 ? 'closed' : mouthPose.open < .08 ? 'neutral'
+    : mouthPose.round > .7 ? mouthPose.open < .45 ? 'narrow' : 'round' : mouthPose.width > 1.08 ? 'wide' : 'open' : undefined);
   const skin = AVATAR_OPTIONS.color[config.color % 8];
   const hairC = HAIR_COLORS[config.hair % 8];
   const outfitC = OUTFIT_COLORS[config.outfit % 8];
