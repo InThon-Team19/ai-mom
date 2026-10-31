@@ -10,7 +10,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PinPad } from '@/components/PinPad';
 import { api } from '@/lib/api';
 import { getDeviceId } from '@/lib/device';
-import { authMessage, loadAccount, login } from '@/lib/account';
+import { authMessage, loadAccount, login, parentEntry } from '@/lib/account';
 import { resetLocal, setRole, useProfile } from '@/lib/store';
 import { C } from '@/theme';
 
@@ -22,7 +22,8 @@ function adultMenu(childId?: string, onDone?: () => void) {
   const toParent = async () => {
     const a = await loadAccount();
     await setRole('parent');
-    router.replace((a?.token ? '/parent' : '/onboarding/login') as Href);
+    // 로그인돼 있으면 서버 정보로 되살려 부모 앱으로 (아이 모드에서 초기화된 프로필이어도 아이 소개를 다시 하지 않게)
+    router.replace((a?.token ? await parentEntry() : '/onboarding/login') as Href);
   };
   const unlink = async () => {
     if (childId) await api.removeDevice(childId, await getDeviceId()).catch(() => {});

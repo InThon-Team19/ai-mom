@@ -91,6 +91,8 @@ export async function logoutAccount() {
 export async function syncAccountProfile(profile: Profile) {
   const a = await loadAccount();
   if (!a?.token) return;
+  // 빈 프로필(초기화된 폰)은 올리지 않음: 서버에 저장된 아이 정보를 빈칸으로 덮어쓰지 않게
+  if (!profile.onboarded && !profile.child?.name) return;
   const view = await req<Partial<Profile>>('/auth/profile', {
     method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${a.token}` },
     body: JSON.stringify(profile),
@@ -100,4 +102,40 @@ export async function syncAccountProfile(profile: Profile) {
   // 안 맞추면 목소리·입모양 업로드가 다른 아이 번호로 가서 404 로 거절됨
   if (view.childId !== profile.childId) await setProfileFromServer({ ...view, onboarded: profile.onboarded });
   if (a.childId !== view.childId) await save({ ...a, childId: view.childId });
+}
+
+/** 이 폰의 프로필이 비었거나 가입 중으로 남아 있으면 로그인 계정의 서버 프로필로 되살림 (아이 소개를 다시 하지 않게).
+ *  같은 폰을 아이 모드로 쓰다 연결이 끊기면 프로필이 초기화되기 때문. 실패하면 null */
+export async function restoreFromAccount(): Promise<Profile | null> {
+  const a = await loadAccount();
+  if (!a?.token) return null;
+  const auth = { Authorization: `Bearer ${a.token}` };
+  try {
+    // childId 를 모르는 예전 계정은 빈 변경(PUT {})으로 서버 프로필만 받아옴 (아무것도 바꾸지 않음)
+    const view = a.childId
+      ? await req<Partial<Profile>>(`/profile/${a.childId}`, { headers: auth })
+      : await req<Partial<Profile>>('/auth/profile', { method: 'PUT', headers: { ...auth, 'Content-Type': 'application/json' }, body: '{}' });
+    if (!view?.childId) return null;
+    const p = await setProfileFromServer(view);
+    if (a.childId !== view.childId) await save({ ...a, childId: view.childId });
+    return p;
+  } catch {
+    return null;
+  }
+}
+
+/** 가입을 멈춘 곳부터 이어서: 아이 소개를 했으면 그 다음 단계로 */
+export function resumeStep(p: Profile): string {
+  if (p.onboarded) return '/parent';
+  if (!p.child?.name || !p.child?.birth) return '/onboarding/child';
+  return '/onboarding/parent';
+}
+
+/** 부모 모드로 들어갈 때 갈 곳: 로그인돼 있으면 (필요하면 서버에서 되살린 뒤) 부모 앱 또는 가입 이어서 */
+export async function parentEntry(): Promise<string> {
+  const a = await loadAccount();
+  let p = await loadProfile();
+  if (!a?.token) return p.onboarded ? '/onboarding/login' : '/onboarding/start';
+  if (!p.onboarded) p = (await restoreFromAccount()) ?? p;
+  return resumeStep(p);
 }

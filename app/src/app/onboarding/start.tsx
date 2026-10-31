@@ -2,9 +2,8 @@
 // 역할 선택 없이 부모만 가입. 그림 자리: "부모 아바타가 사과를 건네는 장면" → 기본 아바타 + 사과
 import { router, type Href } from 'expo-router';
 
-import { loadAccount } from '@/lib/account';
-import { api } from '@/lib/api';
-import { loadProfile, resetLocal, setProfileFromServer, setRole, type Profile } from '@/lib/store';
+import { loadAccount, restoreFromAccount, resumeStep } from '@/lib/account';
+import { loadProfile, resetLocal, setRole } from '@/lib/store';
 import { Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -22,16 +21,14 @@ export default function Start() {
       // 새 가입: 이전 버전에서 남은 기기 가입 정보를 비우고 새 아이 ID로 시작 (부모 기기로 표시)
       await resetLocal();
       await setRole('parent');
-    } else {
-      await setRole('parent'); // 부모 계정 토큰으로 되돌림
-      // 이 폰이 다른 가족 태블릿으로 연결됐던 적이 있으면 프로필이 남의 아이일 수 있음 → 계정의 아이로 맞춤
-      const p = await loadProfile();
-      if (a.childId && p.childId !== a.childId) {
-        const server = await api.getProfile(a.childId).catch(() => null);
-        if (server) await setProfileFromServer({ ...(server as Partial<Profile>), childId: a.childId });
-      }
+      router.push('/onboarding/account' as Href);
+      return;
     }
-    router.push((a?.token ? '/onboarding/child' : '/onboarding/account') as Href);
+    await setRole('parent'); // 부모 계정 토큰으로 되돌림
+    // 이미 로그인: 계정의 서버 프로필로 맞추고(다른 가족 태블릿으로 연결했던 폰 포함) 가입을 마쳤으면 부모 앱, 아니면 멈춘 곳부터
+    const p = await loadProfile();
+    if (!p.onboarded || (a.childId && p.childId !== a.childId)) await restoreFromAccount();
+    router.replace(resumeStep(await loadProfile()) as Href);
   };
 
   return (
