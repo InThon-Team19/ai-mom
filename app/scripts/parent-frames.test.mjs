@@ -30,7 +30,7 @@ test('true timestamp cues are not suppressed by estimated envelope or dwell', ()
 
 // Execute the real hook with controlled Expo clock/events. This is not a device audio test.
 function harness(tts = async () => ({ url: 'test.wav', env: Array(100).fill(0.6), env_ms: 40 })) {
-  const timers = new Map(), listeners = new Map(), effects = [], stateWrites = [];
+  const timers = new Map(), listeners = new Map(), effects = [], stateWrites = [], gestures = [];
   let id = 0, speechOptions;
   const player = {
     currentTime: 0, duration: 2, playing: false, isBuffering: false, isAudioSamplingSupported: false,
@@ -46,6 +46,7 @@ function harness(tts = async () => ({ url: 'test.wav', env: Array(100).fill(0.6)
     'expo-audio': { useAudioPlayer: () => player, setAudioModeAsync: async () => {}, getRecordingPermissionsAsync: async () => ({ granted: false }) },
     'expo-speech': { stop: async () => {}, speak: (_text, options) => { speechOptions = options; } },
     '@/lib/api': { api: { tts }, reportError() {} }, '@/lib/lipsync': lipsync, '@/lib/parentFrames': frames,
+    '@/lib/webAudio': { onNextGesture: fn => gestures.push(fn) },
   };
   const source = readFileSync(new URL('../src/hooks/useSpeak.ts', import.meta.url), 'utf8');
   const code = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
@@ -55,6 +56,7 @@ function harness(tts = async () => ({ url: 'test.wav', env: Array(100).fill(0.6)
     clearTimeout: (key) => timers.delete(key), setInterval: (fn, ms) => { timers.set(++id, { fn, ms }); return id; }, clearInterval: (key) => timers.delete(key) });
   const hook = exports.useSpeak('test-parent');
   return { hook, player, stateWrites, timers, listeners, get speechOptions() { return speechOptions; },
+    gesture: () => gestures.splice(0).forEach(fn => fn()),
     tick: () => [...timers.values()].filter(t => !t.once).forEach(t => t.fn()),
     cleanup: () => effects.forEach(f => f?.()), flush: async () => { for (let i = 0; i < 8; i++) await Promise.resolve(); } };
 }
@@ -97,6 +99,24 @@ test('bundled real TTS event timestamps are ordered and within WAV duration', ()
     assert.ok(cue.start >= previous && cue.end >= cue.start && cue.end <= sample.duration + 0.01);
     previous = cue.end;
   }
+});
+
+test('web autoplay retry restarts the watchdog; stopped speech cannot resume on a later gesture', async () => {
+  const h = harness();
+  const first = h.hook.speak('아'); await h.flush();
+  h.player.playing = false;
+  h.listeners.get('playbackStatusUpdate')({ error: 'NotAllowedError' });
+  assert.equal([...h.timers.values()].filter(t => t.once).length, 0);
+  h.gesture();
+  assert.equal(h.player.playing, true);
+  assert.equal([...h.timers.values()].filter(t => t.once).length, 1);
+  h.player.playing = false;
+  h.listeners.get('playbackStatusUpdate')({ error: 'NotAllowedError' });
+  h.hook.stop(); await first;
+  h.gesture();
+  assert.equal(h.player.playing, false);
+  assert.equal(h.timers.size, 0);
+  h.cleanup();
 });
 
 test('upstream HTTP 400 fallback is preserved without retrying missing parent voice', async () => {

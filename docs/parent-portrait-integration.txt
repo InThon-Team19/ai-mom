@@ -79,3 +79,14 @@ server/tests/test_avatar_profile_sync.py: 인증·프로필 왕복 통합 테스
 백업: ../output/parent-avatar-integration-backup
 기존 실험 보존용 Git stash는 삭제하지 않았습니다.
 공용 docs/api.md, lib/types.ts, models.py, .env.example은 수정하지 않았습니다.
+
+7. 사용자 Push 승인 후 추가 통합 검증 (2026-11-01)
+위 6절은 승인 전 기록입니다. 이후 사용자가 main Push를 명시적으로 승인했습니다.
+push 전 pull --rebase로 origin/main fb2e9f4의 웹 오디오 변경을 반영했습니다.
+웹 자동재생 재시도 의존성을 테스트 하네스에 추가했고,
+재시도 시 타임아웃 재설정과 중지한 음성의 재시작 방지를 검사했습니다.
+Node 자동 테스트는 17/17 통과했습니다. 기존 회귀 스크립트 6종도 통과했습니다.
+이번 재검증 로그: ../output/parent-avatar-final-check/prepush-export.log
+이번 번들 출력: ../output/parent-avatar-final-check/prepush-build
+실제 기기/화면/음성 검증 범위는 4절과 같습니다.
+Git 리베이스로 기존 로컬 커밋 해시는 변경되었습니다.
