@@ -25,13 +25,19 @@ class Signals(BaseModel):
     mood: Literal["engaged", "calm", "overloaded", "distracted"] | None = None
 
 
+class HistoryTurn(BaseModel):
+    role: Literal["child", "avatar"]
+    text: str = Field(default="", max_length=300)
+
+
 class TurnIn(BaseModel):
     child_id: str
     day: int = Field(default=1, ge=1, le=30)
     item: str = "apple"
-    moment: Literal["invite", "reply"] = "invite"
+    moment: Literal["invite", "reply", "chat"] = "invite"  # chat: 학습 뒤 '엄마랑 이야기하기' (일상 대화로 교감)
     child_text: str | None = Field(default=None, max_length=300)
     signals: Signals | None = None
+    history: list[HistoryTurn] | None = Field(default=None, max_length=12)  # chat: 최근 대화 (앱이 보냄, 서버는 저장 안 함)
 
 
 class TurnOut(BaseModel):
@@ -46,4 +52,5 @@ def turn(body: TurnIn, db: DB):
     child = db.get(Child, body.child_id)
     profile = profile_view(db, child) if child else {}
     return TurnOut(**make_turn(body.day, body.item, body.moment, body.child_text,
-                               body.signals.model_dump() if body.signals else None, profile))
+                               body.signals.model_dump() if body.signals else None, profile,
+                               [h.model_dump() for h in body.history] if body.history else None))

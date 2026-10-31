@@ -30,11 +30,11 @@ def clean(text: str) -> str:
     return re.sub(r"\s+", " ", t).strip()
 
 
-def check_output(text: str) -> str | None:
+def check_output(text: str, max_len: int = MAX_LEN) -> str | None:
     """문제가 있으면 이유, 괜찮으면 None"""
     if not text:
         return "빈 문장"
-    if len(text) > MAX_LEN:
+    if len(text) > max_len:
         return "너무 김"
     if _FORBIDDEN.search(text):
         return "금지된 표현"

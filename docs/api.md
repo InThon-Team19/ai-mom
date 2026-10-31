@@ -137,12 +137,13 @@
 ## 에이전트 대화 (충항) — `routers/conversation.py` ← 앱은 이미 이 계약으로 호출 중 (`app/src/lib/agent.ts`)
 | 메서드 | 경로 | 요청 (JSON) | 응답 (JSON) |
 |---|---|---|---|
-| POST | `/conversation/turn` | `{child_id, day, item('apple'\|'banana'\|'snack'), moment('invite'\|'reply'), child_text?, signals?}` | `{text, out_of_scope?, blocked?}` |
+| POST | `/conversation/turn` | `{child_id, day, item('apple'\|'banana'\|'snack'), moment('invite'\|'reply'\|'chat'), child_text?, signals?, history?}` | `{text, out_of_scope?, blocked?}` |
 
 - `moment=invite`: 아바타가 사물을 권하는 첫 마디 (예: "지호야, 사과 한 입 먹어볼까?"). `reply`: 아이 말(`child_text`, STT 결과)에 대답
 - `text`: 아바타가 말할 문장. 검증된 학습 범위 안에서만. 프로필(`GET /profile/{child_id}`)의 부모 호칭·말투·피드백 반영
 - `out_of_scope=true`: 아이 말이 범위 밖 → 앱이 부모 확인 목록에 기록하고 `text`(주제로 되돌리는 말)를 말함
 - `blocked`: 출력 전 검사에서 막은 원래 문장 → 앱이 리포트의 "차단된 문장"으로 기록 (기획 v2: 리포트에 반드시 포함)
+- `moment=chat`: 학습이 끝난 뒤 **'엄마랑 이야기하기'** — 교육이 아닌 일상 대화로 교감 (기분·놀이·좋아하는 것·오늘 한 일에 공감·호응). `child_text` 없으면 여는 말. `history`: `[{role:'child'|'avatar', text}]` 최근 6마디 (앱이 보내고 서버는 저장 안 함). 사실을 지어내지 않음: 정확한 답이 필요한 질문·민감한 주제는 "이따 엄마랑 알아보자"로 넘기고 `out_of_scope=true`(부모 확인 목록). 위험 신호·출력 검사는 같음
 - `signals`: `{touches, reaction_ms?, gaze_ratio?, smiles, voices, repeated?, mood?('engaged'|'calm'|'overloaded'|'distracted')}` 지금 사물에서의 아이 감각 반응 → 말투·속도·권유를 바꿈 (과부하면 천천히·쉬기, 산만하면 이름 부르기, 몰입하면 한 번 더)
 - **구현 (server/app/agent/):** `scope.py` 검증된 범위(사물별 말해도 되는 사실) · `safety.py` 입력 위험 신호(LLM 안 보냄)·출력 검사(길이·금지어·"엄마 여기 있어" 같은 실제 부모 오인 표현 → `blocked`) · `turn.py` 프롬프트(부모 호칭·말투·피드백·감각 상태) + LLM 3초 제한, 늦거나 형식이 깨지면 정해진 문장. 아이 원문은 저장하지 않음
 - **3.5초 안에 답이 없거나 404/에러면 앱은 커리큘럼 고정 문장으로 말함** → 에이전트가 없어도 시연은 돌아감

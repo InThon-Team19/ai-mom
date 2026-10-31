@@ -90,11 +90,15 @@ JSON 한 줄만 출력: {{"in_scope": true 또는 false, "text": "아바타가 �
 
 
 def _ask_llm(system: str, user: str) -> dict | None:
+    return _ask_llm_messages(system, [{"role": "user", "content": user}])
+
+
+def _ask_llm_messages(system: str, messages: list[dict]) -> dict | None:
     from app.llm import MODEL, client
 
     def call() -> str:
         res = client().with_options(timeout=5.0).messages.create(
-            model=MODEL, max_tokens=200, system=system, messages=[{"role": "user", "content": user}],
+            model=MODEL, max_tokens=500, system=system, messages=messages,  # 모델이 속으로 생각하는 데도 토큰을 써서 200이면 빈 답이 옴
         )
         return "".join(b.text for b in res.content if b.type == "text")
 
@@ -121,7 +125,66 @@ def _mentions_today(text: str, day: int) -> bool:
     return any(ITEMS[k]["ko"] in t or ITEMS[k]["en"].lower() in t for k in items_for_day(day))
 
 
-def make_turn(day: int, item: str, moment: str, child_text: str | None, signals: dict | None, profile: dict) -> dict:
+CHAT_OPENERS = ("{name}야, 오늘 재미있었어? {me}랑 이야기하자!", "{name}야, 오늘 뭐가 제일 좋았어?", "{name}야, 지금 기분이 어때?")
+CHAT_FALLBACKS = ("그랬구나. {name} 마음, {me}가 잘 들었어.", "응응, {name} 말 잘 듣고 있어.", "그랬구나. {name} 이야기 더 해 줄래?")
+CHAT_UNSURE = "그건 이따 {me}랑 같이 알아보자. {name}는 오늘 뭐 하고 놀았어?"
+
+
+def _chat_system(day: int, p: dict, profile: dict, mood: str | None) -> str:
+    today = ", ".join(ITEMS[k]["ko"] for k in items_for_day(day))
+    return f"""너는 2~5세 아이 {p['name']}의 {p['me']} 목소리를 가진 그림 아바타야. 학습은 끝났고, 지금은 아이와 편하게 이야기하며 마음을 나누는 시간이야.
+말투: {p['tone']}. 아이 말하기 수준: {p['level']}. 아이가 좋아하는 것: {p['likes']}. 오늘 함께 본 것: {today}.
+지금 아이 상태: {MOOD_GUIDE.get(mood or 'calm', MOOD_GUIDE['calm'])}
+
+목표: 아이 말에 공감하고 호응해 주기. 아이 기분, 놀이, 좋아하는 것, 오늘 한 일이 주제야. 가르치려 하지 마.
+규칙:
+- 한두 문장, 전체 35자 안팎. 쉬운 말. 아이 말을 따라 해 주고("사과 먹었구나!") 가끔 쉬운 질문 하나로 이어가.
+- 사실을 지어내지 마. 모르는 걸 묻거나 정확한 답이 필요한 질문(왜, 어떻게, 언제, 어디)은 답하지 말고 sensitive=true 로 하고 "이따 {p['me']}랑 같이 알아보자"처럼 말해.
+- 건강·병원·약·몸이 아픈 이야기, 낯선 사람, 비밀, 집 밖으로 나가기, 가족 다툼 이야기는 깊이 묻지 말고 sensitive=true 로 하고 부드럽게 다른 이야기로.
+- 진짜 {p['me']}가 옆에 있다고 하지 마. {p['me']}를 찾으면 "{p['me']}는 일하고 있어. 이따 오면 꼭 이야기해 주자"처럼 말해.
+- 약속하지 마(사 줄게, 데려갈게 등). 틀렸다고 하지 마. 이모지·물결표·말줄임표 쓰지 마.
+JSON 한 줄만 출력: {{"sensitive": true 또는 false, "text": "아바타가 말할 문장"}}"""
+
+
+def make_chat(day: int, child_text: str, history: list[dict] | None, signals: dict | None, profile: dict) -> dict:
+    """학습이 끝난 뒤 '엄마랑 이야기하기': 교육이 아닌 일상 대화로 교감. 안전망(입력·출력 검사, 지어내지 않기)은 그대로"""
+    import random
+    p = _persona(profile)
+    mood = (signals or {}).get("mood")
+    fill = lambda s: s.format(name=p["name"], me=p["me"])  # noqa: E731
+    if not child_text:
+        return {"text": fill(random.choice(CHAT_OPENERS)), "out_of_scope": False, "blocked": None}
+    if safety.danger_in(child_text):
+        return {"text": f"괜찮아? 가까이 있는 어른한테 바로 말해 줘. {p['me']}도 금방 갈게.", "out_of_scope": True, "blocked": None}
+    msgs = []
+    for h in (history or [])[-6:]:
+        t = str(h.get("text", ""))[:80]
+        if t:
+            msgs.append({"role": "assistant" if h.get("role") == "avatar" else "user", "content": t})
+    msgs.append({"role": "user", "content": child_text[:120]})
+    # Anthropic 형식: user 로 시작하고 같은 역할이 연달아 오지 않게 정리
+    while msgs and msgs[0]["role"] != "user":
+        msgs.pop(0)
+    merged: list[dict] = []
+    for m in msgs:
+        if merged and merged[-1]["role"] == m["role"]:
+            merged[-1]["content"] += " " + m["content"]
+        else:
+            merged.append(dict(m))
+    data = _ask_llm_messages(_chat_system(day, p, profile, mood), merged)
+    if data is None:
+        return {"text": fill(random.choice(CHAT_FALLBACKS)), "out_of_scope": False, "blocked": None}
+    sensitive = bool(data.get("sensitive"))
+    text = safety.clean(data["text"])
+    if safety.check_output(text, max_len=60):
+        return {"text": fill(CHAT_UNSURE), "out_of_scope": sensitive, "blocked": text[:120] or None}
+    return {"text": text, "out_of_scope": sensitive, "blocked": None}
+
+
+def make_turn(day: int, item: str, moment: str, child_text: str | None, signals: dict | None, profile: dict,
+              history: list[dict] | None = None) -> dict:
+    if moment == "chat":
+        return make_chat(day, (child_text or "").strip(), history, signals, profile)
     if item not in ITEMS:
         item = items_for_day(day)[0]
     p = _persona(profile)
