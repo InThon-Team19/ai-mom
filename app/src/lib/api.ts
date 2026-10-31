@@ -4,7 +4,7 @@ import { File } from 'expo-file-system';
 import { readAsStringAsync } from 'expo-file-system/legacy';
 
 import { getApiUrl } from './config';
-import { getToken } from './session';
+import { getParentToken, getToken, setToken } from './session';
 import type {
   ActivityEvent,
   AnalysisOut,
@@ -39,7 +39,16 @@ export async function req<T>(path: string, init?: RequestInit): Promise<T> {
   const t = await getToken();
   const headers = new Headers(init?.headers);
   if (t && !headers.has('Authorization')) headers.set('Authorization', `Bearer ${t}`);
-  const res = await fetch(`${getApiUrl()}${path}`, { ...init, headers });
+  let res = await fetch(`${getApiUrl()}${path}`, { ...init, headers });
+  if ((res.status === 401 || res.status === 403) && !new Headers(init?.headers).has('Authorization')) {
+    // 같은 폰을 아이 태블릿으로 연결했다가 끊긴(401)·부모 권한 없는(403) 기기 토큰이 남은 경우 → 부모 계정 토큰으로 한 번 더
+    const p = await getParentToken();
+    if (p && p !== t) {
+      await setToken(p);
+      headers.set('Authorization', `Bearer ${p}`);
+      res = await fetch(`${getApiUrl()}${path}`, { ...init, headers });
+    }
+  }
   if (!res.ok) throw new Error(`${res.status} ${path}: ${await res.text()}`);
   return res.json() as Promise<T>;
 }

@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 import { DEFAULT_AVATAR, type AvatarConfig } from '@/components/Avatar';
 import { api } from '@/lib/api';
 import { dayAdvancePatch } from '@/lib/progress';
-import { setToken } from '@/lib/session';
+import { restoreParentToken, setToken } from '@/lib/session';
 import type { DeviceInfo } from '@/lib/types';
 
 export type Profile = {
@@ -138,6 +138,7 @@ export const getRole = async () => {
   }
 };
 export const setRole = async (r: Role) => {
+  if (r === 'parent') await restoreParentToken(); // 아이 모드에서 받은 기기 토큰 대신 부모 계정 토큰으로
   try {
     await AsyncStorage.setItem(ROLE_KEY, r);
   } catch {}
