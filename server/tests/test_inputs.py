@@ -107,11 +107,12 @@ def test_activity_summary_balance():
     ev = [{"type": "touch", "data": {"target": "사과", "reaction_ms": 800}}] * 4 + \
          [{"type": "gaze", "data": {"seconds": 30}}, {"type": "smile", "data": {}},
           {"type": "repeat", "data": {"word": "사과", "matched": True}},
-          {"type": "out_of_scope", "data": {"text": "공룡은 왜 없어?"}}]
+          {"type": "out_of_scope", "data": {"text": "공룡은 왜 없어?"}},
+          {"type": "blocked", "data": {"text": "부적절한 문장"}}]
     s = summarize(ev, "2026-10-31")
     assert s.touches == 4 and s.words == ["사과"] and s.favorites == ["사과"]
     assert abs(sum(s.balance.values()) - 1) < 0.01 and s.balance["touch"] == 0.444
-    assert s.out_of_scope == ["공룡은 왜 없어?"]
+    assert s.out_of_scope == ["공룡은 왜 없어?", "차단된 문장: 부적절한 문장"]
 
 
 # ---------- API ----------

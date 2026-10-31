@@ -43,5 +43,17 @@
 - 저장: 부모 음성 `server/data/children/<id>/parent/voice/<kind>/sample_NNN.{wav,json}`, 입모양 `…/parent/mouth/<kind>/profile_NNN.json`, 아이 반응 `…/activity/<날짜>.jsonl` (모두 비공개)
 - **민주**: 목소리 등록 원본은 `routers/voice.py`의 `samples(child_id)` (wav + 대본 text + 품질)
 
+## 에이전트 대화 (충항) — `routers/conversation.py` ← 앱은 이미 이 계약으로 호출 중 (`app/src/lib/agent.ts`)
+| 메서드 | 경로 | 요청 (JSON) | 응답 (JSON) |
+|---|---|---|---|
+| POST | `/conversation/turn` | `{child_id, day, item('apple'\|'banana'\|'snack'), moment('invite'\|'reply'), child_text?}` | `{text, out_of_scope?, blocked?}` |
+
+- `moment=invite`: 아바타가 사물을 권하는 첫 마디 (예: "지호야, 사과 한 입 먹어볼까?"). `reply`: 아이 말(`child_text`, STT 결과)에 대답
+- `text`: 아바타가 말할 문장. 검증된 학습 범위 안에서만. 프로필(`GET /profile/{child_id}`)의 부모 호칭·말투·피드백 반영
+- `out_of_scope=true`: 아이 말이 범위 밖 → 앱이 부모 확인 목록에 기록하고 `text`(주제로 되돌리는 말)를 말함
+- `blocked`: 출력 전 검사에서 막은 원래 문장 → 앱이 리포트의 "차단된 문장"으로 기록 (기획 v2: 리포트에 반드시 포함)
+- **2.5초 안에 답이 없거나 404/에러면 앱은 커리큘럼 고정 문장으로 말함** → 에이전트가 없어도 시연은 돌아감
+- 부모 피드백(밤 2-3)은 프로필 `feedback[]`에 `{day, issues[], note, review[], newWords}`로 쌓임 → 다음날 대사에 반영
+
 ## LLM (에이전트용, 충항)
 - `server/app/llm.py`의 `chat(system, messages)` 사용. Lablup Token Factory(Anthropic 호환) 경유, 모델 `ANTHROPIC_MODEL`

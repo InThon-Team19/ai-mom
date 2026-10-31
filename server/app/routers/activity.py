@@ -21,6 +21,7 @@ SENSE = {
     "voice": "audio",          # 웃음·옹알이 등 소리 반응 {kind}
     "listen": "audio",         # 부모 목소리 들음 {seconds} (청각 집중 모드 포함)
     "out_of_scope": None,      # 범위 밖 질문 {text} → 부모 확인 필요
+    "blocked": None,           # 에이전트가 출력 전 검사에서 막은 문장 {text} → 부모 확인 필요 (기획 v2: 리포트에 반드시 포함)
     "alert": None,             # 위험 신호 {text}
     "session": None,           # 대화 시작 {topic}
 }
@@ -106,7 +107,8 @@ def summarize(events: list[dict], day: str) -> Summary:
         words=sorted({e["data"].get("word", "") for e in ok} - {""}),
         favorites=[k for k, _ in fav.most_common(3)],
         balance=balance,
-        out_of_scope=[e["data"].get("text", "") for e in by("out_of_scope")],
+        out_of_scope=[e["data"].get("text", "") for e in by("out_of_scope")]
+        + [f"차단된 문장: {e['data'].get('text', '')}" for e in by("blocked")],
         alerts=[e["data"].get("text", "") for e in by("alert")],
     )
 

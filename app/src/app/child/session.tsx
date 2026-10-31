@@ -15,6 +15,7 @@ import { FaceSensor, HoldMic, PillButton, RoundButton, SkipIcon, TargetIcon, sle
 import { dayOf, fill, ITEMS, type Day, type ItemId } from '@/content/curriculum';
 import { useSpeak } from '@/hooks/useSpeak';
 import { useVoiceRecorder } from '@/hooks/useVoiceRecorder';
+import { agentSay } from '@/lib/agent';
 import { api } from '@/lib/api';
 import { haptic, logEvent, playSfx, setVibration, startActivityLog } from '@/lib/sense';
 import { refreshProfile, useProfile } from '@/lib/store';
@@ -99,7 +100,12 @@ export default function Session() {
       if (t !== run.current) return;
       if (phase === 'object') {
         shownAt.current = Date.now();
-        await speak(fill(it.invite, { name, me }));
+        // 에이전트(충항)가 있으면 그 대사, 없으면 커리큘럼 고정 문장
+        const line = profile
+          ? (await agentSay({ child_id: profile.childId, day: plan.day, item: it.id, moment: 'invite' }, fill(it.invite, { name, me }))).text
+          : fill(it.invite, { name, me });
+        if (t !== run.current) return;
+        await speak(line);
       } else {
         await speak(`같이 따라 해 볼까? ${it.ko}!`);
       }
@@ -108,7 +114,7 @@ export default function Session() {
       run.current++;
       stop();
     };
-  }, [plan, idx, phase, focused, speak, stop, name, me]);
+  }, [plan, idx, phase, focused, speak, stop, name, me, profile]);
 
   // ---------- 아이 얼굴: 응시 시간 5초마다, 웃음, 입모양 따라 하기 ----------
   useEffect(() => {
@@ -191,11 +197,18 @@ export default function Session() {
     logEvent('repeat', { word: item.ko, matched: res ? res.matched : null, text });
     if (res?.alert) logEvent('alert', { text });
 
-    if (res && !res.matched && text && looksLikeQuestion(text)) {
-      // 안전망: 범위 밖 질문 → 지어내지 않고 주제로 되돌림
-      logEvent('out_of_scope', { text });
-      await speak(fill(`그건 이따 {me}한테 물어보자! 우리 ${item.ko} 계속 볼까?`, { name, me }));
-      return;
+    if (res && !res.matched && text) {
+      // 안전망: 범위 밖 질문 → 지어내지 않고 주제로 되돌림. 판단은 에이전트, 없으면 간단 규칙
+      const redirect = fill(`그건 이따 {me}한테 물어보자! 우리 ${item.ko} 계속 볼까?`, { name, me });
+      const a = profile
+        ? await agentSay({ child_id: profile.childId, day: plan?.day ?? 1, item: item.id, moment: 'reply', child_text: text }, redirect)
+        : null;
+      if (t !== run.current) return;
+      if (a?.outOfScope || (!a?.outOfScope && looksLikeQuestion(text))) {
+        if (!a?.outOfScope) logEvent('out_of_scope', { text }); // 에이전트가 이미 기록했으면 중복 기록 안 함
+        await speak(a?.outOfScope ? a.text : redirect);
+        return;
+      }
     }
     // 맞았든 아니든 시도 자체를 칭찬 (틀렸다는 표시 없음). 서버가 안 되면 시도한 것으로 봄
     setPop((n) => n + 1);

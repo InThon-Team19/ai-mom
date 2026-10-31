@@ -43,7 +43,7 @@ export type AnalysisOut = { summary: Record<string, number>; traits: string[]; t
 
 export type SttOut = { text: string; features: SpeechFeatures; matched: boolean | null; alert: boolean };
 
-export type ActivityType = 'touch' | 'gaze' | 'smile' | 'imitate' | 'repeat' | 'voice' | 'listen' | 'out_of_scope' | 'alert' | 'session';
+export type ActivityType = 'touch' | 'gaze' | 'smile' | 'imitate' | 'repeat' | 'voice' | 'listen' | 'out_of_scope' | 'blocked' | 'alert' | 'session';
 
 export type ActivityEvent = { type: ActivityType; t?: number; data?: Record<string, unknown> };
 
