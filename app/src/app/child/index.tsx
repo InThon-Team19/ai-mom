@@ -124,19 +124,17 @@ function Greeting() {
     if (profile?.child.name) prefetchDay(profile); // 같은 일차는 한 번만 돎
   }, [profile]);
 
-  const go = (path: '/child/session' | '/child/story' | '/child/audio' | '/child/play' | '/child/chat') => {
+  const go = (path: '/child/session' | '/child/story' | '/child/audio' | '/child/play' | '/child/chat' | '/child/sensory') => {
     stop();
     router.push(path);
   };
 
-  // 큰 버튼 4개 (사용자 요청 — 사과·바나나 그림이 놀자와 같은 곳으로 가서 헷갈림): 놀자 · 손 놀이 · 동화 듣기(동화 있는 날만) · {엄마}랑 이야기
+  // 큰 버튼 4개: 놀자 · 손 놀이 · 동화 고르기 · {엄마}랑 이야기
   // 오늘 사물 그림은 놀자 버튼 안에 작게만 (따로 누르는 버튼 아님). 소리만 듣기는 홈에서 뺌 (동화 화면 · 쉬기 화면에서 들어감)
   const tiles: Tile[] = [
     { key: 'play', label: '놀자!', color: TILE_COLORS[0], icon: (c, z) => <PlayTriIcon size={z * 0.48} color={c} />, items: day.items, onPress: () => go('/child/session') },
     { key: 'hand', label: '손 놀이', color: TILE_COLORS[1], icon: (_c, z) => <HandIcon size={z * 0.55} />, onPress: () => go('/child/play') },
-    ...(day.story
-      ? [{ key: 'story', label: '동화 듣기', color: TILE_COLORS[3], icon: (c: string, z: number) => <BookIcon size={z * 0.48} color={c} />, onPress: () => go('/child/story') }]
-      : []),
+    { key: 'story', label: '동화 듣기', color: TILE_COLORS[3], icon: (c, z) => <BookIcon size={z * 0.48} color={c} />, onPress: () => go('/child/sensory') },
     { key: 'chat', label: `${me}랑 이야기`, color: TILE_COLORS[5], icon: (c, z) => <ChatIcon size={z * 0.5} color={c} dots />, onPress: () => go('/child/chat') },
   ];
 

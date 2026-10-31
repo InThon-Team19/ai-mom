@@ -409,7 +409,8 @@ export default function Session() {
     if (!plan || !focused) return;
     const it = ITEMS[plan.items[idx]];
     const word = english ? `${it.ko}! ${it.en}!` : `${it.ko}!`;
-    const t = ++run.current;
+    const sequence = run;
+    const t = ++sequence.current;
     (async () => {
       await sleep(350);
       if (t !== run.current) return;
@@ -472,7 +473,7 @@ export default function Session() {
       }
     })();
     return () => {
-      run.current++;
+      sequence.current++;
       stop();
     };
   }, [plan, idx, phase, focused, talk, stop, name, me, profile, english, reduceMotion, react, kick, signalsNow, waitUtterance]);

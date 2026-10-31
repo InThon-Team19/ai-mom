@@ -1,0 +1,395 @@
+{
+  "version": "1.0",
+  "units": {
+    "duration": "ms"
+  },
+  "words": [
+    {
+      "story_id": 1,
+      "story_title": "햇님과 달님",
+      "word_id": "sun",
+      "word_ko": "해",
+      "word_en": "sun",
+      "interaction": "tap",
+      "frames": [
+        {
+          "step": 1,
+          "path": "story_01_햇님과달님/sun/sun_01.png"
+        },
+        {
+          "step": 2,
+          "path": "story_01_햇님과달님/sun/sun_02.png"
+        }
+      ],
+      "transition": {
+        "sequence": [
+          1,
+          2
+        ],
+        "mode": "sequential",
+        "duration_ms": 500
+      },
+      "reset": {
+        "mode": "after_delay",
+        "delay_ms": 1800
+      },
+      "sound": {
+        "description": "불꽃이 활활 타오르는 소리",
+        "file": null
+      },
+      "haptic": {
+        "description": "02 상태 동안 짧고 강한 진동",
+        "intensity": "medium",
+        "duration_ms": 80
+      }
+    },
+    {
+      "story_id": 1,
+      "story_title": "햇님과 달님",
+      "word_id": "moon",
+      "word_ko": "달",
+      "word_en": "moon",
+      "interaction": "tap",
+      "frames": [
+        {
+          "step": 1,
+          "path": "story_01_햇님과달님/moon/moon_01.png"
+        },
+        {
+          "step": 2,
+          "path": "story_01_햇님과달님/moon/moon_02.png"
+        },
+        {
+          "step": 3,
+          "path": "story_01_햇님과달님/moon/moon_03.png"
+        },
+        {
+          "step": 4,
+          "path": "story_01_햇님과달님/moon/moon_04.png"
+        }
+      ],
+      "transition": {
+        "sequence": [
+          1,
+          2,
+          3,
+          4,
+          1
+        ],
+        "mode": "cycle",
+        "duration_ms": 500
+      },
+      "reset": {
+        "mode": "cycle",
+        "delay_ms": null
+      },
+      "sound": {
+        "description": null,
+        "file": null
+      },
+      "haptic": {
+        "description": "단계 전환 시 짧은 진동",
+        "intensity": "medium",
+        "duration_ms": 80
+      }
+    },
+    {
+      "story_id": 1,
+      "story_title": "햇님과 달님",
+      "word_id": "tiger",
+      "word_ko": "호랑이",
+      "word_en": "tiger",
+      "interaction": "tap",
+      "frames": [
+        {
+          "step": 1,
+          "path": "story_01_햇님과달님/tiger/tiger_01.png"
+        },
+        {
+          "step": 2,
+          "path": "story_01_햇님과달님/tiger/tiger_02.png"
+        },
+        {
+          "step": 3,
+          "path": "story_01_햇님과달님/tiger/tiger_03.png"
+        }
+      ],
+      "transition": {
+        "sequence": [
+          1,
+          2,
+          3
+        ],
+        "mode": "sequential",
+        "duration_ms": 500
+      },
+      "reset": {
+        "mode": "after_delay",
+        "delay_ms": 1800
+      },
+      "sound": {
+        "description": "03에서 호랑이 포효 소리",
+        "file": null
+      },
+      "haptic": {
+        "description": "02 약한 진동, 03 강한 진동",
+        "intensity": "medium",
+        "duration_ms": 80
+      }
+    },
+    {
+      "story_id": 2,
+      "story_title": "도깨비 이야기",
+      "word_id": "hat",
+      "word_ko": "모자",
+      "word_en": "hat",
+      "interaction": "swipe",
+      "frames": [
+        {
+          "step": 1,
+          "path": "story_02_도깨비이야기/hat/hat_01.png"
+        },
+        {
+          "step": 2,
+          "path": "story_02_도깨비이야기/hat/hat_02.png"
+        }
+      ],
+      "transition": {
+        "sequence": [
+          1,
+          2
+        ],
+        "mode": "sequential",
+        "duration_ms": 500
+      },
+      "reset": {
+        "mode": "manual",
+        "delay_ms": null
+      },
+      "sound": {
+        "description": "바람 소리",
+        "file": null
+      },
+      "haptic": {
+        "description": "모자가 날아갈 때 짧은 진동",
+        "intensity": "medium",
+        "duration_ms": 80
+      }
+    },
+    {
+      "story_id": 2,
+      "story_title": "도깨비 이야기",
+      "word_id": "pouch",
+      "word_ko": "주머니",
+      "word_en": "pouch",
+      "interaction": "swipe",
+      "frames": [
+        {
+          "step": 1,
+          "path": "story_02_도깨비이야기/pouch/pouch_01.png"
+        },
+        {
+          "step": 2,
+          "path": "story_02_도깨비이야기/pouch/pouch_02.png"
+        },
+        {
+          "step": 3,
+          "path": "story_02_도깨비이야기/pouch/pouch_03.png"
+        },
+        {
+          "step": 4,
+          "path": "story_02_도깨비이야기/pouch/pouch_04.png"
+        }
+      ],
+      "transition": {
+        "sequence": [
+          1,
+          2,
+          3,
+          4
+        ],
+        "mode": "sequential",
+        "duration_ms": 500
+      },
+      "reset": {
+        "mode": "manual",
+        "delay_ms": null
+      },
+      "sound": {
+        "description": "끈이 풀리는 소리와 부드러운 마법 효과음",
+        "file": null
+      },
+      "haptic": {
+        "description": "단계마다 짧은 진동",
+        "intensity": "medium",
+        "duration_ms": 80
+      }
+    },
+    {
+      "story_id": 2,
+      "story_title": "도깨비 이야기",
+      "word_id": "stick",
+      "word_ko": "막대기",
+      "word_en": "stick",
+      "interaction": "tap",
+      "frames": [
+        {
+          "step": 1,
+          "path": "story_02_도깨비이야기/stick/stick_01.png"
+        },
+        {
+          "step": 2,
+          "path": "story_02_도깨비이야기/stick/stick_02.png"
+        },
+        {
+          "step": 3,
+          "path": "story_02_도깨비이야기/stick/stick_03.png"
+        }
+      ],
+      "transition": {
+        "sequence": [
+          1,
+          2,
+          3
+        ],
+        "mode": "sequential",
+        "duration_ms": 500
+      },
+      "reset": {
+        "mode": "manual",
+        "delay_ms": null
+      },
+      "sound": {
+        "description": "나무에 금이 가고 부러지는 소리",
+        "file": null
+      },
+      "haptic": {
+        "description": "02 약한 진동, 03 강한 진동",
+        "intensity": "medium",
+        "duration_ms": 80
+      }
+    },
+    {
+      "story_id": 3,
+      "story_title": "까마귀와 물주전자",
+      "word_id": "crow",
+      "word_ko": "까마귀",
+      "word_en": "crow",
+      "interaction": "tap",
+      "frames": [
+        {
+          "step": 1,
+          "path": "story_03_까마귀와물주전자/crow/crow_01.png"
+        },
+        {
+          "step": 2,
+          "path": "story_03_까마귀와물주전자/crow/crow_02.png"
+        }
+      ],
+      "transition": {
+        "sequence": [
+          1,
+          2
+        ],
+        "mode": "sequential",
+        "duration_ms": 500
+      },
+      "reset": {
+        "mode": "after_delay",
+        "delay_ms": 1800
+      },
+      "sound": {
+        "description": "날개를 퍼덕이는 소리",
+        "file": null
+      },
+      "haptic": {
+        "description": "01 부드러운 진동, 02 강한 진동",
+        "intensity": "medium",
+        "duration_ms": 80
+      }
+    },
+    {
+      "story_id": 3,
+      "story_title": "까마귀와 물주전자",
+      "word_id": "pitcher",
+      "word_ko": "물주전자",
+      "word_en": "pitcher",
+      "interaction": "swipe",
+      "frames": [
+        {
+          "step": 1,
+          "path": "story_03_까마귀와물주전자/pitcher/pitcher_01.png"
+        },
+        {
+          "step": 2,
+          "path": "story_03_까마귀와물주전자/pitcher/pitcher_02.png"
+        },
+        {
+          "step": 3,
+          "path": "story_03_까마귀와물주전자/pitcher/pitcher_03.png"
+        },
+        {
+          "step": 4,
+          "path": "story_03_까마귀와물주전자/pitcher/pitcher_04.png"
+        }
+      ],
+      "transition": {
+        "sequence": [
+          1,
+          2,
+          3,
+          4
+        ],
+        "mode": "sequential",
+        "duration_ms": 500
+      },
+      "reset": {
+        "mode": "manual",
+        "delay_ms": null
+      },
+      "sound": {
+        "description": "물이 흐르고 바닥에 떨어지는 소리",
+        "file": null
+      },
+      "haptic": {
+        "description": "단계 전환 시 부드러운 진동",
+        "intensity": "medium",
+        "duration_ms": 80
+      }
+    },
+    {
+      "story_id": 3,
+      "story_title": "까마귀와 물주전자",
+      "word_id": "stone",
+      "word_ko": "돌",
+      "word_en": "stone",
+      "interaction": "rub",
+      "frames": [
+        {
+          "step": 1,
+          "path": "story_03_까마귀와물주전자/stone/stone_01.png"
+        }
+      ],
+      "transition": {
+        "sequence": [
+          1
+        ],
+        "mode": "sequential",
+        "duration_ms": 500
+      },
+      "reset": {
+        "mode": "none",
+        "delay_ms": null
+      },
+      "sound": {
+        "description": "돌 표면을 문지르는 소리",
+        "file": null
+      },
+      "haptic": {
+        "description": "거친 표면을 표현하는 짧은 진동 패턴 반복",
+        "intensity": "medium",
+        "duration_ms": 80
+      }
+    }
+  ]
+}

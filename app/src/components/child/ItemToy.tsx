@@ -13,13 +13,13 @@ import Animated, {
   withSequence,
   withSpring,
   withTiming,
-  ZoomIn,
   type SharedValue,
 } from 'react-native-reanimated';
 
 import Svg, { Path } from 'react-native-svg';
 
 import { ItemArt } from '@/components/child/design';
+import { FruitSprite } from '@/components/child/FruitSprite';
 import { StarBurst } from '@/components/child/stage';
 import type { ItemId } from '@/content/curriculum';
 import { playSfx } from '@/lib/sense';
@@ -41,64 +41,6 @@ function Glyph({ emoji, size }: { emoji: string; size: number }) {
       style={{ width: size, height: size, fontSize: size * 0.78, lineHeight: size, textAlign: 'center', includeFontPadding: false }}>
       {emoji}
     </Text>
-  );
-}
-
-/** 사과: 누를 때마다 오른쪽 가장자리에 한 입씩 (최대 3입) */
-function Bites({ count, size, bg }: { count: number; size: number; bg: string }) {
-  const spots = [
-    { x: 0.82, y: 0.3 },
-    { x: 0.88, y: 0.52 },
-    { x: 0.8, y: 0.73 },
-  ];
-  const r = size * 0.13;
-  return (
-    <>
-      {spots.slice(0, count).map((s, i) => (
-        <Animated.View
-          key={i}
-          entering={ZoomIn.duration(160)}
-          pointerEvents="none"
-          style={{ position: 'absolute', left: s.x * size - r, top: s.y * size - r, width: r * 2, height: r * 2, borderRadius: r, backgroundColor: bg }}
-        />
-      ))}
-    </>
-  );
-}
-
-/** 바나나: 누를 때마다 위쪽을 덮던 껍질 한 줄이 바깥으로 벗겨져 내려옴 (최대 3줄) */
-function PeelStrip({ index, peeled, size }: { index: number; peeled: boolean; size: number }) {
-  const angle = [-140, 140, 165][index];
-  const rot = useSharedValue(0);
-  const op = useSharedValue(0);
-  useEffect(() => {
-    if (peeled) {
-      op.set(withTiming(1, { duration: 120 }));
-      rot.set(withTiming(angle, { duration: 600 }));
-    }
-  }, [peeled, angle, op, rot]);
-  const st = useAnimatedStyle(() => ({ opacity: op.value, transform: [{ rotate: `${rot.value}deg` }] }));
-  const w = size * 0.16;
-  const h = size * 0.42;
-  return (
-    <Animated.View
-      pointerEvents="none"
-      style={[
-        {
-          position: 'absolute',
-          left: size * 0.5 - w / 2 + (index - 1) * w * 0.4,
-          top: size * 0.5 - h,
-          width: w,
-          height: h,
-          borderRadius: w / 2,
-          backgroundColor: '#F6D649',
-          borderWidth: 2,
-          borderColor: '#C9A21C',
-          transformOrigin: 'bottom',
-        },
-        st,
-      ]}
-    />
   );
 }
 
@@ -350,7 +292,7 @@ export function ItemToy({
       <StarBurst trigger={success} radius={size * 0.85} />
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel="눌러봐"
+        accessibilityLabel={id === 'apple' ? '사과 한 입 먹기' : id === 'banana' ? '바나나 껍질 벗기기' : '과자 나누기'}
         disabled={!interactive || !drop || !!leave}
         onPressIn={onIn}
         onPressOut={onOut}
@@ -363,10 +305,8 @@ export function ItemToy({
               <Half id={id} size={size} side="right" apart={apart} />
             </View>
           ) : (
-            <ItemArt id={id} size={size} />
+            <FruitSprite id={id} size={size} presses={presses} reduceMotion={reduceMotion} />
           )}
-          {id === 'apple' && <Bites count={Math.min(3, presses)} size={size} bg={bg} />}
-          {id === 'banana' && [0, 1, 2].map((i) => <PeelStrip key={i} index={i} peeled={presses > i} size={size} />)}
           {id === 'snack' && (
             <>
               <Crack trigger={presses} size={size} />
