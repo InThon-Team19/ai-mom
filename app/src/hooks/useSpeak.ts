@@ -1,6 +1,6 @@
 // 아바타 말하기: 부모 목소리 TTS(민주, Fish Audio) 재생 + 음량으로 입 움직임. 담당: 태희
 // TTS 서버가 안 되면 기기 기본 한국어 음성(expo-speech)으로 대신 말함 (시연이 끊기지 않게)
-import { setAudioModeAsync, useAudioPlayer, useAudioPlayerStatus, useAudioSampleListener } from 'expo-audio';
+import { setAudioModeAsync, useAudioPlayer, useAudioSampleListener } from 'expo-audio';
 import * as Speech from 'expo-speech';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
@@ -8,7 +8,6 @@ import { api } from '@/lib/api';
 
 export function useSpeak(childId: string | undefined) {
   const player = useAudioPlayer();
-  const status = useAudioPlayerStatus(player);
   const [mouth, setMouth] = useState(0);
   const [speaking, setSpeaking] = useState(false);
   const [usingFallback, setUsingFallback] = useState(false);
@@ -49,9 +48,13 @@ export function useSpeak(childId: string | undefined) {
     done.current = null;
   }, [stopFake]);
 
+  // 재생이 끝나면 finish (상태 이벤트 구독)
   useEffect(() => {
-    if (status.didJustFinish) finish();
-  }, [status.didJustFinish, finish]);
+    const sub = player.addListener('playbackStatusUpdate', (st) => {
+      if (st.didJustFinish) finish();
+    });
+    return () => sub.remove();
+  }, [player, finish]);
 
   useEffect(() => () => stopFake(), [stopFake]);
 
