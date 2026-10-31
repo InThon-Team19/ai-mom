@@ -95,7 +95,7 @@ function Greeting() {
     if (profile?.child.name) prefetchDay(profile); // 같은 일차는 한 번만 돎
   }, [profile]);
 
-  const go = (path: '/child/session' | '/child/story' | '/child/audio') => {
+  const go = (path: '/child/session' | '/child/story' | '/child/audio' | '/child/play') => {
     stop();
     router.push(path);
   };
@@ -127,7 +127,9 @@ function Greeting() {
         <RoundButton size={140} label="놀자" onPress={() => go('/child/session')}>
           <PlayIcon size={62} />
         </RoundButton>
-        <View style={{ flexDirection: 'row', gap: 16 }}>
+        {/* 버튼이 셋이라 폰 가로 화면에선 줄을 바꿔 넘치지 않게 */}
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 12, maxWidth: '100%' }}>
+          <PillButton label="✋ 손 놀이" onPress={() => go('/child/play')} />
           {day.story && <PillButton label="📖 동화 듣기" onPress={() => go('/child/story')} />}
           <PillButton label="🎧 소리만 듣기" onPress={() => go('/child/audio')} />
         </View>

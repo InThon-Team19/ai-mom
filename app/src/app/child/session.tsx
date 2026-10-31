@@ -329,7 +329,8 @@ export default function Session() {
       }
       const top = (Object.entries(counts.current) as [ItemId, number][]).sort((a, b) => b[1] - a[1])[0];
       const fav = ITEMS[top ? top[0] : plan.items[0]].ko;
-      router.replace({ pathname: plan.story ? '/child/story' : '/child/end', params: { fav, basket: nextBasket.join(',') } });
+      // 말 놀이가 끝나면 손 놀이(쓸어내기·북·정리)를 거쳐 동화 또는 마무리로 — 갈 곳(next)을 같이 넘김
+      router.replace({ pathname: '/child/play', params: { fav, basket: nextBasket.join(','), next: plan.story ? 'story' : 'end' } });
     }, 350);
   };
 

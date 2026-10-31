@@ -1,5 +1,5 @@
 // 아이 태블릿 3-2 · 3-3 · 3-5 누르는 사물 — 담당: 태희 (민철 와이어프레임 · 기획 2-3 "사과 한 바퀴의 움직임")
-// 기획 1-1 "아바타가 단어를 말할 때의 연출": 사과 = 베어 문 자국 / 바나나 = 껍질이 한 줄씩 / 과자 = 둘로 부러짐
+// 기획 1-1 "아바타가 단어를 말할 때의 연출": 사과 = 베어 문 자국 / 바나나 = 껍질이 한 줄씩 / 과자 = 금이 쩍 → 둘로 부러짐 + 부스러기
 // 움직임: 위에서 떨어져 납작하게 닿고 두 번 통통(움직임 줄이기면 한 번) · 기다리면 살짝 흔들림 · 누르면 눌렸다 튀어 오름
 //        · 아이 말소리 크기만큼 커짐 · 딴 데를 보면(attention) 더 크게 통통 튀며 흔들림 · 성공하면 크게 튀며 별 · 넘어갈 때 굴러서 바구니로 쏙
 // 감각 자극 제한: 깜빡임 없음, 움직임 한 번은 1초 안
@@ -16,6 +16,8 @@ import Animated, {
   ZoomIn,
   type SharedValue,
 } from 'react-native-reanimated';
+
+import Svg, { Path } from 'react-native-svg';
 
 import { StarBurst } from '@/components/child/stage';
 import type { ItemId } from '@/content/curriculum';
@@ -111,6 +113,59 @@ function Half({ emoji, size, side, apart }: { emoji: string; size: number; side:
         <Glyph emoji={emoji} size={size} />
       </View>
     </Animated.View>
+  );
+}
+
+/** 과자: 누르면 가운데에 금이 먼저 쩍 가고(0.1초) → 반쪽이 벌어지면 금은 틈에 묻혀 흐려졌다가 → 다시 붙으면 옅은 금 자국이 남음 */
+function Crack({ trigger, size }: { trigger: number; size: number }) {
+  const op = useSharedValue(0);
+  const draw = useSharedValue(0); // 위에서 아래로 금이 그어짐 (세로 크기 비율)
+  useEffect(() => {
+    if (!trigger) return;
+    draw.set(0);
+    draw.set(withTiming(1, { duration: 110, easing: out }));
+    op.set(withSequence(withTiming(1, { duration: 60 }), withDelay(120, withTiming(0, { duration: 160 })), withDelay(1100, withTiming(0.45, { duration: 300 }))));
+  }, [trigger, op, draw]);
+  const st = useAnimatedStyle(() => ({ opacity: op.value, transform: [{ scaleY: draw.value }] }));
+  const w = size * 0.22;
+  return (
+    <Animated.View pointerEvents="none" style={[{ position: 'absolute', left: size / 2 - w / 2, top: size * 0.12, width: w, height: size * 0.76, transformOrigin: 'top' }, st]}>
+      <Svg width={w} height={size * 0.76} viewBox="0 0 20 76">
+        <Path d="M10 0 L6 12 L13 22 L7 34 L14 46 L8 58 L12 68 L10 76" stroke="#6B4423" strokeWidth={3} fill="none" strokeLinejoin="round" strokeLinecap="round" />
+      </Svg>
+    </Animated.View>
+  );
+}
+
+/** 과자 부스러기: 부러지는 순간 작은 조각 몇 개가 아래로 톡 떨어지며 사라짐 (0.7초 한 번) */
+const CRUMBS = [
+  { dx: -0.32, dy: 0.42, r: 0.05, rot: -120 },
+  { dx: -0.12, dy: 0.5, r: 0.035, rot: 90 },
+  { dx: 0.1, dy: 0.48, r: 0.045, rot: -60 },
+  { dx: 0.3, dy: 0.4, r: 0.035, rot: 140 },
+];
+function Crumb({ trigger, size, c, reduceMotion }: { trigger: number; size: number; c: (typeof CRUMBS)[number]; reduceMotion?: boolean }) {
+  const p = useSharedValue(0);
+  useEffect(() => {
+    if (!trigger) return;
+    p.set(0);
+    p.set(withDelay(90, withTiming(1, { duration: reduceMotion ? 500 : 700, easing: Easing.out(Easing.quad) })));
+  }, [trigger, p, reduceMotion]);
+  const k = reduceMotion ? 0.5 : 1;
+  const st = useAnimatedStyle(() => {
+    const v = p.value;
+    return {
+      opacity: v <= 0 ? 0 : v < 0.1 ? v * 10 : 1 - (v - 0.1) / 0.9,
+      // 옆으로 퍼지면서 아래로 떨어짐 (포물선)
+      transform: [{ translateX: c.dx * size * k * v }, { translateY: (c.dy * v * v - 0.08 * v) * size * k }, { rotate: `${c.rot * v}deg` }],
+    };
+  });
+  const d = c.r * size * 2;
+  return (
+    <Animated.View
+      pointerEvents="none"
+      style={[{ position: 'absolute', left: size / 2 - d / 2, top: size * 0.5 - d / 2, width: d, height: d, borderRadius: d * 0.3, backgroundColor: '#C68B4E', borderWidth: 1, borderColor: '#8E5B2C' }, st]}
+    />
   );
 }
 
@@ -279,7 +334,8 @@ export function ItemToy({
   };
   const onTap = () => {
     setPresses((n) => n + 1);
-    if (id === 'snack') apart.set(withSequence(withSpring(1, GENTLE), withDelay(1300, withSpring(0, GENTLE))));
+    // 과자: 금이 먼저 간 뒤(0.1초) 반쪽이 벌어지고, 1.3초 뒤 다시 붙음
+    if (id === 'snack') apart.set(withSequence(withDelay(110, withSpring(1, GENTLE)), withDelay(1300, withSpring(0, GENTLE))));
     onPress();
   };
 
@@ -305,6 +361,14 @@ export function ItemToy({
           )}
           {id === 'apple' && <Bites count={Math.min(3, presses)} size={size} bg={bg} />}
           {id === 'banana' && [0, 1, 2].map((i) => <PeelStrip key={i} index={i} peeled={presses > i} size={size} />)}
+          {id === 'snack' && (
+            <>
+              <Crack trigger={presses} size={size} />
+              {CRUMBS.map((c, i) => (
+                <Crumb key={i} trigger={presses} size={size} c={c} reduceMotion={reduceMotion} />
+              ))}
+            </>
+          )}
         </Animated.View>
       </Pressable>
     </View>

@@ -17,6 +17,7 @@ export default function ChildLayout() {
     <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: C.primarySoft }, animation: 'fade' }}>
       <Stack.Screen name="index" />
       <Stack.Screen name="session" />
+      <Stack.Screen name="play" />
       <Stack.Screen name="story" />
       <Stack.Screen name="audio" options={{ contentStyle: { backgroundColor: '#21242B' } }} />
       <Stack.Screen name="end" />

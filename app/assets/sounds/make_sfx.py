@@ -42,4 +42,14 @@ save("tong", tong, 0.22)
 # 쏙 (바구니에 들어감): 짧게 올라가는 부드러운 음 — 작게(0.22)
 n = int(sr * 0.16); t = np.arange(n) / sr; f = 380 + 900 * (t / t[-1]) ** 1.6
 save("ssok", np.sin(2 * np.pi * np.cumsum(f) / sr) * np.abs(np.sin(np.pi * t / t[-1])) ** 1.5, 0.22)
+# 쓱 (쓸어내기): 아주 부드럽게 쓸리는 노이즈 — 손가락을 따라 자주 나므로 가장 작게(0.16)
+n = int(sr * 0.22); t = np.arange(n) / sr
+swish = np.convolve(rng.normal(0, 1, n), np.ones(18) / 18, "same") * np.sin(np.pi * t / t[-1]) ** 2
+swish = np.diff(swish, prepend=0) * 0.5 + swish * 0.5  # 너무 웅웅거리지 않게 살짝 밝게
+save("swish", swish, 0.16)
+# 둥! (세게 친 북): 더 낮고 길게 울림 — 그래도 최대 0.35
+n = int(sr * 0.8); t = np.arange(n) / sr
+drum_big = np.sin(2 * np.pi * (70 + 55 * np.exp(-t * 18)) * t) * env(n, 0.002, 0.26)
+drum_big += np.convolve(rng.normal(0, 1, n), np.ones(20) / 20, "same") * env(n, 0.001, 0.02) * 0.5
+save("drum_big", drum_big)
 print("ok")
