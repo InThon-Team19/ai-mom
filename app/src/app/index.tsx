@@ -1,11 +1,11 @@
-// 모드 선택 (부모 / 아이) — 서버 연결 확인용
+// 모드 선택 (부모 / 아이) + 서버 주소 설정 — 화면 디자인은 민철 와이어프레임 나오면 교체
 import { Link } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { Text, View } from 'react-native';
+import { useCallback, useEffect, useState } from 'react';
+import { Pressable, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { api } from '@/lib/api';
-import { API_URL } from '@/lib/config';
+import { loadApiUrl, saveApiUrl } from '@/lib/config';
 
 const LINKS = [
   ['/parent/onboarding', '가입 1 배경 정보'],
@@ -20,9 +20,19 @@ const LINKS = [
 
 export default function Home() {
   const [server, setServer] = useState('확인 중...');
-  useEffect(() => {
-    api.health().then(() => setServer('연결됨')).catch(() => setServer(`연결 실패 — ${API_URL}`));
+  const [url, setUrl] = useState('');
+
+  const check = useCallback(() => {
+    setServer('확인 중...');
+    api.health().then(() => setServer('연결됨')).catch(() => setServer('연결 실패'));
   }, []);
+
+  useEffect(() => {
+    loadApiUrl().then((u) => {
+      setUrl(u);
+      check();
+    });
+  }, [check]);
 
   return (
     <SafeAreaView style={{ flex: 1, padding: 24, gap: 14 }}>
@@ -32,7 +42,29 @@ export default function Home() {
           {label}
         </Link>
       ))}
-      <Text style={{ color: '#888' }}>서버: {server}</Text>
+
+      <View style={{ gap: 6, marginTop: 'auto' }}>
+        <Text style={{ color: '#888' }}>서버: {server}</Text>
+        <View style={{ flexDirection: 'row', gap: 8 }}>
+          <TextInput
+            value={url}
+            onChangeText={setUrl}
+            autoCapitalize="none"
+            autoCorrect={false}
+            keyboardType="url"
+            placeholder="http://노트북IP:8000"
+            style={{ flex: 1, borderWidth: 1, borderColor: '#ccc', borderRadius: 8, padding: 8 }}
+          />
+          <Pressable
+            onPress={async () => {
+              setUrl(await saveApiUrl(url));
+              check();
+            }}
+            style={{ paddingHorizontal: 14, justifyContent: 'center', backgroundColor: '#208AEF', borderRadius: 8 }}>
+            <Text style={{ color: 'white' }}>저장</Text>
+          </Pressable>
+        </View>
+      </View>
     </SafeAreaView>
   );
 }

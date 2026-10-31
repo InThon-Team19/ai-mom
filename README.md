@@ -58,6 +58,14 @@ npx expo start              # 폰/태블릿 Expo Go로 QR
 - 패키지 추가는 `npx expo install <pkg>` (SDK 맞는 버전)
 - 같은 와이파이가 안 되면 `cloudflared tunnel --url http://localhost:8000`
 
+
+## 서버 운영 (시연)
+- 서버는 **태희 노트북 1대**에서 실행 (`--host 0.0.0.0 --port 8000`). 폰/태블릿은 같은 와이파이로 `http://노트북IP:8000`
+- 앱 **홈 화면 아래 서버 주소 칸**에서 주소를 바꾸고 저장 → APK를 다시 빌드할 필요 없음
+- 와이파이가 막히면(대회장 격리 등) `cloudflared tunnel --url http://localhost:8000` → 나온 https 주소를 홈 화면에 입력
+- APK: `cd app && npx eas-cli@latest build -p android --profile preview` (http 주소 허용 설정 포함)
+- 확인: `http://노트북IP:8000/docs`, 서버 테스트 `cd server && pytest -q`
+
 ## Git 규칙 (해커톤용: main 직접 push)
 1. **main에 바로 push**. 브랜치·PR 필요 없음
 2. 작업 전 `git pull`, push 전 `git pull --rebase` (충돌 나면 바로 풀고 다시 push)

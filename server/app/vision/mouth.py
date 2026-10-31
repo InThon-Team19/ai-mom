@@ -12,6 +12,14 @@ from app.vision.landmarks import VideoDetector, mouth_box, mouth_metrics
 LEVELS = 4
 
 
+def _imwrite(path: Path, img: np.ndarray) -> None:
+    """cv2.imwrite 는 한글 경로에서 조용히 실패 → 인코딩 후 직접 저장."""
+    ok, buf = cv2.imencode(path.suffix, img)
+    if not ok:
+        raise ValueError(f"이미지 인코딩 실패: {path.name}")
+    path.write_bytes(buf.tobytes())
+
+
 def analyze_video(video: Path, out_dir: Path, sample_fps: float = 15.0) -> dict:
     cap = cv2.VideoCapture(str(video))
     if not cap.isOpened():
@@ -53,12 +61,12 @@ def analyze_video(video: Path, out_dir: Path, sample_fps: float = 15.0) -> dict:
         x0, y0, x1, y1 = mouth_box(lm, w, h)
         crop = cv2.resize(bgr[y0:y1, x0:x1], (256, 256))
         path = out_dir / f"mouth_{i}.png"
-        cv2.imwrite(str(path), crop)
+        _imwrite(path, crop)
         sprites.append(path)
 
     # 아바타 얼굴용 기본 프레임 (가장 닫힌 입)
     face = out_dir / "face.jpg"
-    cv2.imwrite(str(face), frames[int(np.argmin(opens))][1])
+    _imwrite(face, frames[int(np.argmin(opens))][1])
 
     return {
         "face_ratio": round(len(frames) / total, 3) if total else 0.0,

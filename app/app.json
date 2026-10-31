@@ -56,7 +56,16 @@
           "cameraPermission": "부모 입모양 영상을 촬영해요.",
           "microphonePermission": "낭독 영상의 목소리를 녹음해요."
         }
-      ]
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "usesCleartextTraffic": true
+          }
+        }
+      ],
+      "expo-asset"
     ],
     "experiments": {
       "typedRoutes": true,
