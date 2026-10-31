@@ -1,0 +1,12 @@
+# 배포 이미지에 넣지 않을 것: 키·로컬 DB·개인 녹음·가상환경
+.env
+.env.*
+.venv
+__pycache__
+*.pyc
+aibom.db
+aibom.db-*
+data
+static/children
+tests
+.pytest_cache
