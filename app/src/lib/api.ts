@@ -28,12 +28,15 @@ const json = (method: string, body: unknown): RequestInit => ({
 });
 
 /** 로컬 파일(uri) + 폼 필드 → multipart 업로드.
- * Expo 58 기본 fetch(expo/fetch)는 RN 식 {uri, name, type} 첨부를 지원하지 않음 → expo-file-system File(Blob 구현) 사용 */
-function upload<T>(path: string, uri: string, _type: string, fields: Record<string, string> = {}) {
+ * Expo 58 기본 fetch(expo/fetch)는 RN 식 {uri} 첨부도, 네이티브 File 객체도 못 받음.
+ * 받는 형식은 진짜 Blob 또는 bytes() 를 가진 객체 → 파일 내용을 읽어 bytes() 객체로 감싸 보냄 */
+async function upload<T>(path: string, uri: string, type: string, fields: Record<string, string> = {}) {
   const form = new FormData();
   for (const [k, v] of Object.entries(fields)) form.append(k, v);
   const name = uri.split('/').pop() || 'file';
-  form.append('file', new File(uri), name);
+  const data = new Uint8Array(await new File(uri).arrayBuffer());
+  const part = { name, type, size: data.byteLength, bytes: async () => data };
+  form.append('file', part as unknown as Blob, name);
   return req<T>(path, { method: 'POST', body: form });
 }
 
