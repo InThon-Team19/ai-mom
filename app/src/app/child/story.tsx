@@ -12,6 +12,7 @@ import { BookIcon, ChevIcon, ChunkyButton, CloseButton, K, KidScreen, SOFT2, Spe
 import { sleep, useDailyLimit, useMouthScale, who } from '@/components/child/kit';
 import { ParentExit } from '@/components/ParentExit';
 import { dayOf, fill } from '@/content/curriculum';
+import { storyBooks } from '@/content/sensory/stories';
 import { useSpeak } from '@/hooks/useSpeak';
 import { api } from '@/lib/api';
 import { logEvent } from '@/lib/sense';
@@ -20,13 +21,14 @@ import { AnimatedText, Text } from '@/components/AppText';
 
 export default function Story() {
   const profile = useProfile();
-  const { fav, basket } = useLocalSearchParams<{ fav?: string; basket?: string }>();
+  const { fav, basket, storyId } = useLocalSearchParams<{ fav?: string; basket?: string; storyId?: string }>();
   const { u, f, compact } = useKid();
   const focused = useIsFocused();
   const { speak, stop, mouth, avatarDriver, speaking } = useSpeak(profile?.childId);
   const scale = useMouthScale(profile?.childId);
   const { me, name } = who(profile);
-  const story = dayOf(profile?.day ?? 1).story;
+  const selectedStory = storyId ? storyBooks[Number(storyId)] : undefined;
+  const story = selectedStory ?? dayOf(profile?.day ?? 1).story;
   const childId = profile?.childId;
   const [page, setPage] = useState(0);
   const [scene, setScene] = useState({ w: 0, h: 0 });
@@ -39,6 +41,13 @@ export default function Story() {
   }, [stop, fav, basket]);
 
   useDailyLimit(profile?.settings.dailyLimitMin, focused, toEnd);
+
+  const finishStory = useCallback(() => {
+    run.current++;
+    stop();
+    if (selectedStory) router.dismissTo({ pathname: '/child/sensory', params: { cards: storyId } });
+    else toEnd();
+  }, [stop, selectedStory, storyId, toEnd]);
 
   useEffect(() => {
     if (profile && !story) toEnd();
@@ -60,6 +69,7 @@ export default function Story() {
           await speak(fill(`{me}가 동화책 읽어줄게. ${story.title}!`, { me, name }));
           if (t !== run.current) return;
           await sleep(500);
+          if (t !== run.current) return;
         }
         const t0 = Date.now();
         await speak(story.pages[page].text);
@@ -68,14 +78,14 @@ export default function Story() {
         await sleep(1500);
         if (t !== run.current) return;
         if (page + 1 < story.pages.length) setPage(page + 1);
-        else toEnd();
+        else finishStory();
       })();
       return () => {
         if (pre) clearTimeout(pre);
         run.current++;
         stop();
       };
-    }, [story, page, speak, stop, me, name, toEnd, childId]),
+    }, [story, page, speak, stop, me, name, finishStory, childId]),
   );
 
   if (!story) return <View style={{ flex: 1, backgroundColor: K.bg }} />;
@@ -173,7 +183,7 @@ export default function Story() {
           icon={<SpeakerIcon size={u(24, 16)} waves={1} />}
           onPress={() => {
             stop();
-            router.push('/child/audio');
+            router.push({ pathname: '/child/audio', params: selectedStory ? { storyId, page: String(page) } : {} });
           }}
           color={K.teal}
           deep={K.tealDeep}
@@ -184,9 +194,9 @@ export default function Story() {
           d={u(6, 3)}
         />
         <ChunkyButton
-          label="다음 장"
+          label={selectedStory && page + 1 === story.pages.length ? '단어 카드' : '다음 장'}
           iconRight={<ChevIcon size={u(20, 14)} />}
-          onPress={() => (page + 1 < story.pages.length ? setPage(page + 1) : toEnd())}
+          onPress={() => (page + 1 < story.pages.length ? setPage(page + 1) : finishStory())}
           height={btnH}
           width={u(188, 120)}
           fontSize={f(23, 15)}

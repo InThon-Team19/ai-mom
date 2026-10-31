@@ -92,6 +92,15 @@ def summarize(events: list[dict], day: str) -> Summary:
     gaze_s = sum(e["data"].get("seconds", 0) for e in by("gaze"))
     listen_s = sum(e["data"].get("seconds", 0) for e in by("listen"))
     repeats = by("repeat")
+    # 녹음 결과가 화면의 대기 종료 뒤 도착하거나 사물 놀이 중 먼저 말한 경우도 반영.
+    # 같은 clip_id의 voice/repeat 이벤트는 한 번만 센다.
+    repeat_clips = {e["data"].get("clip_id") for e in repeats if e["data"].get("clip_id")}
+    for event in by("voice"):
+        data = event["data"]
+        clip_id = data.get("clip_id")
+        if clip_id and clip_id not in repeat_clips and (data.get("phase") == "repeat" or data.get("matched") is True):
+            repeats.append({"type": "repeat", "data": {**data, "word": data.get("item", "")}})
+            repeat_clips.add(clip_id)
     ok = [e for e in repeats if e["data"].get("matched")]
     smiles = len(by("smile"))
     rt = [e["data"]["reaction_ms"] for e in touches if e["data"].get("reaction_ms")]

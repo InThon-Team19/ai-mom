@@ -197,6 +197,7 @@ export function useChildListener({
       let holdStart = 0;
       let echo: number | null = null;
       let bargeTicks = 0;
+      let wasHeld = false;
 
       const endWindow = async (keep: boolean) => {
         const uri = await stopRec();
@@ -214,6 +215,7 @@ export function useChildListener({
       while (alive) {
         const now = Date.now();
         const held = holds.current > 0 || now < resumeAt.current;
+        if (held) wasHeld = true;
         // Android: 아바타가 말하는 동안에도 녹음을 유지하며 끼어들기 감지 (iOS 는 녹음 중 스피커 소리가 작아져 예전처럼 멈춤)
         if (held && holds.current > 0 && Platform.OS === 'android' && cb.current.onBargeIn) {
           // 아이가 말하던 중에 아바타가 말을 시작함: 그 토막은 여기서 끊어 올림 (아바타 목소리가 아이 토막에 섞이지 않게)
@@ -276,6 +278,12 @@ export function useChildListener({
           continue;
         }
 
+        // Android의 끼어들기 감지용 녹음에는 아바타 목소리가 들어 있다.
+        // 듣기를 재개할 때 새 창으로 바꿔 아이 목소리로 업로드하지 않는다.
+        if (wasHeld) {
+          await endWindow(false);
+          wasHeld = false;
+        }
         if (!recording.current) {
           try {
             await startRec();
@@ -371,6 +379,11 @@ export function useChildListener({
             winMeta = cb.current.meta();
             busyRef.current = true;
             setSt('hearing');
+          } else if (cb.current.meta().phase === 'repeat' && t - winStart >= LISTEN.FIXED_WINDOW_MS) {
+            // 짧거나 작은 단어가 초기 보정/음량 기준을 못 넘겨도 서버에서 말소리인지 확인한다.
+            // 무음은 서버가 saved:false로 거르므로 말한 횟수로 기록하지 않는다.
+            winMeta = cb.current.meta();
+            await endWindow(true);
           } else if (t - winStart > LISTEN.IDLE_WINDOW_MS) {
             await endWindow(false); // 아무 말 없던 창은 버리고 새로 시작
           }

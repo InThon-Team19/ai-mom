@@ -1,7 +1,7 @@
 // 아이 태블릿 3-7 청각 집중 모드 (화면을 어둡게 하고 부모 목소리로만 이어서 들려줌 — 스크린 타임 대응) — 담당: 태희 (민철 Design 보드 KidAudio)
 // 보드: 밤하늘(별·달·언덕) · 부모/홈 · "엄마 목소리만 들어요" · 동그라미 속 아바타 · 소리 막대 · 지금 문장 · 화면 켜기
 // 감각 자극 제한: 깜빡임 없음 — 원·막대는 목소리 크기만큼 부드럽게만 움직임
-import { router, useFocusEffect } from 'expo-router';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { View } from 'react-native';
 import Svg, { Circle, Ellipse, G } from 'react-native-svg';
@@ -11,6 +11,7 @@ import { ChunkyButton, HomePill, K, KidScreen, MonitorIcon, SkipNextIcon, useKid
 import { sleep, useMouthScale, who } from '@/components/child/kit';
 import { ParentExit } from '@/components/ParentExit';
 import { dayOf, fill, ITEMS } from '@/content/curriculum';
+import { storyBooks } from '@/content/sensory/stories';
 import { useSpeak } from '@/hooks/useSpeak';
 import { logEvent } from '@/lib/sense';
 import { useProfile } from '@/lib/store';
@@ -18,11 +19,17 @@ import { Text } from '@/components/AppText';
 
 export default function AudioOnly() {
   const profile = useProfile();
+  const { storyId, page } = useLocalSearchParams<{ storyId?: string; page?: string }>();
+  const selectedStory = storyId ? storyBooks[Number(storyId)] : undefined;
   const { u, f, width, height, compact, insets } = useKid();
   const { speak, stop, mouth, avatarDriver } = useSpeak(profile?.childId, true);
   const scale = useMouthScale(profile?.childId);
   const { name, me, english } = who(profile);
-  const [from, setFrom] = useState({ at: 0 }); // "다음" 누를 때마다 새 객체 → 흐름을 그 문장부터 다시 시작
+  const [from, setFrom] = useState(() => {
+    const startPage = Number(page);
+    const validPage = selectedStory && Number.isInteger(startPage) && startPage >= 0 && startPage < selectedStory.pages.length;
+    return { at: validPage ? startPage + 1 : 0 }; // 선택한 동화는 현재 장부터 (첫 문장은 제목 소개)
+  });
   const [now, setNow] = useState(''); // 지금 들려주는 문장
   const pos = useRef(0);
   const run = useRef(0);
@@ -31,6 +38,11 @@ export default function AudioOnly() {
   const lines = useMemo(() => {
     const d = dayOf(profile?.day ?? 1);
     const out: { text: string; pause: number }[] = [];
+    if (selectedStory) {
+      out.push({ text: fill(`{me}가 동화책 읽어줄게. ${selectedStory.title}!`, { name, me }), pause: 1000 });
+      for (const p of selectedStory.pages) out.push({ text: p.text, pause: 1500 });
+      return out;
+    }
     for (const id of d.items) {
       const it = ITEMS[id];
       out.push({ text: fill(it.invite, { name, me }), pause: 1500 });
@@ -43,7 +55,7 @@ export default function AudioOnly() {
     }
     out.push({ text: fill('잘 들었어, 우리 {name}! 사랑해.', { name, me }), pause: 0 });
     return out;
-  }, [profile?.day, name, me, english]);
+  }, [profile?.day, name, me, english, selectedStory]);
 
   useFocusEffect(
     useCallback(() => {
@@ -61,12 +73,15 @@ export default function AudioOnly() {
           logEvent('listen', { seconds: Math.round((Date.now() - t0) / 100) / 10, mode: 'audio' });
           await sleep(lines[i].pause);
         }
+        if (t === run.current && selectedStory) {
+          router.dismissTo({ pathname: '/child/sensory', params: { cards: storyId } });
+        }
       })();
       return () => {
         run.current++;
         stop();
       };
-    }, [profile, lines, speak, stop, from]),
+    }, [profile, lines, speak, stop, from, selectedStory, storyId]),
   );
 
   /** 다음 문장으로 건너뛰기 (끝이면 처음부터) */
@@ -137,7 +152,7 @@ export default function AudioOnly() {
           ))}
         </View>
         {!compact && !!now && (
-          <Text numberOfLines={2} style={{ maxWidth: '86%', fontSize: f(38, 18), fontWeight: '800', color: K.white, textAlign: 'center' }}>
+          <Text numberOfLines={2} adjustsFontSizeToFit style={{ maxWidth: '86%', fontSize: f(38, 18), fontWeight: '800', color: K.white, textAlign: 'center' }}>
             &quot;{now}&quot;
           </Text>
         )}

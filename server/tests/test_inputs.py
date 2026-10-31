@@ -125,6 +125,23 @@ def test_match_expected_is_lenient():
     assert not match_expected("바나나", "사과 주세요")
 
 
+def test_repeat_summary_includes_late_and_spontaneous_clips_without_duplicates():
+    voice = {"type": "voice", "data": {"clip_id": "1", "item": "사과", "phase": "repeat", "matched": True}}
+    late = summarize([voice], "2026-11-01")
+    assert late.repeats == 1 and late.repeat_ok == 1 and late.words == ["사과"]
+    repeat = {"type": "repeat", "data": {"clip_id": "1", "word": "사과", "matched": True}}
+    both = summarize([voice, repeat, voice], "2026-11-01")
+    assert both.repeats == 1 and both.repeat_ok == 1
+    spontaneous = {"type": "voice", "data": {"clip_id": "2", "item": "바나나", "phase": "object", "matched": True}}
+    other = {"type": "voice", "data": {"clip_id": "3", "item": "바나나", "phase": "object", "matched": False}}
+    result = summarize([spontaneous, other], "2026-11-01")
+    assert result.repeats == 1 and result.repeat_ok == 1 and result.words == ["바나나"]
+    unknown = {"type": "voice", "data": {"clip_id": "4", "item": "사과", "phase": "repeat", "matched": None}}
+    result = summarize([unknown], "2026-11-01")
+    assert result.repeats == 1 and result.repeat_ok == 0 and result.words == []
+    assert summarize([], "2026-11-01").repeats == 0
+
+
 def test_activity_summary_balance():
     ev = [{"type": "touch", "data": {"target": "사과", "reaction_ms": 800}}] * 4 + \
          [{"type": "gaze", "data": {"seconds": 30}}, {"type": "smile", "data": {}},

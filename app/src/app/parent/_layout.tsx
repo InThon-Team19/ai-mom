@@ -98,9 +98,10 @@ export default function ParentTabs() {
       <Tabs.Screen name="avatar" options={{ title: '아바타', tabBarIcon: (p) => <AvatarIcon color={p.color} size={22} />, tabBarLabel: (p) => <TabLabel focused={p.focused} text="아바타" /> }} />
       <Tabs.Screen name="settings" options={{ title: '설정', tabBarIcon: (p) => <GearIcon color={p.color} size={22} />, tabBarLabel: (p) => <TabLabel focused={p.focused} text="설정" /> }} />
       {/* 내일 계획 낭독: 탭 막대에는 숨기고 피드백 '낭독하기'에서 들어감 */}
-      <Tabs.Screen name="plan" options={{ href: null, title: '내일 계획' }} />
+      {/* Expo 58의 href:null은 화면 접근도 막으므로 탭 버튼만 숨긴다. */}
+      <Tabs.Screen name="plan" options={{ tabBarButton: () => null, tabBarItemStyle: { display: 'none' }, title: '내일 계획' }} />
       {/* 아이 녹음 기록: 리포트 아래 버튼에서 들어감 */}
-      <Tabs.Screen name="recordings" options={{ href: null, title: '아이 녹음 기록' }} />
+      <Tabs.Screen name="recordings" options={{ tabBarButton: () => null, tabBarItemStyle: { display: 'none' }, title: '아이 녹음 기록' }} />
     </Tabs>
   );
 }

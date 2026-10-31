@@ -3,11 +3,25 @@ import { Platform } from 'react-native';
 
 import { haptic, type HapticKind as SenseHaptic } from '@/lib/sense';
 
-export type SoundId = 'fire' | 'roar' | 'wind' | 'loosen' | 'untie' | 'magic' | 'crack' | 'break' | 'flap' | 'water' | 'waterMore' | 'splash' | 'rub';
-// Add actual, licensed resources here using static require(). No placeholder paths.
-export const sounds: Record<SoundId, AudioSource | null> = {
-  fire: null, roar: null, wind: null, loosen: null, untie: null, magic: null,
-  crack: null, break: null, flap: null, water: null, waterMore: null, splash: null, rub: null,
+export type SoundId = 'fire' | 'moonChange' | 'wakeup' | 'roar' | 'wind' | 'whoosh' | 'loosen' | 'untie' | 'magic' | 'crack' | 'break' | 'call' | 'flap' | 'water' | 'waterMore' | 'splash' | 'rub';
+export const sounds: Record<SoundId, AudioSource> = {
+  fire: require('@/assets/sounds/sun_fire.wav'),
+  moonChange: require('@/assets/sounds/moon_change.wav'),
+  wakeup: require('@/assets/sounds/tiger_wakeup.wav'),
+  roar: require('@/assets/sounds/tiger_roar.wav'),
+  wind: require('@/assets/sounds/hat_wind.wav'),
+  whoosh: require('@/assets/sounds/hat_whoosh.wav'),
+  loosen: require('@/assets/sounds/pouch_rustle.wav'),
+  untie: require('@/assets/sounds/pouch_untie.wav'),
+  magic: require('@/assets/sounds/pouch_magic.wav'),
+  crack: require('@/assets/sounds/stick_crack.wav'),
+  break: require('@/assets/sounds/stick_break.wav'),
+  call: require('@/assets/sounds/crow_call.wav'),
+  flap: require('@/assets/sounds/crow_flap.wav'),
+  water: require('@/assets/sounds/pitcher_pour.wav'),
+  waterMore: require('@/assets/sounds/pitcher_pour.wav'),
+  splash: require('@/assets/sounds/pitcher_splash.wav'),
+  rub: require('@/assets/sounds/stone_rub.wav'),
 };
 // 진동은 lib/sense haptic() 으로만 (Android 진동·진동 끄기·화면 흔들기 공통). 감각 자극 제한: 해 진동은 0.9초 안에 끝
 const KIND: Record<HapticKind, SenseHaptic> = { soft: 'tap', medium: 'tap', strong: 'strong', rough: 'tick' };
@@ -22,18 +36,23 @@ export function pulse(kind: HapticKind) {
   lastHaptic = Date.now();
   haptic(KIND[kind]);
 }
-let player: AudioPlayer | null = null;
+let players: AudioPlayer[] = [];
 let owner: string | null = null;
 export function stopSound(id?: string) {
   if (id && owner !== id) return;
-  try { player?.pause(); player?.remove(); } catch {}
-  player = null; owner = null;
+  for (const player of players) {
+    try { player.pause(); player.remove(); } catch {}
+  }
+  players = []; owner = null;
 }
-export function playSound(id: string, sound: SoundId, loop = false) {
+export function playSound(id: string, sound: SoundId | SoundId[], loop = false) {
   stopSound();
-  if (!sounds[sound]) return;
+  owner = id;
   try {
-    player = createAudioPlayer(sounds[sound]); owner = id;
-    player.volume = 0.28; player.loop = loop; player.play();
+    for (const effect of Array.isArray(sound) ? sound : [sound]) {
+      const player = createAudioPlayer(sounds[effect]);
+      players.push(player);
+      player.volume = 0.28; player.loop = loop; player.play();
+    }
   } catch { stopSound(); }
 }

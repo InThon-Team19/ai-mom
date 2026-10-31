@@ -385,7 +385,7 @@ export default function Session() {
   /** 말소리 토막이 서버에서 돌아올 때까지 기다림. 아이가 말하는 중이거나 올리는 중이면 최대 10초 더 */
   const waitUtterance = useCallback(
     async (t: number, ms: number): Promise<ClipResult | null> => {
-      utter.current = null;
+      if (utter.current?.meta.item !== metaRef.current.item) utter.current = null;
       waiting.current = true;
       const t0 = Date.now();
       try {
@@ -462,7 +462,6 @@ export default function Session() {
           // 그래도 조용하면 저절로 넘어가지 않고, 가끔 다시 권하며 계속 기다림 (넘어가는 건 아이가 말하거나 다음 버튼)
           const nudges = ['천천히 해도 괜찮아.', word, `준비되면 말해 줘. ${it.ko}!`];
           for (let i = 0; !r; i++) {
-            if (i === 0) logEvent('repeat', { word: it.ko, matched: null, text: '' });
             r = await waitUtterance(t, 12000);
             if (t !== run.current) return;
             if (r) break;
@@ -829,7 +828,7 @@ export default function Session() {
       evaluate(); // 울음 등은 바로 반영
       return;
     }
-    if (waiting.current && (saved || (!r.res && r.spoke))) {
+    if ((waiting.current || (phase === 'repeat' && r.meta.phase === 'repeat')) && (saved || (!r.res && r.spoke))) {
       utter.current = r;
       return;
     }

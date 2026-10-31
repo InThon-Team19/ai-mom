@@ -1,6 +1,7 @@
 // 아이 목소리: 오늘 자동 녹음된 말소리 클립 목록 + 재생 (한 번에 하나만) — 담당: 태희
 import { setAudioModeAsync, useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
-import { useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
+import { useFocusEffect } from 'expo-router';
 import { Pressable, View } from 'react-native';
 import Svg, { Path, Rect } from 'react-native-svg';
 
@@ -25,12 +26,19 @@ export function ClipList({ childId, clips, state }: { childId: string; clips: Ch
   const status = useAudioPlayerStatus(player);
   const [playingId, setPlayingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const request = useRef(0);
+  useFocusEffect(useCallback(() => () => {
+    request.current++;
+    player.pause();
+    setPlayingId(null);
+  }, [player]));
 
   // 끝나면 자동으로 재생 표시가 꺼지게 상태에서 바로 계산 (로딩 중엔 재생 중으로 봄)
   const isActive = (id: string) =>
     playingId === id && !status.didJustFinish && (status.playing || status.isBuffering || !status.isLoaded);
 
   const toggle = async (clip: ChildClip) => {
+    const current = ++request.current;
     setError(null);
     try {
       if (isActive(clip.id)) {
@@ -40,10 +48,14 @@ export function ClipList({ childId, clips, state }: { childId: string; clips: Ch
       }
       player.pause();
       await setAudioModeAsync({ playsInSilentMode: true, allowsRecording: false }).catch(() => {});
-      player.replace(await api.childClipSource(childId, clip.id));
+      if (current !== request.current) return;
+      const source = await api.childClipSource(childId, clip.id);
+      if (current !== request.current) return;
+      player.replace(source);
       player.play();
       setPlayingId(clip.id);
     } catch {
+      if (current !== request.current) return;
       setPlayingId(null);
       setError('재생하지 못했어요. 서버 연결을 확인해 주세요.');
     }
