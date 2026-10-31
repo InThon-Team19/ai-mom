@@ -31,7 +31,7 @@ export type TurnOut = {
 
 let unavailableUntil = 0; // 404 면 1분 동안 묻지 않음 (예전엔 앱을 다시 켤 때까지 안 물어서 서버가 생겨도 고정 문장만 나왔음) // 한 번 404 면 이번 실행 동안 다시 안 물어봄 (아이 화면 지연 방지). 앱을 다시 불러오면 초기화
 
-/** 에이전트 대사. fallback 은 지금 커리큘럼 문장 (에이전트가 없거나 3.5초 안에 답이 없으면 사용. 서버는 AI 를 3초까지 기다림) */
+/** 에이전트 대사. fallback 은 지금 커리큘럼 문장 (에이전트가 없거나 5.5초 안에 답이 없으면 사용. 서버는 AI 를 4.5초까지 기다림) */
 export async function agentSay(input: TurnIn, fallback: string): Promise<{ text: string; outOfScope: boolean }> {
   if (Date.now() < unavailableUntil) return { text: fallback, outOfScope: false };
   try {
@@ -41,7 +41,7 @@ export async function agentSay(input: TurnIn, fallback: string): Promise<{ text:
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(input),
       }),
-      new Promise<never>((_, rej) => setTimeout(() => rej(new Error('timeout')), input.moment === 'chat' ? 6500 : 3500)),
+      new Promise<never>((_, rej) => setTimeout(() => rej(new Error('timeout')), input.moment === 'chat' ? 6500 : 5500)),
     ]);
     if (res.blocked) logEvent('blocked', { text: res.blocked });
     if (res.out_of_scope && input.child_text) logEvent('out_of_scope', { text: input.child_text });

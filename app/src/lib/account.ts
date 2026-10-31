@@ -120,9 +120,13 @@ export async function restoreFromAccount(): Promise<RestoreResult> {
   const auth = { Authorization: `Bearer ${a.token}` };
   try {
     // childId 를 모르는 예전 계정은 빈 변경(PUT {})으로 서버 프로필만 받아옴 (아무것도 바꾸지 않음)
-    const view = a.childId
-      ? await req<Partial<Profile>>(`/profile/${a.childId}`, { headers: auth })
-      : await req<Partial<Profile>>('/auth/profile', { method: 'PUT', headers: { ...auth, 'Content-Type': 'application/json' }, body: '{}' });
+    // 서버 주소가 틀렸거나 꺼져 있으면 fetch 가 1분 가까이 멈춰 시작 화면이 빈 채로 남음 → 8초면 '연결 안 됨'으로
+    const view = await Promise.race([
+      a.childId
+        ? req<Partial<Profile>>(`/profile/${a.childId}`, { headers: auth })
+        : req<Partial<Profile>>('/auth/profile', { method: 'PUT', headers: { ...auth, 'Content-Type': 'application/json' }, body: '{}' }),
+      new Promise<never>((_, rej) => setTimeout(() => rej(new Error('timeout')), 8000)),
+    ]);
     if (!view?.childId) return { ok: false, reason: 'network' };
     const profile = await setProfileFromServer({ ...view, onboarded: view.onboarded === true });
     await save({ ...a, childId: view.childId, serverOnboarded: view.onboarded === true });

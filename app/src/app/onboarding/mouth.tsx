@@ -2,7 +2,7 @@
 // 문장을 읽으며 정면 촬영. 영상은 저장·전송하지 않고 기기 안에서 0.05초마다 잰 입모양 수치만 서버로 → 학습률 상승.
 // 실제 부모 얼굴은 이 화면의 실시간 카메라 미리보기에만 보임. 표정 샘플은 "나중에"
 // 카메라 위 인식 표시(얼굴 틀·입 윤곽·체크)와 상태 문구는 기획 2-4 → components/FaceGuide
-import { useLocalSearchParams } from 'expo-router';
+import { useIsFocused, useLocalSearchParams } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
@@ -23,6 +23,7 @@ export default function MouthSignup() {
   const name = p?.child.nickname || p?.child.name;
   const me = p?.parent.title;
   const sentences = useMemo(() => MOUTH_SENTENCES.map((s) => fill(s, { name, me })), [name, me]);
+  const focused = useIsFocused(); // 다음 단계(1-7)로 가도 이 화면은 스택에 남음 → 카메라를 꺼야 함
   const device = useDevice(); // 폰: 화면 폭 / 태블릿: 가운데 최대 520, 높이는 화면의 일부
   const ra = useReadAloud({ childId: p?.childId, sentences, kind: 'signup', camera: true });
   const [camError, setCamError] = useState('');
@@ -46,6 +47,7 @@ export default function MouthSignup() {
   const next = ra.index < sentences.length - 1 ? sentences[ra.index + 1] : null;
 
   const leave = async () => {
+    if (ra.recording || ra.busy) return; // '그래도 다음으로'를 촬영 중에 눌러도 녹음이 켜진 채 넘어가지 않게
     await updateProfile({}); // 진행 상태 동기화 (입모양 수치는 이미 서버에 저장됨)
     goNext(edit, '/onboarding/setup');
   };
@@ -106,13 +108,17 @@ export default function MouthSignup() {
         </View>
       </View>
 
-      <FaceGuide
-        onFrame={onFrame}
-        onError={setCamError}
-        recording={ra.recording}
-        doneCount={doneSignal(ra.statuses, ra.allDone)}
-        style={{ ...device.camera, borderRadius: R.md, borderWidth: 1, borderColor: C.border }}
-      />
+      {focused ? (
+        <FaceGuide
+          onFrame={onFrame}
+          onError={setCamError}
+          recording={ra.recording}
+          doneCount={doneSignal(ra.statuses, ra.allDone)}
+          style={{ ...device.camera, borderRadius: R.md, borderWidth: 1, borderColor: C.border }}
+        />
+      ) : (
+        <View style={{ ...device.camera, borderRadius: R.md, backgroundColor: C.card }} />
+      )}
       {!!camError && <Text style={{ fontSize: 13, color: C.warn }}>카메라 인식 오류: {camError.slice(0, 80)}</Text>}
 
       <Card style={{ gap: 6 }}>

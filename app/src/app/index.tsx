@@ -28,14 +28,17 @@ export default function Entry() {
 
   useEffect(() => {
     (async () => {
-      setUrl(await loadApiUrl());
-      check();
-      const [role, p, a] = await Promise.all([getRole(), loadProfile(), loadAccount()]);
-      // 서버가 모든 API 에 로그인을 요구: 부모 기기인데 로그인 토큰이 없으면(이전 버전 가입 기기 포함) 로그인부터
-      // 부모 폰: 로그인돼 있으면 가입 정보를 서버에서 되살려 바로 이어서 (아이 소개를 다시 하지 않게)
-      if (role === 'parent' && (p.onboarded || a?.token)) setDest(await parentEntry());
-      else if (role === 'child') setDest('/child');
-      setReady(true);
+      try {
+        setUrl(await loadApiUrl());
+        check();
+        const [role, p, a] = await Promise.all([getRole(), loadProfile(), loadAccount()]);
+        // 서버가 모든 API 에 로그인을 요구: 부모 기기인데 로그인 토큰이 없으면(이전 버전 가입 기기 포함) 로그인부터
+        // 부모 폰: 로그인돼 있으면 가입 정보를 서버에서 되살려 바로 이어서 (아이 소개를 다시 하지 않게)
+        if (role === 'parent' && (p.onboarded || a?.token)) setDest(await parentEntry());
+        else if (role === 'child') setDest('/child');
+      } finally {
+        setReady(true); // 무슨 일이 있어도 빈 화면에 멈추지 않게 (최소한 기기 용도 고르기는 보이게)
+      }
     })();
   }, [check]);
 

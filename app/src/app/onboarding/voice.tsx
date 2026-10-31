@@ -41,6 +41,7 @@ export default function VoiceSignup() {
   const visible = sentences.slice(from, from + 5).map((text, k) => ({ text, i: from + k }));
 
   const leave = () => {
+    if (ra.recording || ra.busy) return; // '그래도 다음으로'를 녹음 중에 눌러도 마이크가 켜진 채 넘어가지 않게
     if (childId) api.registerVoice(childId).catch(() => {});
     goNext(edit, '/onboarding/mouth');
   };

@@ -101,6 +101,21 @@ export function useReadAloud({
     }
   }, [childId, busy, rec, sentences, index, kind, camera]);
 
+  /** 녹음 중 화면을 떠날 때(다른 탭으로): 보내지 않고 녹음만 멈춤 (마이크가 계속 켜져 있지 않게) */
+  const cancel = useCallback(async () => {
+    if (!rec.isRecording || pending.current) return;
+    pending.current = true;
+    try {
+      await rec.stop();
+      track.current = [];
+      setMessage('화면을 떠나서 녹음을 멈췄어요. 다시 눌러 읽어 주세요.');
+    } catch (e) {
+      reportError('readAloud cancel', e);
+    } finally {
+      pending.current = false;
+    }
+  }, [rec]);
+
   const statuses: SentenceStatus[] = sentences.map((_, i) => (i === index ? 'now' : done[i] === 'done' ? 'done' : done[i] === 'retry' ? 'retry' : 'todo'));
   const allDone = sentences.every((_, i) => done[i] === 'done');
 
@@ -113,6 +128,7 @@ export function useReadAloud({
     seconds: Math.floor(rec.seconds), // 화면 표시용 정수 초 (그대로면 3.217초처럼 보임)
     busy,
     toggle,
+    cancel,
     voice,
     mouth,
     gain,

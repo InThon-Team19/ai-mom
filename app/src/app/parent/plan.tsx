@@ -52,6 +52,12 @@ function PlanReader({ profile, plan }: { profile: Profile; plan: Day }) {
     [raFrame, feed],
   );
 
+  // 녹음 중 다른 탭으로 가면 카메라와 함께 마이크도 끔 (보내지 않음)
+  const { cancel, recording } = ra;
+  useEffect(() => {
+    if (!focused && recording) cancel();
+  }, [focused, recording, cancel]);
+
   // 문장 하나 전송이 끝날 때마다(busy true → false) 코칭 갱신
   const wasBusy = useRef(false);
   useEffect(() => {

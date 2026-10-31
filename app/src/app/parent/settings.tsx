@@ -8,6 +8,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { AccountSection } from '@/components/AccountSection';
 import { RingGauge } from '@/components/RingGauge';
 import { Button, Chip } from '@/components/ui';
+import { logoutAccount } from '@/lib/account';
 import { api } from '@/lib/api';
 import { getDeviceId } from '@/lib/device';
 import { pinHash, validPin } from '@/lib/pin';
@@ -143,6 +144,8 @@ export default function Settings() {
 
   const restart = () =>
     confirm('처음부터 다시 가입할까요?', '이 기기에 저장된 가입 정보가 지워져요. (서버의 학습 기록은 남아요)', '다시 가입', async () => {
+      // 로그인도 끊어야 함: 계정 토큰이 남아 있으면 부모 모드로 들어갈 때 같은 가족 정보를 되살려 그대로 부모 앱으로 돌아감
+      await logoutAccount();
       await resetLocal();
       router.replace('/');
     });

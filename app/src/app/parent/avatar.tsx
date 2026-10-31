@@ -122,6 +122,12 @@ function Learn({ profile, onLock }: { profile: Profile; onLock: (v: boolean) => 
     [raFrame, feed],
   );
 
+  // 녹음 중 다른 탭으로 가면 카메라와 함께 마이크도 끔 (보내지 않음)
+  const { cancel, recording } = ra;
+  useEffect(() => {
+    if (!focused && recording) cancel();
+  }, [focused, recording, cancel]);
+
   const lock = ra.recording || ra.busy;
   // 녹음 중에는 꾸미기로 못 넘어가게
   useEffect(() => {

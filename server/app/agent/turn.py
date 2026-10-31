@@ -14,7 +14,7 @@ from app.agent import safety
 from app.agent.scope import ITEMS, items_for_day, scope_text
 
 logger = logging.getLogger(__name__)
-LLM_TIMEOUT_S = 3.0  # 앱은 3.5초까지 기다림 (네트워크 몫을 남김). 연결 시간까지 포함한 전체 시간으로 끊음
+LLM_TIMEOUT_S = 4.5  # 앱은 5.5초까지 기다림 (네트워크 몫을 남김). 연결 시간까지 포함한 전체 시간으로 끊음. 3초는 AI 응답이 들쭉날쭉해 자주 끊겼음
 _pool = ThreadPoolExecutor(max_workers=4)
 CHAT_BUDGET_S = 5.0  # 이야기하기는 조금 기다려도 됨(아바타가 생각하는 얼굴) → 앱은 6.5초까지 기다림
 
