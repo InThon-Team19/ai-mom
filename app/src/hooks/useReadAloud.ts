@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import type { FaceFrame } from '@/components/FaceTracker';
 import { useVoiceRecorder } from '@/hooks/useVoiceRecorder';
-import { api, reportError } from '@/lib/api';
+import { api, reportError, trace } from '@/lib/api';
 import type { Gauge, TrackPoint } from '@/lib/types';
 
 export type SentenceStatus = 'done' | 'now' | 'todo' | 'retry';
@@ -61,7 +61,9 @@ export function useReadAloud({
         await rec.start();
         return;
       }
+      trace('readAloud 녹음 멈춤 요청');
       const uri = await rec.stop();
+      trace(`readAloud 녹음 파일 ${uri}`);
       if (!uri) {
         reportError('readAloud', '녹음 파일 uri 없음');
         setMessage('녹음이 저장되지 않았어요. 다시 눌러 주세요.');

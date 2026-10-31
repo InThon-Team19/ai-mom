@@ -1,6 +1,7 @@
 // 담당: 민주 — 서버 API 호출은 전부 여기에 모으기 (화면에서 fetch 직접 쓰지 않기)
 // ↓ 입력 파이프라인·아이 반응·프로필(임시) 부분: 태희
 import { File } from 'expo-file-system';
+import { readAsStringAsync } from 'expo-file-system/legacy';
 
 import { getApiUrl } from './config';
 import type {
@@ -34,13 +35,40 @@ export function reportError(where: string, e: unknown) {
   fetch(`${getApiUrl()}/debug/log`, { method: 'POST', body: msg }).catch(() => {});
 }
 
+/** 앱 진행 기록을 서버 터미널로 (원인 추적용, 실패해도 무시) */
+export function trace(msg: string) {
+  fetch(`${getApiUrl()}/debug/log`, { method: 'POST', body: `trace ${msg}` }).catch(() => {});
+}
+
+function withTimeout<T>(p: Promise<T>, ms: number, what: string): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const t = setTimeout(() => reject(new Error(`${what} 시간 초과(${ms}ms)`)), ms);
+    p.then(
+      (v) => (clearTimeout(t), resolve(v)),
+      (e) => (clearTimeout(t), reject(e)),
+    );
+  });
+}
+
+/** 녹음 파일 → base64. 오래 검증된 legacy API 먼저, 실패하면 새 File API */
+async function readBase64(uri: string) {
+  try {
+    return await withTimeout(readAsStringAsync(uri, { encoding: 'base64' }), 8000, 'legacy 읽기');
+  } catch (e) {
+    reportError('readBase64 legacy', e);
+    return await withTimeout(new File(uri).base64(), 8000, 'File 읽기');
+  }
+}
+
 /** 로컬 녹음 파일(uri) → base64 JSON 업로드.
  * Expo 58 기본 fetch(expo/fetch)로는 multipart 파일 첨부가 폰에서 실패해서, 이미 잘 되는 JSON 경로로 보냄 */
 async function uploadB64<T>(path: string, uri: string, fields: Record<string, string>) {
   try {
-    const audio_b64 = await new File(uri).base64();
+    trace(`${path} 읽기 시작 ${uri}`);
+    const audio_b64 = await readBase64(uri);
+    trace(`${path} 읽기 완료 ${audio_b64.length}자`);
     const ext = (uri.split('?')[0].split('.').pop() || 'm4a').toLowerCase();
-    return await req<T>(path, json('POST', { ...fields, audio_b64, ext }));
+    return await withTimeout(req<T>(path, json('POST', { ...fields, audio_b64, ext })), 30000, '업로드');
   } catch (e) {
     reportError(`upload ${path} (${uri})`, e);
     throw e;
