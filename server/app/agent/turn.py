@@ -40,8 +40,11 @@ def _persona(profile: dict) -> dict:
     child = profile.get("child") or {}
     parent = profile.get("parent") or {}
     name = child.get("nickname") or child.get("name") or "우리 아기"
+    last = ord(name[-1]) - 0xAC00 if name else -1
+    call = name + ("아" if 0 <= last < 11172 and last % 28 else "야")  # 부르는 말: 지민아 / 지호야
     return {
         "name": name,
+        "call": call,
         "me": parent.get("title") or "엄마",
         "tone": parent.get("tone") or "다정한",
         "english": bool(parent.get("english")) or "영어 노출" in (parent.get("goals") or []),
@@ -66,7 +69,7 @@ def _fallback(moment: str, item: str, p: dict, out_of_scope: bool, mood: str | N
     if mood == "overloaded":
         return f"천천히 해도 괜찮아. {ko}, 여기 있어."
     if moment == "invite":
-        return f"{p['name']}야, {ko} 한번 눌러볼까?"
+        return f"{p['call']}, {ko} 한번 눌러볼까?"
     return f"응, 그랬구나! 우리 {ko} 볼까?"
 
 
@@ -125,7 +128,7 @@ def _mentions_today(text: str, day: int) -> bool:
     return any(ITEMS[k]["ko"] in t or ITEMS[k]["en"].lower() in t for k in items_for_day(day))
 
 
-CHAT_OPENERS = ("{name}야, 오늘 재미있었어? {me}랑 이야기하자!", "{name}야, 오늘 뭐가 제일 좋았어?", "{name}야, 지금 기분이 어때?")
+CHAT_OPENERS = ("{call}, 오늘 재미있었어? {me}랑 이야기하자!", "{call}, 오늘 뭐가 제일 좋았어?", "{call}, 지금 기분이 어때?")
 CHAT_FALLBACKS = ("그랬구나. {name} 마음, {me}가 잘 들었어.", "응응, {name} 말 잘 듣고 있어.", "그랬구나. {name} 이야기 더 해 줄래?")
 CHAT_UNSURE = "그건 이따 {me}랑 같이 알아보자. {name}는 오늘 뭐 하고 놀았어?"
 
@@ -151,7 +154,7 @@ def make_chat(day: int, child_text: str, history: list[dict] | None, signals: di
     import random
     p = _persona(profile)
     mood = (signals or {}).get("mood")
-    fill = lambda s: s.format(name=p["name"], me=p["me"])  # noqa: E731
+    fill = lambda s: s.format(name=p["name"], me=p["me"], call=p["call"])  # noqa: E731
     if not child_text:
         return {"text": fill(random.choice(CHAT_OPENERS)), "out_of_scope": False, "blocked": None}
     if safety.danger_in(child_text):

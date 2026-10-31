@@ -129,9 +129,22 @@ export const MOUTH_SENTENCES = [
 // 마무리 3-8: 실제 부모에게 연결
 export const ENDING = '오늘 정말 재미있었다! 이따 {me} 오면 {fav} 이야기 해줄래?';
 
+/** 받침 있으면 a, 없으면 b (지민아/지호야, 지민이는/지호는) */
+const hasBatchim = (w: string) => {
+  const c = w.charCodeAt(w.length - 1);
+  return c >= 0xac00 && c <= 0xd7a3 && (c - 0xac00) % 28 !== 0;
+};
+const JOSA: Record<string, [string, string]> = { 야: ['아', '야'], 는: ['이는', '는'], 가: ['이가', '가'], 를: ['이를', '를'], 랑: ['이랑', '랑'], 와: ['이와', '와'] };
+const JOSA_ME: Record<string, [string, string]> = { 는: ['은', '는'], 가: ['이', '가'], 를: ['을', '를'], 랑: ['이랑', '랑'], 와: ['과', '와'] };
+
+/** 문장 채우기: 이름·호칭 뒤 조사를 받침에 맞춤 ({name}야 → 지민아 / 지호야) */
 export function fill(text: string, p: { name?: string; me?: string; fav?: string }) {
+  const name = p.name || '우리 아기';
+  const me = p.me || '엄마';
   return text
-    .replaceAll('{name}', p.name || '우리 아기')
-    .replaceAll('{me}', p.me || '엄마')
+    .replace(/{name}(야|는|가|를|랑|와)/g, (_, j: string) => name + JOSA[j][hasBatchim(name) ? 0 : 1])
+    .replace(/{me}(는|가|를|랑|와)/g, (_, j: string) => me + JOSA_ME[j][hasBatchim(me) ? 0 : 1])
+    .replaceAll('{name}', name)
+    .replaceAll('{me}', me)
     .replaceAll('{fav}', p.fav || '오늘 놀이');
 }
