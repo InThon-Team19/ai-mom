@@ -162,8 +162,8 @@ function LinkScreen({ onDone, canCancel }: { onDone: () => void; canCancel: bool
             : msg.includes('이미 사용한')
               ? '이미 쓴 코드예요. 부모 폰 설정 탭에서 새 코드를 받아 주세요.'
               : msg.startsWith('429')
-                ? '시도가 너무 많아요. 잠시 후 다시 해주세요.'
-                : '서버에 연결할 수 없어요. 잠시 후 다시 해주세요.',
+                ? '시도가 너무 많아요. 잠시 후 다시 해 주세요.'
+                : '서버에 연결할 수 없어요. 잠시 후 다시 해 주세요.',
       );
     } finally {
       setBusy(false);
@@ -203,7 +203,7 @@ function LinkScreen({ onDone, canCancel }: { onDone: () => void; canCancel: bool
           <Button label="취소" variant="ghost" onPress={onDone} />
         ) : (
           <Button
-            label="‹ 돌아가기 (부모 폰으로 쓰기·다시 고르기)"
+            label="‹ 처음 화면으로 돌아가기"
             variant="ghost"
             onPress={async () => {
               await clearRole(); // 아이 태블릿으로 잘못 골랐을 때: 기기 용도 선택 화면으로

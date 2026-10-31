@@ -85,7 +85,7 @@ export default function End() {
       )}
 
       <Animated.Text entering={FadeIn.delay(300).duration(600)} style={{ fontSize: 22, color: C.sub }}>
-        {fill('이따 {me} 오면 {fav} 이야기 해줄래?', { name, me, fav })}
+        {fill('이따 {me} 오면 {fav} 이야기 해 줄래?', { name, me, fav })}
       </Animated.Text>
       <PillButton
         label="한 번 더 볼래요"

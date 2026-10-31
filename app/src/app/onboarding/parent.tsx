@@ -13,7 +13,7 @@ type Tone = Profile['parent']['tone'];
 const TONES: { tone: Tone; example: string }[] = [
   { tone: '다정한', example: '{name}야, 오늘도 잘 놀고 있어?' },
   { tone: '장난스러운', example: '{name} 대장님, 출동 준비됐나요?' },
-  { tone: '차분한', example: '{name}야, 천천히 같이 해볼까?' },
+  { tone: '차분한', example: '{name}야, 천천히 같이 해 볼까?' },
 ];
 const GOALS = ['한국어 표현 늘리기', '영어 노출', '노래와 놀이', '소리 중심'];
 
@@ -62,7 +62,7 @@ function Form({ initial, childName }: { initial: Profile['parent']; childName: s
             </Box>
           ))}
           <Box dashed selected={custom} onPress={() => setCustom(true)}>
-            <Text style={boxText(custom)}>직접 입력</Text>
+            <Text style={boxText(custom)}>직접 적기</Text>
           </Box>
         </View>
         {custom && (
