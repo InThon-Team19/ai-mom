@@ -1,0 +1,87 @@
+[
+  {
+    "file": "closed.png",
+    "size": [
+      1024,
+      1024
+    ],
+    "difference_bbox": [
+      469,
+      509,
+      557,
+      535
+    ],
+    "outside_mouth_changed_pixels": 0,
+    "sha256": "2e7e183c71274ccfb137bd49eacfd4b04ff655a2e8dbc4fe599477d45e8f3ffb"
+  },
+  {
+    "file": "narrow.png",
+    "size": [
+      1024,
+      1024
+    ],
+    "difference_bbox": [
+      469,
+      506,
+      557,
+      538
+    ],
+    "outside_mouth_changed_pixels": 0,
+    "sha256": "5caf747bf3a2ebb39488f3691929549bc3df921f4850b7146f414672b4bcb2f7"
+  },
+  {
+    "file": "neutral.png",
+    "size": [
+      1024,
+      1024
+    ],
+    "difference_bbox": null,
+    "outside_mouth_changed_pixels": 0,
+    "sha256": "a997cd8daee8824d92303da66171be8c9abc05c8c6ba736f7949d525a87ca40a"
+  },
+  {
+    "file": "open.png",
+    "size": [
+      1024,
+      1024
+    ],
+    "difference_bbox": [
+      469,
+      503,
+      557,
+      541
+    ],
+    "outside_mouth_changed_pixels": 0,
+    "sha256": "c531719c81e41f348e0e5a31be3eef092fb9bcd1ddcd6dea7eae0800a7ddaa6d"
+  },
+  {
+    "file": "round.png",
+    "size": [
+      1024,
+      1024
+    ],
+    "difference_bbox": [
+      469,
+      499,
+      557,
+      545
+    ],
+    "outside_mouth_changed_pixels": 0,
+    "sha256": "189827107bdbb802391015067c63b0429773953583f3d64a889ec8e55ce878a7"
+  },
+  {
+    "file": "wide.png",
+    "size": [
+      1024,
+      1024
+    ],
+    "difference_bbox": [
+      464,
+      509,
+      562,
+      535
+    ],
+    "outside_mouth_changed_pixels": 0,
+    "sha256": "18e754306ba90a3d43fb9fca33664f07df4a20bc8a87abe667e21b27b90237b8"
+  }
+]
