@@ -101,7 +101,7 @@ export default function Report() {
         <H1>오늘의 리포트</H1>
 
         <Card soft style={{ gap: 10 }}>
-          <Text style={{ fontSize: 13, fontWeight: '700', color: C.primary }}>{today.day}일차</Text>
+          <Text style={{ fontSize: 13, fontWeight: '700', color: C.link }}>{today.day}일차</Text>
           <Text style={T.sub}>오늘은 이 주제를 배웠어요</Text>
           <Text style={T.h2}>{today.items.map((id) => `${ITEMS[id].emoji} ${ITEMS[id].ko}`).join(' · ')}</Text>
           {hasData && s && (
@@ -186,7 +186,7 @@ export default function Report() {
 
             {tipItem && (
               <Card soft style={{ borderWidth: 0 }}>
-                <Text style={{ fontSize: 14, fontWeight: '700', color: C.primary }}>언어 연계 팁</Text>
+                <Text style={{ fontSize: 14, fontWeight: '700', color: C.link }}>언어 연계 팁</Text>
                 <Text style={T.body}>
                   {`한국어로 '${tipItem.ko}'를 잘 말했으니, 이제 영어 '${tipItem.en}'을 들려줄 타이밍이에요.`}
                 </Text>

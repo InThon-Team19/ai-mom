@@ -18,7 +18,7 @@ function Row({ label, value, href }: { label: string; value: string; href: strin
         {value}
       </Text>
       <Pressable onPress={() => router.push(href as never)} hitSlop={8}>
-        <Text style={{ color: C.primary, fontWeight: '700' }}>수정</Text>
+        <Text style={{ color: C.link, fontWeight: '700' }}>수정</Text>
       </Pressable>
     </View>
   );
@@ -40,7 +40,7 @@ export function PersonaCard({ profile }: { profile: Profile }) {
 
   const name = profile.child.nickname || profile.child.name || '아이';
   return (
-    <View style={{ borderRadius: R.md, borderWidth: 2, borderColor: C.primary, backgroundColor: C.primarySoft, padding: 16, gap: 8 }}>
+    <View style={{ borderRadius: R.md, borderWidth: 2, borderColor: C.primaryStrong, backgroundColor: C.primarySoft, padding: 16, gap: 8 }}>
       <Text style={{ fontSize: 17, fontWeight: '800', color: C.text }}>내 아바타 페르소나 확인</Text>
       <View style={{ flexDirection: 'row', gap: 12, alignItems: 'center' }}>
         <View style={{ width: 84, height: 92, borderRadius: R.sm, backgroundColor: C.white, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>

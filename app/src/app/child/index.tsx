@@ -174,7 +174,7 @@ function LinkScreen({ onDone, canCancel }: { onDone: () => void; canCancel: bool
             textAlign: 'center',
             color: C.text,
             borderWidth: 2,
-            borderColor: C.primary,
+            borderColor: C.primaryStrong,
             borderRadius: R.md,
             paddingVertical: 14,
             backgroundColor: C.primarySoft,

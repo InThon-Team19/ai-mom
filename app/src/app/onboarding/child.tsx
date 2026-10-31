@@ -158,7 +158,7 @@ function Box({ label, selected, onPress }: { label: string; selected: boolean; o
         justifyContent: 'center',
         borderRadius: R.sm,
         borderWidth: selected ? 2 : 1,
-        borderColor: selected ? C.primary : C.sub,
+        borderColor: selected ? C.primaryStrong : C.sub,
         backgroundColor: selected ? C.primarySoft : C.white,
       }}>
       <Text style={{ fontSize: 15, fontWeight: selected ? '700' : '500', color: C.text }}>{label}</Text>

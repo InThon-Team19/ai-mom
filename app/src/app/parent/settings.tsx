@@ -55,7 +55,7 @@ function Row({ label, value }: { label: string; value: string }) {
 
 const Link = ({ label, href }: { label: string; href: string }) => (
   <Pressable onPress={() => router.push(href as Href)} hitSlop={8}>
-    <Text style={{ color: C.primary, fontWeight: '700' }}>{label}</Text>
+    <Text style={{ color: C.link, fontWeight: '700' }}>{label}</Text>
   </Pressable>
 );
 
@@ -166,11 +166,11 @@ export default function Settings() {
             .map((d) => (
               <View key={d.device_id} style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 4 }}>
                 <View style={{ paddingHorizontal: 10, paddingVertical: 4, borderRadius: R.pill, backgroundColor: d.role === 'parent' ? C.primary : C.primarySoft }}>
-                  <Text style={{ fontSize: 12, fontWeight: '800', color: d.role === 'parent' ? C.white : C.primary }}>{d.role === 'parent' ? '부모' : '아이'}</Text>
+                  <Text style={{ fontSize: 12, fontWeight: '800', color: d.role === 'parent' ? C.onPrimary : C.link }}>{d.role === 'parent' ? '부모' : '아이'}</Text>
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={{ fontSize: 15, color: C.text }}>
-                    {d.name || '기기'} {d.device_id === me && <Text style={{ color: C.primary }}>(이 기기)</Text>}
+                    {d.name || '기기'} {d.device_id === me && <Text style={{ color: C.link }}>(이 기기)</Text>}
                   </Text>
                   <Text style={T.small}>마지막 사용 {fmt(d.last_seen)}</Text>
                 </View>

@@ -141,7 +141,7 @@ function Box({
         borderRadius: R.sm,
         borderWidth: selected ? 2 : 1,
         borderStyle: dashed && !selected ? 'dashed' : 'solid',
-        borderColor: selected ? C.primary : C.sub,
+        borderColor: selected ? C.primaryStrong : C.sub,
         backgroundColor: selected ? C.primarySoft : C.white,
       }}>
       {children}

@@ -171,12 +171,12 @@ function Check({ checked, onPress, label }: { checked: boolean; onPress: () => v
           height: 24,
           borderRadius: 5,
           borderWidth: 2,
-          borderColor: checked ? C.primary : C.sub,
+          borderColor: checked ? C.primaryStrong : C.sub,
           backgroundColor: checked ? C.primary : C.white,
           alignItems: 'center',
           justifyContent: 'center',
         }}>
-        {checked && <Text style={{ color: C.white, fontSize: 15, fontWeight: '900', lineHeight: 18 }}>✓</Text>}
+        {checked && <Text style={{ color: C.onPrimary, fontSize: 15, fontWeight: '900', lineHeight: 18 }}>✓</Text>}
       </View>
       <Text style={{ flex: 1, fontSize: 15, color: C.text, lineHeight: 22 }}>{label}</Text>
     </Pressable>
@@ -207,7 +207,7 @@ function Select({
         style={{
           minHeight: 50,
           borderWidth: open ? 2 : 1,
-          borderColor: open ? C.primary : C.sub,
+          borderColor: open ? C.primaryStrong : C.sub,
           borderRadius: R.sm,
           paddingHorizontal: 14,
           flexDirection: 'row',

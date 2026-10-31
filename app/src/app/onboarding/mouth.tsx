@@ -88,7 +88,7 @@ export default function MouthSignup() {
         <RingGauge progress={g.progress} baseline={g.baseline} size={104} />
         <View style={{ flex: 1, gap: 4 }}>
           <Text style={{ fontSize: 15, fontWeight: '800', color: C.text }}>입모양 학습률</Text>
-          <Text style={{ fontSize: 15, fontWeight: '700', color: C.primary }}>+{gainPct}%</Text>
+          <Text style={{ fontSize: 15, fontWeight: '700', color: C.link }}>+{gainPct}%</Text>
           <Text style={{ fontSize: 14, color: C.sub }}>
             {g.usable ? '이제 아바타 입모양으로 쓸 수 있어요' : `문장 ${g.remaining_sentences}개 더 읽어주세요`}
           </Text>

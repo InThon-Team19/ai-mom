@@ -70,7 +70,7 @@ export default function ParentHome() {
         </View>
 
         <Card soft style={{ gap: 10 }}>
-          <Text style={{ fontSize: 14, fontWeight: '700', color: C.primary }}>오늘 밤 할 일</Text>
+          <Text style={{ fontSize: 14, fontWeight: '700', color: C.link }}>오늘 밤 할 일</Text>
           {['오늘의 리포트 보기', '피드백 남기기', '내일 계획 읽기'].map((t, i) => (
             <Pressable key={t} onPress={() => go((['report', 'feedback', 'plan'] as const)[i])}>
               <Text style={T.body}>

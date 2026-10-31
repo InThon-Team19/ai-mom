@@ -78,7 +78,7 @@ export default function VoiceSignup() {
           </Text>
         </View>
         <Pressable hitSlop={12} onPress={onNext} style={{ width: 96, alignItems: 'center', opacity: ra.recording || ra.busy ? 0.4 : 1 }}>
-          <Text style={{ fontSize: 16, fontWeight: '800', color: C.primary }}>다음 단계</Text>
+          <Text style={{ fontSize: 16, fontWeight: '800', color: C.link }}>다음 단계</Text>
         </Pressable>
       </View>
     </View>
@@ -90,7 +90,7 @@ export default function VoiceSignup() {
         <RingGauge progress={g.progress} baseline={g.baseline} size={124} />
         <View style={{ flex: 1, gap: 4 }}>
           <Text style={{ fontSize: 15, fontWeight: '800', color: C.text }}>음성 학습률</Text>
-          <Text style={{ fontSize: 15, fontWeight: '700', color: C.primary }}>+{gainPct}%</Text>
+          <Text style={{ fontSize: 15, fontWeight: '700', color: C.link }}>+{gainPct}%</Text>
           <Text style={{ fontSize: 14, color: C.sub }}>
             {g.usable ? '이제 아바타 목소리로 쓸 수 있어요. 더 읽으면 더 자연스러워져요.' : `${g.remaining_sentences}문장 더 읽으면 쓸 수 있어요`}
           </Text>
@@ -143,7 +143,7 @@ function SentenceRow({ text, status, disabled, onPress }: { text: string; status
         paddingVertical: now ? 22 : 12,
         borderRadius: R.sm,
         borderWidth: now ? 2 : done ? 0 : 1,
-        borderColor: now ? C.primary : C.border,
+        borderColor: now ? C.primaryStrong : C.border,
         backgroundColor: now ? C.primarySoft : done ? C.card : C.white,
       }}>
       <Text style={{ flex: 1, fontSize: now ? 20 : 15, fontWeight: now ? '800' : '400', color: done ? C.sub : C.text }}>{text}</Text>

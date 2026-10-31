@@ -116,7 +116,7 @@ export function FaceTracker({ onFrame, onError, intervalMs = 50, style, guide }:
       />
       {guide && (
         <View pointerEvents="none" style={{ position: 'absolute', inset: 0, alignItems: 'center', justifyContent: 'center' }}>
-          <View style={{ width: '45%', height: '85%', borderRadius: 999, borderWidth: 2, borderStyle: 'dashed', borderColor: '#2453D6' }} />
+          <View style={{ width: '45%', height: '85%', borderRadius: 999, borderWidth: 2, borderStyle: 'dashed', borderColor: '#F2B705' }} />
         </View>
       )}
     </View>

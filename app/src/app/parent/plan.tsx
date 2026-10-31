@@ -78,7 +78,7 @@ function PlanReader({ profile, plan }: { profile: Profile; plan: Day }) {
           <RingGauge progress={progress} baseline={baseline} size={92} stroke={10} showBaselineText={false} />
           <View style={{ flex: 1, gap: 2 }}>
             <Text style={{ fontSize: 15, fontWeight: '800', color: C.text }}>입모양·음성 학습률</Text>
-            <Text style={{ fontSize: 15, fontWeight: '700', color: C.primary }}>+{Math.max(0, gain)}%</Text>
+            <Text style={{ fontSize: 15, fontWeight: '700', color: C.link }}>+{Math.max(0, gain)}%</Text>
             <Text style={T.small}>검은 눈금이 최소 기준 · 문장 {remaining}개 남음</Text>
           </View>
         </View>

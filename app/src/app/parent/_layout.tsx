@@ -52,7 +52,7 @@ export default function ParentTabs() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: C.primary,
+        tabBarActiveTintColor: C.link,
         tabBarInactiveTintColor: C.text,
         tabBarLabelStyle: { fontSize: 12, fontWeight: '600' },
         sceneStyle: { backgroundColor: C.bg },

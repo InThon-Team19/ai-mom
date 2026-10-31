@@ -75,7 +75,7 @@ export default function Story() {
     <View style={{ flex: 1, backgroundColor: C.primarySoft, gap: 16, paddingTop: 16 + insets.top, paddingBottom: 16 + insets.bottom, paddingLeft: 40 + insets.left, paddingRight: 40 + insets.right }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: 52 }}>
         <View style={{ backgroundColor: C.primary, borderRadius: R.pill, paddingHorizontal: 18, paddingVertical: 10 }}>
-          <Text style={{ color: C.white, fontSize: 18, fontWeight: '800' }}>{story.title}</Text>
+          <Text style={{ color: C.onPrimary, fontSize: 18, fontWeight: '800' }}>{story.title}</Text>
         </View>
         <PillButton
           small
@@ -114,7 +114,7 @@ export default function Story() {
           {story.pages.map((_, i) => (
             <View
               key={i}
-              style={{ width: 16, height: 16, borderRadius: 8, borderWidth: 2, borderColor: i === page ? C.primary : C.muted, backgroundColor: i === page ? C.primary : 'transparent' }}
+              style={{ width: 16, height: 16, borderRadius: 8, borderWidth: 2, borderColor: i === page ? C.primaryStrong : C.muted, backgroundColor: i === page ? C.primary : 'transparent' }}
             />
           ))}
         </View>
