@@ -1,4 +1,3 @@
-<!-- 담당: 민철 (PM) — 와이어프레임 -->
 # 아이봄 와이어프레임
 
 원본(인터랙티브 캔버스): https://claude.ai/artifact/EAjyiqT3qMtp8QEs61wGUf
