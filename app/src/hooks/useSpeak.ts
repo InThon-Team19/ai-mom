@@ -2,6 +2,7 @@
 // TTS 서버가 안 되면 기기 기본 한국어 음성(expo-speech)으로 대신 말함 (시연이 끊기지 않게)
 import { setAudioModeAsync, useAudioPlayer, useAudioSampleListener } from 'expo-audio';
 import * as Speech from 'expo-speech';
+import { Platform } from 'react-native';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { api, reportError } from '@/lib/api';
@@ -130,7 +131,8 @@ export function useSpeak(childId: string | undefined) {
           });
           if (my !== gen.current) return; // 기다리는 사이 멈췄거나 다음 문장으로 넘어감 → 늦게 온 소리는 틀지 않음
           // 재생 모드 설정이 실패해도 받은 엄마 목소리는 그대로 틈 (예전엔 여기서 실패하면 기기 음성으로 바뀜)
-          await setAudioModeAsync({ playsInSilentMode: true, allowsRecording: false }).catch((e) => reportError('speak.audioMode', e));
+          // iOS 만: 녹음 모드면 스피커 소리가 작아져서 재생 전에 끔. Android 는 끼어들기 감지용 녹음을 끊지 않게 그대로 둠
+          if (Platform.OS === 'ios') await setAudioModeAsync({ playsInSilentMode: true, allowsRecording: false }).catch((e) => reportError('speak.audioMode', e));
           if (my !== gen.current) return;
           env.current = v && v.length ? { v, ms: env_ms || 40 } : null;
           playingGen.current = my;

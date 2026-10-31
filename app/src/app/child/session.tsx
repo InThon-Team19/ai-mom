@@ -109,6 +109,10 @@ export default function Session() {
   const { isTablet } = useDevice();
   const focused = useIsFocused();
   const { speak, stop, mouth, setSlow } = useSpeak(profile?.childId);
+  const stopRef = useRef(stop); // 끼어들기 때 아바타 말 멈추기용 (듣기 hook 보다 먼저 만들어짐)
+  useEffect(() => {
+    stopRef.current = stop;
+  });
   const scale = useMouthScale(profile?.childId);
   const { name, me, english } = who(profile);
   const reduceMotion = !!profile?.settings.reduceMotion;
@@ -183,7 +187,9 @@ export default function Session() {
   const flow = useRef({ onClip: (_r: ClipResult) => {} });
   const getMeta = useCallback(() => metaRef.current, []);
   const onClip = useCallback((r: ClipResult) => flow.current.onClip(r), []);
-  const listener = useChildListener({ childId: profile?.childId, active: !!plan && focused && !!profile, meta: getMeta, onClip });
+  // 아바타가 말하는 중에 아이가 끼어들면 아바타 말을 멈추고 아이 말을 들음
+  const onBargeIn = useCallback(() => stopRef.current(), []);
+  const listener = useChildListener({ childId: profile?.childId, active: !!plan && focused && !!profile, meta: getMeta, onClip, onBargeIn });
   const { hold, release } = listener;
 
   /** 아바타 말하기: 말하는 동안 듣기를 멈춤 (아바타 목소리가 녹음되지 않게) */
@@ -601,6 +607,7 @@ export default function Session() {
       ],
       'right',
     );
+    if (phase === 'repeat') return; // 따라 말하기 중엔 소리·진동·움직임만 (듣기 흐름은 그대로)
     if (calmBusy.current) return; // 진정시키는 말은 끊지 않음
     // 한 번 누를 때마다 이름을 다시 말해줌 (효과음이 들리게 살짝 뒤에). 한동안 안 누르면 따라 말하기로
     const t = ++run.current;
@@ -656,16 +663,11 @@ export default function Session() {
   const respond = async (t: number, r: ClipResult) => {
     if (!item) return;
     const res = r.res;
-    const text = res?.text?.trim() ?? '';
+    const raw = res?.text?.trim() ?? '';
+    const text = /[가-힣a-zA-Z]/.test(raw) ? raw : ''; // "." 처럼 기호만 인식되면 빈칸
     logEvent('repeat', { word: item.ko, matched: res ? res.matched : null, text, clip_id: res?.id ?? null });
-
-    if (res && !res.matched && text) {
-      if (await replyOutOfScope(t, text)) {
-        if (t === run.current) setKick((k) => k + 1); // 주제로 되돌린 뒤 다시 따라 말하기
-        return;
-      }
-      if (t !== run.current) return;
-    }
+    // 따라 말하기에서 소리를 냈으면 무조건 반응: 맞으면 크게 칭찬, 다르면 "좋아! 잘했어"로 칭찬하고 넘어감
+    // (예전엔 엉뚱한 말로 보고 처음으로 되돌려서 "따라 해 볼까?"만 반복됐음)
     // 서버가 안 되면(음량으로 말소리는 확인) 시도한 것으로 봄
     const praised = !res || res.matched === true;
     if (praised) {
@@ -699,7 +701,7 @@ export default function Session() {
     } else {
       // 다르게 말함·옹알이: 실패음·틀림 표시 없이 아바타가 한 번 더 말하고 넘어감
       react([['smile', 1800]]);
-      await talk(text ? `좋아! ${say(item)}` : say(item));
+      await talk(`좋아! 잘했어. ${say(item)}`);
       if (t !== run.current) return;
       await sleep(600);
     }
@@ -713,7 +715,8 @@ export default function Session() {
   /** 따라 말하기를 기다리지 않을 때 들어온 말소리 (사물 놀이 중 아이가 먼저 말함) */
   const freeClip = (res: ChildClipOut) => {
     if (!item || phase !== 'object' || leaving.current || calmBusy.current || !droppedRef.current) return;
-    const text = res.text?.trim() ?? '';
+    const raw = res.text?.trim() ?? '';
+    const text = /[가-힣a-zA-Z]/.test(raw) ? raw : ''; // 기호만 인식되면 옹알이로
     const s = sig.current;
     if (res.matched) {
       // 시키지 않았는데 사물 이름을 말함 → 바로 칭찬 (말 반응을 놓치지 않음)
@@ -925,7 +928,7 @@ export default function Session() {
               success={success}
               leave={leave}
               onLeft={onLeft}
-              interactive={phase === 'object'}
+              interactive // 따라 말하기 중에도 만지면 반응
             />
             {/* 바닥 그림자 — 떨어져 닿는 자리 */}
             <View style={{ width: toySize * 0.6, height: 12, borderRadius: 6, backgroundColor: C.green, opacity: dropped && !leave ? 0.45 : 0, marginTop: -6 }} />

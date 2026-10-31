@@ -16,6 +16,7 @@ import {
   useAudioRecorder,
 } from 'expo-audio';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { Platform } from 'react-native';
 import { useSharedValue } from 'react-native-reanimated';
 
 import { api, trace } from '@/lib/api';
@@ -41,6 +42,10 @@ export const LISTEN = {
   NO_METER_MS: 2000, // 음량 값이 이만큼 없으면 대체 모드
   FORCE_MS: 4000, // 귀를 눌러 강제로 듣는 시간
   RESUME_DELAY_MS: 300, // 아바타 말이 끝나고 다시 듣기까지 (스피커 잔향)
+  // 끼어들기: 아바타가 말하는 중에도 소리 크기를 재서, 아바타 목소리(스피커 울림)보다 6dB 이상 큰 소리가 0.3초 이어지면 아이가 말한 것
+  BARGE_OVER_ECHO_DB: 6,
+  BARGE_TICKS: 3,
+  BARGE_WARMUP_MS: 500, // 아바타 목소리 크기를 먼저 재는 시간
 } as const;
 
 export type ListenStatus = 'off' | 'denied' | 'paused' | 'listening' | 'hearing';
@@ -66,11 +71,14 @@ export function useChildListener({
   active,
   meta,
   onClip,
+  onBargeIn,
 }: {
   childId: string | undefined;
   active: boolean; // 화면이 켜져 있고 듣기를 해도 될 때
   meta: () => ClipMeta; // 말 시작 순간의 사물·단계 (올릴 때 같이 보냄)
   onClip: (r: ClipResult) => void;
+  /** 아바타가 말하는 중에 아이가 끼어듦 → 화면이 아바타 말을 멈춤 (Android 만) */
+  onBargeIn?: () => void;
 }) {
   const recorder = useAudioRecorder({ ...RecordingPresets.HIGH_QUALITY, isMeteringEnabled: true });
   const [status, setStatus] = useState<ListenStatus>('off');
@@ -78,9 +86,9 @@ export function useChildListener({
   const [mode, setMode] = useState<'meter' | 'fixed'>('meter');
   const level = useSharedValue(0); // 귀 표시용 (다시 그리지 않고 애니메이션만)
 
-  const cb = useRef({ onClip, meta, childId });
+  const cb = useRef({ onClip, meta, childId, onBargeIn });
   useEffect(() => {
-    cb.current = { onClip, meta, childId };
+    cb.current = { onClip, meta, childId, onBargeIn };
   });
 
   const holds = useRef(0);
@@ -184,6 +192,10 @@ export function useChildListener({
       let forcedWin = false;
       let winMeta: ClipMeta = cb.current.meta();
       let failures = 0;
+      // 끼어들기 감지 (아바타가 말하는 동안)
+      let holdStart = 0;
+      let echo: number | null = null;
+      let bargeTicks = 0;
 
       const endWindow = async (keep: boolean) => {
         const uri = await stopRec();
@@ -201,6 +213,50 @@ export function useChildListener({
       while (alive) {
         const now = Date.now();
         const held = holds.current > 0 || now < resumeAt.current;
+        // Android: 아바타가 말하는 동안에도 녹음을 유지하며 끼어들기 감지 (iOS 는 녹음 중 스피커 소리가 작아져 예전처럼 멈춤)
+        if (held && holds.current > 0 && Platform.OS === 'android' && cb.current.onBargeIn) {
+          if (!recording.current) {
+            try {
+              await startRec();
+            } catch {
+              await sleep(LISTEN.TICK_MS);
+              continue;
+            }
+            winStart = Date.now();
+            winMeta = cb.current.meta();
+          }
+          stoppedWaiters.current.splice(0).forEach((r) => r());
+          setSt('paused');
+          await sleep(LISTEN.TICK_MS);
+          if (!alive) break;
+          let db: number | undefined;
+          try {
+            db = recorder.getStatus().metering;
+          } catch {}
+          if (typeof db !== 'number' || db <= -159) continue;
+          const t = Date.now();
+          if (!holdStart) holdStart = t;
+          const floor = ambient === null ? -35 : Math.max(LISTEN.MIN_THRESHOLD_DB, Math.min(LISTEN.MAX_THRESHOLD_DB, ambient + LISTEN.OVER_AMBIENT_DB));
+          const loud = echo !== null && t - holdStart > LISTEN.BARGE_WARMUP_MS && db > Math.max(floor, echo + LISTEN.BARGE_OVER_ECHO_DB);
+          bargeTicks = loud ? bargeTicks + 1 : 0;
+          if (!loud) echo = echo === null ? db : Math.max(db, echo - 0.6); // 아바타 목소리 크기: 천천히 내려가는 최고값
+          if (bargeTicks >= LISTEN.BARGE_TICKS) {
+            // 아이가 끼어듦: 아바타 목소리가 섞인 앞부분은 버리고 새로 녹음 → 아바타 말은 화면이 멈춤
+            removeFile(await stopRec());
+            speaking = false;
+            loudTicks = 0;
+            bargeTicks = 0;
+            echo = null;
+            holdStart = 0;
+            resumeAt.current = 0;
+            trace('child-listener barge-in');
+            cb.current.onBargeIn?.();
+          }
+          continue;
+        }
+        holdStart = 0;
+        echo = null;
+        bargeTicks = 0;
         if (held) {
           if (recording.current) {
             // 아바타가 말하기 직전까지 아이가 말하고 있었으면 (0.5초 이상) 그 토막은 살림

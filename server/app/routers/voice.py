@@ -508,9 +508,14 @@ def child_clip(body: ChildClipIn):
         return ChildClipOut(saved=False, features=SpeechFeatures(**feats))
     text = ""
     try:
-        text = transcribe(wav)  # 힌트 없이: 목표 단어를 힌트로 주면 말 없는 소리도 그 단어로 되읊어 '맞게 말함'으로 잘못 기록됨 (시험: 삐 소리 -> '사과')
+        # 따라 말하기는 짧은 한 단어라 힌트 없이는 "."/빈칸으로 나오는 일이 많음 → 목표 단어를 문장 힌트로.
+        # (말 없는 잡음이 그 단어로 인식될 수 있지만 아이에게 틀림 표시를 하지 않는 원칙상 감수. 자유 대화엔 힌트 없음)
+        ko = next((w for w in body.expected.split("|") if re.search(r"[가-힣]", w)), "")
+        text = transcribe(wav, prompt=f"따라 말하기: {ko}") if body.phase == "repeat" and ko else transcribe(wav)
     except Exception:
         pass  # STT 키가 없거나 실패해도 소리는 저장 (부모가 들을 수 있게)
+    if not re.search(r"[가-힣A-Za-z]", text):
+        text = ""  # "." 처럼 기호만 나오면 말 없음으로
     feats = speech_features(pcm, sr, text)
     matched = match_expected(text, body.expected) if body.expected and text else None
     alert = any(w in text for w in ALERT_WORDS)

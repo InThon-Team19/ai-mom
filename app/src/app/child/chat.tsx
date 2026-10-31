@@ -49,6 +49,10 @@ export default function Chat() {
     basket?: string;
   }>();
   const { speak, stop, mouth } = useSpeak(profile?.childId);
+  const stopRef = useRef(stop); // 끼어들기 때 아바타 말 멈추기용
+  useEffect(() => {
+    stopRef.current = stop;
+  });
   const scale = useMouthScale(profile?.childId);
   const { name, me } = who(profile);
   const reduceMotion = !!profile?.settings.reduceMotion;
@@ -99,6 +103,7 @@ export default function Chat() {
     active: ready && focused && !!profile && !ending,
     meta: getMeta,
     onClip,
+    onBargeIn: () => stopRef.current(), // 아바타가 말하는 중에 아이가 끼어들면 아바타 말을 멈춤
   });
   const { hold, release } = listener;
 
