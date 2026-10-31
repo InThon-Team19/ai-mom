@@ -40,13 +40,13 @@ export function SensoryChips({ report }: { report: SensoryReport }) {
   );
 }
 
-/** 무리 신호 경고 (홈: 누르면 리포트로) */
+/** 우리 아이 확인해 줄 점 (예전 "무리 신호") — 홈: 누르면 리포트로 */
 export function StrainCard({ strain, onPress }: { strain: string[]; onPress?: () => void }) {
   if (!strain.length) return null;
   const body = (
     <Card dashed style={{ borderColor: C.warn, gap: 6, flexDirection: 'row', alignItems: 'center' }}>
       <View style={{ flex: 1, gap: 4 }}>
-        <Text style={{ fontSize: 16, fontWeight: '800', color: C.warn }}>⚠ 무리 신호 {strain.length}개</Text>
+        <Text style={{ fontSize: 16, fontWeight: '800', color: C.warn }}>우리 아이 확인해 줄 점 {strain.length}가지</Text>
         <Text style={T.sub}>{strain[0]}</Text>
       </View>
       {onPress && <Text style={{ fontSize: 24, color: C.text }}>›</Text>}
@@ -93,7 +93,7 @@ export function SensoryCard({ report, loading, failed }: { report: SensoryReport
 
           {report.strain.length > 0 && (
             <View style={{ borderWidth: 1.5, borderColor: C.warn, borderRadius: R.md, padding: 12, gap: 6, backgroundColor: C.white }}>
-              <Text style={{ fontSize: 15, fontWeight: '800', color: C.warn }}>⚠ 무리 신호</Text>
+              <Text style={{ fontSize: 15, fontWeight: '800', color: C.warn }}>우리 아이 확인해 줄 점</Text>
               {report.strain.map((t) => (
                 <Text key={t} style={{ fontSize: 14, color: C.warn }}>
                   · {t}

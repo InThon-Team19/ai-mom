@@ -165,7 +165,7 @@ export function computeSensory(today: Summary | null, history: (Summary | null)[
   const tips: string[] = [];
   const fast = today.reaction_ms > 0 && today.reaction_ms < RULES.fastReactionMs && today.touches >= RULES.manyTouches;
   if (fast) {
-    strain.push(`누르기가 아주 빠르고 많았어요 (평균 ${(today.reaction_ms / 1000).toFixed(1)}초, ${today.touches}번). 자극이 많았을 수 있어요.`);
+    strain.push(`누르기가 아주 빠르고 많았어요 (평균 ${(today.reaction_ms / 1000).toFixed(1)}초, ${today.touches}번). 자극이 조금 많았을 수 있어요.`);
   }
   const avgGaze = past.length ? past.reduce((a, s) => a + s.gaze_s, 0) / past.length : 0;
   const avgTouch = past.length ? past.reduce((a, s) => a + s.touches, 0) / past.length : 0;
@@ -186,7 +186,7 @@ export function computeSensory(today: Summary | null, history: (Summary | null)[
   }
   // 학습 화면이 사물마다 추정한 아이 상태 (감각 반응 기반)
   const moods = today.moods ?? {};
-  if ((moods.overloaded ?? 0) >= 2) strain.push(`활동 중 무리한 것처럼 보인 순간이 ${moods.overloaded}번 있었어요 (빠른 연속 누르기·찡그림 등).`);
+  if ((moods.overloaded ?? 0) >= 2) strain.push(`놀다가 조금 힘들어 보인 순간이 ${moods.overloaded}번 있었어요 (빠르게 여러 번 누르기·찡그림 등).`);
   if ((moods.distracted ?? 0) >= 2) tips.push('집중이 흐트러진 순간이 여러 번 있었어요. 내일은 활동을 짧게 나누고 엄마 목소리로 먼저 불러 주면 좋을 수 있어요.');
   if (today.alerts.length) {
     strain.push(`불편함을 말한 순간이 ${today.alerts.length}번 있었어요. 아래 확인 필요에서 살펴봐 주세요.`);

@@ -200,7 +200,7 @@ export default function ParentHome() {
             accessibilityRole="button"
             style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 10, paddingHorizontal: 14, borderRadius: 16, borderWidth: 2, borderColor: C.warn, backgroundColor: C.warnSoft }}>
             <Text style={{ flex: 1, fontSize: 14, fontWeight: '700', color: C.warn }} numberOfLines={2}>
-              ⚠ 무리 신호 {sensory.strain.length}개 · {sensory.strain[0]}
+              우리 아이 확인해 줄 점 {sensory.strain.length}가지 · {sensory.strain[0]}
             </Text>
             <Text style={{ fontSize: 22, color: C.sub }}>›</Text>
           </Pressable>
