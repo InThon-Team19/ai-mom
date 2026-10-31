@@ -25,8 +25,13 @@
 | POST | `/voice/parent-sample` | `child_id`, `file`(m4a 등) | `url, features, total_speech_s, progress(학습률 0~1), sample_count` | 가입 3 목소리 |
 | POST | `/voice/stt` | `file`, `expected`(따라 말하기 목표, 선택), `who`(child\|parent) | `text, features, matched` | 아이 따라 말하기, 부모 낭독 |
 | POST | `/vision/parent-mouth` | `child_id`, `kind`(signup\|plan), `file`(mp4) | `ok, face_ratio, sprites[4], face_url, video_url, audio_url, track_url, message` | 가입 4 입모양, 밤 낭독 |
-| POST | `/vision/child-frame` | `file`(jpg) | `face, looking, mouth_open, mouth, gaze` | 아이 대화 (1.5초 간격) |
+| POST | `/vision/child-frame` | `file`(jpg) | `face, looking, mouth_open, mouth, gaze` | 서버 판정용 (실시간은 앱 `FaceTracker`가 기기 안에서 0.05초마다) |
+| POST | `/voice/register` | `child_id` | `model_id, state, sample_count` | 가입 3 끝 (Fish Audio 목소리 등록) |
+| POST | `/voice/tts` | JSON `{child_id, text}` | `url`(mp3) | 아바타 말하기 |
 
 - 저장 위치: `server/static/children/<child_id>/parent/{voice,signup,plan}/` → `/static/...` URL
 - **민주(TTS)**: 목소리 등록은 `routers/voice.py`의 `parent_samples(child_id)`가 돌려주는 wav 목록을 ElevenLabs에 올리면 됨. 입모양 영상의 음성(`audio_url`)도 샘플로 사용 가능
 - **아바타 립싱크**: TTS 오디오 음량에 맞춰 `sprites[0]`(닫힘) ~ `sprites[3]`(크게 벌림)을 바꿔 끼우는 방식
+
+## LLM (에이전트용, 충항)
+- `server/app/llm.py`의 `chat(system, messages)` 사용. Lablup Token Factory(Anthropic 호환) 경유, 모델 `ANTHROPIC_MODEL`

@@ -126,3 +126,73 @@ def stt(file: UploadFile = File(...), expected: str = Form(""), who: str = Form(
         features=SpeechFeatures(**feats),
         matched=match_expected(text, expected) if expected else None,
     )
+
+
+# ---------- TTS: 부모 목소리 복제·합성 (초안: 태희 → 민주) ----------
+import hashlib  # noqa: E402
+
+import httpx  # noqa: E402
+
+from app.tts import fish  # noqa: E402
+
+
+class VoiceRegisterOut(BaseModel):
+    model_id: str
+    state: str          # created | training | trained | failed
+    sample_count: int
+
+
+def _voice_id_file(child_id: str) -> Path:
+    return child_dir(child_id, "parent", "voice") / "fish_model_id.txt"
+
+
+@router.post("/register", response_model=VoiceRegisterOut)
+def register(child_id: str = Form(...)):
+    """지금까지 올린 부모 목소리 샘플 (+ 입모양 영상 음성)로 Fish Audio 목소리 모델 생성."""
+    try:
+        wavs = parent_samples(child_id)
+    except ValueError:
+        raise HTTPException(400, "child_id 형식 오류")
+    mouth_audio = child_dir(child_id, "parent", "signup") / "mouth_audio.wav"
+    if mouth_audio.exists():
+        wavs.append(mouth_audio)
+    if not wavs:
+        raise HTTPException(400, "목소리 샘플을 먼저 올려 주세요 (/voice/parent-sample)")
+    try:
+        res = fish.register_voice(f"aibom-{child_id}", wavs)
+    except RuntimeError as e:
+        raise HTTPException(503, str(e))
+    except httpx.HTTPStatusError as e:
+        raise HTTPException(502, f"Fish Audio 오류: {e.response.text[:200]}")
+    _voice_id_file(child_id).write_text(res["_id"], encoding="utf-8")
+    return VoiceRegisterOut(model_id=res["_id"], state=res.get("state", ""), sample_count=len(wavs))
+
+
+class TtsIn(BaseModel):
+    child_id: str
+    text: str
+
+
+class TtsOut(BaseModel):
+    url: str
+
+
+@router.post("/tts", response_model=TtsOut)
+def tts(body: TtsIn):
+    """부모 목소리로 문장 읽기 → mp3 URL. 같은 문장은 캐시."""
+    try:
+        id_file = _voice_id_file(body.child_id)
+    except ValueError:
+        raise HTTPException(400, "child_id 형식 오류")
+    if not id_file.exists():
+        raise HTTPException(400, "목소리 등록을 먼저 해 주세요 (/voice/register)")
+    model_id = id_file.read_text(encoding="utf-8").strip()
+    out = child_dir(body.child_id, "tts") / f"{hashlib.sha1(body.text.encode()).hexdigest()[:16]}.mp3"
+    if not out.exists():
+        try:
+            fish.synthesize(body.text, model_id, out)
+        except RuntimeError as e:
+            raise HTTPException(503, str(e))
+        except httpx.HTTPStatusError as e:
+            raise HTTPException(502, f"Fish Audio 오류: {e.response.text[:200]}")
+    return TtsOut(url=public_url(out))

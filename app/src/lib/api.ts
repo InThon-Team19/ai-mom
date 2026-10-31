@@ -30,6 +30,19 @@ export const api = {
   /** 부모 입모양 영상 → 립싱크 입 사진. kind: signup(가입) | plan(밤 낭독) */
   parentMouth: (childId: string, uri: string, kind: 'signup' | 'plan' = 'signup') =>
     upload<ParentMouthOut>('/vision/parent-mouth', uri, 'video/mp4', { child_id: childId, kind }),
-  /** 아이 카메라 프레임 → 얼굴·응시·입 벌림 */
+  /** 쌓인 부모 목소리로 TTS 목소리 등록 (Fish Audio) */
+  registerVoice: (childId: string) => {
+    const form = new FormData();
+    form.append('child_id', childId);
+    return req<{ model_id: string; state: string; sample_count: number }>('/voice/register', { method: 'POST', body: form });
+  },
+  /** 부모 목소리로 문장 읽기 → mp3 URL */
+  tts: (childId: string, text: string) =>
+    req<{ url: string }>('/voice/tts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ child_id: childId, text }),
+    }),
+  /** 아이 카메라 프레임 → 얼굴·응시·입 벌림 (서버 판정, 실시간은 components/FaceTracker 사용) */
   childFrame: (uri: string) => upload<ChildFrameOut>('/vision/child-frame', uri, 'image/jpeg'),
 };

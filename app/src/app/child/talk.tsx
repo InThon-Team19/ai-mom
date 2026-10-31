@@ -1,12 +1,11 @@
 // 아이 대화 (아바타 + 감각 놀이, 아이 영상·음성 입력) — 담당: 태희
-// 지금은 입력 확인용 임시 화면: 카메라로 응시·입 벌림, 마이크로 따라 말하기 판정.
+// 지금은 입력 확인용 임시 화면: 기기 안에서 0.05초마다 응시·입 벌림, 마이크로 따라 말하기 판정.
 // 아바타·에이전트 대화(충항)·TTS(민주)가 붙으면 이 화면에 합침. 디자인은 민철 와이어프레임 기준
-import { CameraView, useCameraPermissions } from 'expo-camera';
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { useChildSensing } from '@/hooks/useChildSensing';
+import { FaceTracker, type FaceFrame } from '@/components/FaceTracker';
 import { useVoiceRecorder } from '@/hooks/useVoiceRecorder';
 import { api } from '@/lib/api';
 import type { SttOut } from '@/lib/types';
@@ -14,16 +13,23 @@ import type { SttOut } from '@/lib/types';
 const WORDS = ['사과', '바나나', '엄마', '강아지', '안녕'];
 
 export default function Screen() {
-  const cam = useRef<CameraView>(null);
-  const [perm, reqPerm] = useCameraPermissions();
-  const sensing = useChildSensing(cam, !!perm?.granted);
+  const [s, setS] = useState<FaceFrame | null>(null);
+  const [faceError, setFaceError] = useState<string | null>(null);
+  // 말하는 동안 입을 벌린 프레임 수 (따라 말하기 때 실제로 입을 움직였는지)
+  const [mouthFrames, setMouthFrames] = useState(0);
   const rec = useVoiceRecorder();
   const [w, setW] = useState(0);
   const [stt, setStt] = useState<SttOut | null>(null);
   const [status, setStatus] = useState('');
 
+  function onFrame(f: FaceFrame) {
+    setS(f);
+    if (rec.isRecording && f.mouthOpen) setMouthFrames((n) => n + 1);
+  }
+
   async function onPressIn() {
     setStt(null);
+    setMouthFrames(0);
     setStatus('');
     try {
       await rec.start();
@@ -46,24 +52,16 @@ export default function Screen() {
     }
   }
 
-  const s = sensing.latest;
   return (
     <SafeAreaView style={{ flex: 1, padding: 16, gap: 12 }}>
       <View style={{ flexDirection: 'row', gap: 12 }}>
-        <View style={{ width: 160, height: 120, borderRadius: 12, overflow: 'hidden', backgroundColor: '#ddd' }}>
-          {perm?.granted ? (
-            <CameraView ref={cam} style={{ flex: 1 }} facing="front" animateShutter={false} />
-          ) : (
-            <Pressable onPress={reqPerm} style={{ flex: 1, justifyContent: 'center' }}>
-              <Text style={{ textAlign: 'center' }}>카메라 허용</Text>
-            </Pressable>
-          )}
-        </View>
+        <FaceTracker onFrame={onFrame} onError={setFaceError} style={{ width: 160, height: 120, borderRadius: 12 }} />
         <View style={{ gap: 4, justifyContent: 'center' }}>
           <Text>얼굴: {s ? (s.face ? '보임' : '안 보임') : '-'}</Text>
           <Text>화면 응시: {s ? (s.looking ? '👀 보는 중' : '딴 곳') : '-'}</Text>
-          <Text>입: {s ? (s.mouth_open ? '벌림' : '닫힘') : '-'}</Text>
-          {!!sensing.error && <Text style={{ color: '#e5484d' }} numberOfLines={2}>{sensing.error}</Text>}
+          <Text>입: {s ? (s.mouthOpen ? '벌림' : '닫힘') : '-'}</Text>
+          <Text style={{ color: '#888' }}>입 벌림 {s ? s.open.toFixed(2) : '-'} · {s ? s.fps.toFixed(0) : 0}fps</Text>
+          {!!faceError && <Text style={{ color: '#e5484d' }} numberOfLines={2}>{faceError}</Text>}
         </View>
       </View>
 
@@ -74,6 +72,9 @@ export default function Screen() {
           <Text style={{ fontSize: 22 }}>
             {stt.matched ? '🎉 잘했어!' : '한 번 더!'} ({stt.text || '…'})
           </Text>
+        )}
+        {stt && (
+          <Text style={{ color: '#666' }}>입 움직임 {mouthFrames}프레임 ({(mouthFrames * 0.05).toFixed(1)}초)</Text>
         )}
         {!!status && <Text>{status}</Text>}
       </View>

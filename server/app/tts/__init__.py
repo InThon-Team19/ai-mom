@@ -1,1 +1,1 @@
-# 담당: 민주 — ElevenLabs 목소리 등록·합성
+# 담당: 민주 — TTS (fish.py: Fish Audio 목소리 복제·합성, 초안 태희)

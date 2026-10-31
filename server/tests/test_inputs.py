@@ -105,3 +105,8 @@ def test_bad_child_id_rejected():
     r = client.post("/voice/parent-sample", data={"child_id": "../../"},
                     files={"file": ("a.wav", _wav_bytes(), "audio/wav")})
     assert r.status_code == 400
+
+
+def test_tts_requires_registration():
+    r = client.post("/voice/tts", json={"child_id": "nobody", "text": "안녕"})
+    assert r.status_code == 400
