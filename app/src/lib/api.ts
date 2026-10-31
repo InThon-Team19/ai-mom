@@ -123,14 +123,39 @@ async function readBase64(uri: string) {
   }
 }
 
+/** 브라우저 녹음은 파일 경로가 아닌 blob URL이며 확장자는 MIME 형식에서 얻는다. */
+async function recordingPayload(uri: string) {
+  if (/^(blob:|data:)/i.test(uri)) {
+    const response = await withTimeout(fetch(uri), 8000, '녹음 읽기');
+    if (!response.ok) throw new Error('녹음 파일을 읽지 못했어요. 다시 녹음해 주세요.');
+    const blob = await withTimeout(response.blob(), 8000, '녹음 읽기');
+    if (!blob.size) throw new Error('녹음이 비어 있어요. 마이크를 확인하고 다시 녹음해 주세요.');
+    const mime = blob.type.split(';')[0].toLowerCase();
+    const formats: Record<string, string> = {
+      'audio/webm': 'webm', 'video/webm': 'webm', 'audio/ogg': 'ogg',
+      'audio/mp4': 'm4a', 'video/mp4': 'm4a', 'audio/aac': 'aac',
+      'audio/wav': 'wav', 'audio/x-wav': 'wav', 'audio/mpeg': 'mp3',
+    };
+    const ext = formats[mime];
+    if (!ext) throw new Error('이 브라우저의 녹음 형식을 지원하지 않아요. 다른 브라우저에서 다시 녹음해 주세요.');
+    const bytes = new Uint8Array(await blob.arrayBuffer());
+    let binary = '';
+    for (let i = 0; i < bytes.length; i += 32768) {
+      binary += String.fromCharCode(...bytes.subarray(i, i + 32768));
+    }
+    return { audio_b64: btoa(binary), ext };
+  }
+  const ext = /\.([a-z0-9]+)(?:\?|$)/i.exec(uri)?.[1].toLowerCase() || 'm4a';
+  return { audio_b64: await readBase64(uri), ext };
+}
+
 /** 로컬 녹음 파일(uri) → base64 JSON 업로드.
  * Expo 58 기본 fetch(expo/fetch)로는 multipart 파일 첨부가 폰에서 실패해서, 이미 잘 되는 JSON 경로로 보냄 */
 async function uploadB64<T>(path: string, uri: string, fields: Record<string, string>) {
   try {
     trace(`${path} 읽기 시작 ${uri}`);
-    const audio_b64 = await readBase64(uri);
+    const { audio_b64, ext } = await recordingPayload(uri);
     trace(`${path} 읽기 완료 ${audio_b64.length}자`);
-    const ext = (uri.split('?')[0].split('.').pop() || 'm4a').toLowerCase();
     return await withTimeout(req<T>(path, json('POST', { ...fields, audio_b64, ext })), 30000, '업로드');
   } catch (e) {
     reportError(`upload ${path} (${uri})`, e);
@@ -167,9 +192,8 @@ export const api = {
 
   // 아이 말소리 클립: 소음 감지로 녹음한 토막 → 말소리면 저장·받아쓰기 / 부모가 목록·재생
   childClip: async (childId: string, uri: string, info: { item?: string; phase?: string; expected?: string }) => {
-    const audio_b64 = await readBase64(uri);
-    const ext = (uri.split('?')[0].split('.').pop() || 'm4a').toLowerCase();
-    return req<ChildClipOut>('/voice/child-clip-b64', json('POST', { child_id: childId, audio_b64, ext, ...info }));
+    const audio = await recordingPayload(uri);
+    return req<ChildClipOut>('/voice/child-clip-b64', json('POST', { child_id: childId, ...audio, ...info }));
   },
   childClips: (childId: string, day?: string) => req<ChildClip[]>(`/voice/child-clips/${childId}${day ? `?day=${day}` : ''}`),
   /** 재생용 주소 + 인증 헤더 (expo-audio 의 { uri, headers }) */
@@ -221,10 +245,7 @@ export function backendApi(token?: string) {
   });
   const id = encodeURIComponent;
   const query = (values: Record<string, string>) => Object.entries(values).map(([k, v]) => `${id(k)}=${id(v)}`).join('&');
-  const recording = async (uri: string) => {
-    const ext = (uri.split('?')[0].split('.').pop() || 'm4a').toLowerCase();
-    return { audio_b64: await readBase64(uri), ext };
-  };
+  const recording = recordingPayload;
   return {
     signup: (email: string, password: string, display_name: string) =>
       call<BackendToken & { parent: { id: string; email: string; display_name: string } }>('/auth/signup', 'POST', { email, password, display_name }),
