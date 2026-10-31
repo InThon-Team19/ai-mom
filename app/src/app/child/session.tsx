@@ -896,6 +896,10 @@ export default function Session() {
   const toySize = Math.round(Math.max(56, Math.min(cardBox.w * 0.62, (cardBox.h - sfxFont * 1.6) * 0.78, u(240, 56))));
   const art = Math.round(Math.max(40, Math.min(cardBox.w * 0.55, cardBox.h * 0.6, u(140, 40))));
   const badge = u(52, 30);
+  // 따라 말하기 오른쪽 카드: 마이크는 남는 높이에 맞춤 (상태바·내비게이션 바가 있는 1280x800 Galaxy Tab 에서 카드 위아래로 넘치던 문제)
+  const repeatH = kid.height - kid.insets.top - kid.insets.bottom - u(30, 8) - u(34, 8) - u(60, 40) - u(86, 46) - u(20, 6) * 2;
+  const repeatFixed = u(110, 44) + Math.round(f(100, 34) * 1.05) + (compact ? 0 : Math.round(f(19) * 1.35)) + u(42, 20) + u(14, 4) * (compact ? 3 : 4);
+  const repeatMic = Math.round(Math.max(64, Math.min(u(184, 64), repeatH - repeatFixed - 16)));
   const replay = () => {
     // 다시 들려준 뒤에도 따라 말하기면 아이 말을 기다림 (예전엔 흐름만 끊겨 따라 말해도 반응이 없었음)
     const t = ++run.current;
@@ -933,7 +937,7 @@ export default function Session() {
             {/* 아이 얼굴 센서: 작고 흐리게 (기기 안에서만 처리, 영상은 저장·전송 안 함) */}
             {focused && (
               <View pointerEvents="box-none" style={{ opacity: 0.45 }}>
-                <FaceSensor onFrame={onFrame} style={{ width: compact ? 52 : 72, height: compact ? 38 : 54, borderRadius: 12 }} />
+                <FaceSensor onFrame={onFrame} style={{ width: u(72, 52), height: u(54, 38), borderRadius: u(12, 8) }} />
               </View>
             )}
           </>
@@ -1122,7 +1126,7 @@ export default function Session() {
               {english && <Text style={{ fontSize: f(40, 16), color: K.sub }}> {item.en}</Text>}
             </Text>
             {/* 녹음 버튼 대신 듣고 있는 마이크: 누르지 않아도 들음. 누르면 지금 바로 들음 */}
-            <ListeningMic status={listener.status} level={listener.level} onPress={onEar} size={u(184, 64)} />
+            <ListeningMic status={listener.status} level={listener.level} onPress={onEar} size={repeatMic} />
             {!compact && <Text style={{ fontSize: f(19), fontWeight: '700', color: K.sub }}>버튼 없이 말하면 바로 들어요</Text>}
             <Stars on={Math.min(3, success)} size={u(42, 20)} gap={u(12, 6)} />
             {/* 다시 들려줘 (보드엔 없지만 예전 기능 유지 — 카드 오른쪽 위 작은 버튼) */}

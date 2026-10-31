@@ -95,7 +95,8 @@ export default function End() {
 
       <View style={{ flex: 1, minHeight: 0, flexDirection: 'row', alignItems: 'center' }}>
         {/* 왼쪽: 큰 둥근 아바타 + 별 */}
-        <View style={{ width: u(560, 230), alignItems: 'center', justifyContent: 'center' }}>
+        {/* 폭: 원 + 여백만큼 (보드 560 고정이면 1024~1366 폭 태블릿에서 오른쪽 버튼 두 개가 칸 밖으로 삐져나옴) */}
+        <View style={{ width: Math.min(u(560, 230), circle + u(90, 20)), alignItems: 'center', justifyContent: 'center' }}>
           <Animated.View style={bobStyle}>
             <AvatarCircle size={circle} border={u(10, 5)}>
               <Avatar config={profile?.avatar} mouth={mouth} scale={scale} size={Math.round(circle * 0.87)} expression="smile" />

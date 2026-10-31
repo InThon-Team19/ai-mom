@@ -12,7 +12,7 @@ import Animated, { Easing, useAnimatedStyle, useSharedValue, withSequence, withS
 import Svg, { Ellipse, Path, Rect } from 'react-native-svg';
 
 import type { AvatarExpression } from '@/components/Avatar';
-import { BasketArt, HandIcon, ItemArt, K } from '@/components/child/design';
+import { BasketArt, HandIcon, ItemArt, K, useKid } from '@/components/child/design';
 import { StarBurst } from '@/components/child/stage';
 import { ITEMS, type ItemId } from '@/content/curriculum';
 import { haptic, logEvent, playSfx } from '@/lib/sense';
@@ -101,7 +101,10 @@ export function RevealStation({ items, w, h, reduceMotion, wiggle, english, onAc
   const [pop, setPop] = useState(0);
   const [touched, setTouched] = useState(false); // 처음 쓸기 전엔 손 모양 힌트
   const item = ITEMS[items[idx] ?? items[0]];
-  const box = Math.round(Math.max(120, Math.min(w * 0.8, h * 0.82, 440)));
+  // 최대 크기는 보드 비율로 (큰 태블릿에서 고정 440 에 묶여 작게 보이지 않게), 아래 이름 줄 높이만큼은 남김
+  const { u, f } = useKid();
+  const wordH = u(48, 36);
+  const box = Math.round(Math.max(120, Math.min(w * 0.8, h * 0.82, h - wordH - 12, u(440, 300))));
   const cell = box / COLS;
   const k = box / 384; // 보드 크기 대비
   // 손가락 처리용 최신 값 (빠르게 들어오므로 ref)
@@ -253,9 +256,9 @@ export function RevealStation({ items, w, h, reduceMotion, wiggle, english, onAc
           </View>
         </GestureDetector>
       </Animated.View>
-      <View style={{ height: 40, justifyContent: 'center' }}>
+      <View style={{ height: wordH, justifyContent: 'center' }}>
         {revealed && (
-          <AnimatedText key={idx} entering={ZoomIn.duration(220)} style={{ fontSize: 28, fontWeight: '800', color: K.ink }}>
+          <AnimatedText key={idx} entering={ZoomIn.duration(220)} style={{ fontSize: f(32, 24), fontWeight: '800', color: K.ink }}>
             {item.ko}!
           </AnimatedText>
         )}
@@ -291,8 +294,9 @@ function Ring({ level, size, cx, cy, reduceMotion }: { level: number; size: numb
 export function DrumStation({ w, h, reduceMotion, wiggle, onActivity, say, feel, onDone }: StationProps) {
   const alive = useAlive();
   // 보드 PlayDrum: 옆에서 본 북 그림 (viewBox 520x420) + 아래 세기 칩
-  const chipH = Math.max(32, Math.min(44, h * 0.1));
-  const dw = Math.round(Math.max(160, Math.min(w * 0.85, ((h - chipH - 16) * 520) / 420, 480)));
+  const { u } = useKid();
+  const chipH = Math.max(32, Math.min(u(44, 32), h * 0.1));
+  const dw = Math.round(Math.max(160, Math.min(w * 0.85, ((h - chipH - 16) * 520) / 420, u(480, 300))));
   const dh = Math.round((dw * 420) / 520);
   const k = dw / 520;
   const [rings, setRings] = useState<{ id: number; level: number }[]>([]);
@@ -514,7 +518,8 @@ export function SortStation({ items, w, h, reduceMotion, wiggle, onActivity, say
   const pieces = useMemo<ItemId[]>(() => (items.length >= 2 ? items.slice(0, 4) : [items[0], items[0]]), [items]);
   const n = pieces.length;
   // 보드 PlaySort: 아래 큰 바구니 그림(472x200) 안에 사물 모양 점선 자리 · 위에서 끌어 옴 · 사이에 점선 화살표
-  const bw = Math.round(Math.max(200, Math.min(w * 0.9, (h * 0.5 * 472) / 200, 520)));
+  const { u } = useKid();
+  const bw = Math.round(Math.max(200, Math.min(w * 0.9, (h * 0.5 * 472) / 200, u(520, 300))));
   const bh = Math.round((bw * 200) / 472);
   const basketTop = h - bh - 8;
   const bk = bw / 472;

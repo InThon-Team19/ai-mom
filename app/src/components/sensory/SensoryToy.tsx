@@ -5,7 +5,7 @@ import { PanGestureHandler, State, TapGestureHandler, type PanGestureHandlerEven
 import { frames, type WordId } from '@/content/sensory/assets';
 import { hapticConfig, playSound, pulse, stopSound } from '@/content/sensory/feedback';
 import { initial, transition, type Input } from '@/content/sensory/machine';
-import { K, SOFT2 } from '@/components/child/design';
+import { K, SOFT2, useKid } from '@/components/child/design';
 import { logEvent } from '@/lib/sense';
 import { useProfile } from '@/lib/store';
 import { Text } from '@/components/AppText';
@@ -22,6 +22,7 @@ function Frame({ source, visible, duration }: { source: number; visible: boolean
 
 export function SensoryToy({ id, label }: { id: WordId; label: string }) {
   const profile = useProfile();
+  const { u, f } = useKid(); // 큰 태블릿에서 글자·여백도 보드 비율로 (폰 가로는 예전 크기가 최소)
   const feedback = (kind: Parameters<typeof pulse>[0]) => { if (profile?.settings.vibration !== false) pulse(kind); };
   const state = useRef(initial());
   const [step, setStep] = useState(0);
@@ -100,8 +101,8 @@ export function SensoryToy({ id, label }: { id: WordId; label: string }) {
     {frames[id].map((source, index) => <Frame key={index} source={source} visible={step === index} duration={id === 'sun' ? 100 : 150} />)}
   </Animated.View>;
   // Keep every PNG mounted and decoded; animate layer opacity without changing layout.
-  return <View style={styles.card}>
-    <Text style={styles.label}>{label}</Text>
+  return <View style={[styles.card, { padding: u(14, 8), borderRadius: u(32, 24) }]}>
+    <Text style={[styles.label, { fontSize: f(30, 22) }]}>{label}</Text>
     {swipe || id === 'stone' ? <PanGestureHandler minDist={id === 'stone' ? 2 : 40} maxPointers={1}
       onGestureEvent={event => { if (id === 'stone') rub(event.nativeEvent); }}
       onHandlerStateChange={({ nativeEvent: e }) => {
@@ -112,7 +113,7 @@ export function SensoryToy({ id, label }: { id: WordId; label: string }) {
       : <TapGestureHandler maxDist={20} onHandlerStateChange={e => { if (e.nativeEvent.state === State.END) input('tap'); }}>
         <View style={styles.touch} accessible accessibilityRole="button" accessibilityLabel={`${label}, 만져 보세요`} accessibilityActions={[{ name: 'activate' }]} onAccessibilityAction={() => input('tap')}>{picture}</View>
       </TapGestureHandler>}
-    <Text style={styles.hint}>{id === 'stone' ? '살살 문질러요' : swipe ? '손가락으로 밀어요' : id === 'crow' || id === 'tiger' ? '톡, 톡! 두 번 만져요' : '톡! 만져요'}</Text>
+    <Text style={[styles.hint, { fontSize: f(19, 14), paddingVertical: u(6, 4) }]}>{id === 'stone' ? '살살 문질러요' : swipe ? '손가락으로 밀어요' : id === 'crow' || id === 'tiger' ? '톡, 톡! 두 번 만져요' : '톡! 만져요'}</Text>
   </View>;
 }
 const styles = StyleSheet.create({

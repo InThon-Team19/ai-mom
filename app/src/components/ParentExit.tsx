@@ -7,7 +7,7 @@ import { Alert, Platform, Pressable, View } from 'react-native';
 import Svg, { Path, Rect } from 'react-native-svg';
 
 import { PinPad } from '@/components/PinPad';
-import { useDevice } from '@/lib/layout';
+import { useKid } from '@/components/child/design';
 import { api } from '@/lib/api';
 import { getDeviceId } from '@/lib/device';
 import { authMessage, loadAccount, login, parentEntry } from '@/lib/account';
@@ -56,7 +56,8 @@ function adultMenu(childId?: string, onDone?: () => void) {
  */
 export function ParentExit({ dark = false, label = '부모' }: { dark?: boolean; label?: string; home?: boolean }) {
   const profile = useProfile();
-  const { isTablet } = useDevice();
+  // 크기: 옆 SoftPill(소리만·천천히·홈)과 같은 비율 — 태블릿 크기에 따라 같이 커지고 줄어듦
+  const { u, f } = useKid();
   const [progress, setProgress] = useState(0);
   const [pinOpen, setPinOpen] = useState(false);
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -81,7 +82,7 @@ export function ParentExit({ dark = false, label = '부모' }: { dark?: boolean;
     }, 50);
   };
 
-  const h = isTablet ? 48 : 36;
+  const h = u(48, 36);
   const ink = dark ? '#FFFFFF' : '#3A364E';
   return (
     <>
@@ -93,22 +94,22 @@ export function ParentExit({ dark = false, label = '부모' }: { dark?: boolean;
         hitSlop={8}
         style={{
           height: h,
-          paddingHorizontal: isTablet ? 18 : 12,
+          paddingHorizontal: u(18, 12),
           borderRadius: h / 2,
           backgroundColor: dark ? '#3D3470' : '#FFFFFF',
           boxShadow: dark ? undefined : '0px 3px 10px rgba(58,54,78,0.08)',
           flexDirection: 'row',
           alignItems: 'center',
-          gap: isTablet ? 8 : 5,
+          gap: u(8, 5),
           overflow: 'hidden',
         }}>
         {/* 3초 누르는 동안 왼쪽부터 노랗게 차오름 (깜빡임 없음) */}
         {progress > 0 && <View pointerEvents="none" style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: `${Math.round(progress * 100)}%`, backgroundColor: '#EFCA5A' }} />}
-        <Svg width={isTablet ? 14 : 11} height={isTablet ? 16 : 13} viewBox="0 0 14 16">
+        <Svg width={u(14, 11)} height={u(16, 13)} viewBox="0 0 14 16">
           <Rect x="1" y="7" width="12" height="8" rx="2" fill={progress > 0 ? '#3A364E' : ink} />
           <Path d="M4 7V5a3 3 0 0 1 6 0v2" stroke={progress > 0 ? '#3A364E' : ink} strokeWidth={2} fill="none" />
         </Svg>
-        <Text style={{ fontSize: isTablet ? 17 : 13, fontWeight: '800', color: progress > 0 ? '#3A364E' : ink }}>{label}</Text>
+        <Text style={{ fontSize: f(17, 13), fontWeight: '800', color: progress > 0 ? '#3A364E' : ink }}>{label}</Text>
       </Pressable>
       <PinPad
         visible={pinOpen}

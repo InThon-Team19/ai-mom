@@ -18,7 +18,7 @@ import { Text } from '@/components/AppText';
 
 export default function AudioOnly() {
   const profile = useProfile();
-  const { u, f, width, height, compact } = useKid();
+  const { u, f, width, height, compact, insets } = useKid();
   const { speak, stop, mouth } = useSpeak(profile?.childId);
   const scale = useMouthScale(profile?.childId);
   const { name, me, english } = who(profile);
@@ -75,7 +75,17 @@ export default function AudioOnly() {
     setFrom({ at: n < lines.length ? n : 0 });
   };
 
-  const ring = u(366, 150);
+  // 동그라미 크기: 보드 비율이되 남는 높이를 넘지 않게 (4:3 아이패드·Galaxy Tab 에서 문장 두 줄이면 위 알약·아래 버튼과 겹치던 문제)
+  const lineH = (n: number) => Math.round(n * 1.35);
+  const rest =
+    u(48, 36) + // 위 알약
+    lineH(f(32, 18)) + // 제목
+    u(56, 26) + u(16, 2) + // 소리 막대
+    (compact ? 0 : lineH(f(38, 18)) * 2) + // 지금 문장 (최대 두 줄)
+    u(78, 44) + u(4, 2) + // 버튼
+    u(18, 4) * (compact ? 3 : 4); // 사이 간격
+  const avail = height - insets.top - insets.bottom - u(30, 8) - u(34, 8);
+  const ring = Math.round(Math.max(120, Math.min(u(366, 150), avail - rest - 8)));
   const av = Math.round(ring * (186 / 366));
   const k = Math.max(0, Math.min(1, mouth));
   const bars = [18, 32, 46, 56, 42, 30, 44];

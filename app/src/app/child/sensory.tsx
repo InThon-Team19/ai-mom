@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { AppState, Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { AppState, Pressable, StyleSheet, View } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -8,7 +8,7 @@ import { Asset } from 'expo-asset';
 import { frames, stories, type WordId } from '@/content/sensory/assets';
 import { stopSound } from '@/content/sensory/feedback';
 import { SensoryToy } from '@/components/sensory/SensoryToy';
-import { ChunkyButton, K, SOFT2 } from '@/components/child/design';
+import { ChunkyButton, K, SOFT2, useKid } from '@/components/child/design';
 import { dayOf } from '@/content/curriculum';
 import { useProfile } from '@/lib/store';
 import { Text } from '@/components/AppText';
@@ -21,7 +21,10 @@ export default function SensoryStories() {
   const [foreground, setForeground] = useState(AppState.currentState === 'active');
   const [ready, setReady] = useState(false);
   const [failed, setFailed] = useState(false);
-  const { width, height } = useWindowDimensions();
+  // 크기: 다른 아이 화면처럼 보드(1180x820) 비율로 키움 (폰 가로에선 예전 크기가 최소)
+  const { u, f, width, height } = useKid();
+  const btn = { height: u(60, 48), fontSize: f(22, 16) };
+  const titleSize = { fontSize: f(30, 22) };
   const story = stories.find(s => s.id === selected);
   useFocusEffect(useCallback(() => { setFocused(true); return () => { setFocused(false); setSelected(null); stopSound(); }; }, []));
   useEffect(() => {
@@ -33,23 +36,23 @@ export default function SensoryStories() {
     void Asset.loadAsync(Object.values(frames).flat()).then(() => { if (alive) setReady(true); }).catch(() => { if (alive) setFailed(true); });
     return () => { alive = false; };
   }, []);
-  return <GestureHandlerRootView style={{ flex: 1 }}><SafeAreaView style={styles.screen}>
-    <View style={styles.header}>
-      <ChunkyButton height={48} fontSize={16} label={story ? '‹ 동화 고르기' : '‹ 돌아가기'} onPress={() => story ? setSelected(null) : router.back()} />
-      <Text style={styles.title}>{story?.title ?? '동화 고르기'}</Text>
+  return <GestureHandlerRootView style={{ flex: 1 }}><SafeAreaView style={[styles.screen, { padding: u(28, 12) }]}>
+    <View style={[styles.header, { gap: u(16, 12), paddingBottom: u(16, 12) }]}>
+      <ChunkyButton {...btn} label={story ? '‹ 동화 고르기' : '‹ 돌아가기'} onPress={() => story ? setSelected(null) : router.back()} />
+      <Text style={[styles.title, titleSize]}>{story?.title ?? '동화 고르기'}</Text>
     </View>
-    {!story && dailyStory && <View style={styles.daily}>
-      <Text style={styles.dailyTitle}>오늘의 동화 · {dailyStory.title}</Text>
-      <ChunkyButton height={48} fontSize={16} label="읽어줘" onPress={() => router.push('/child/story')} />
+    {!story && dailyStory && <View style={[styles.daily, { gap: u(16, 12), padding: u(16, 12), marginBottom: u(16, 12), borderRadius: u(28, 24) }]}>
+      <Text style={[styles.dailyTitle, { fontSize: f(24, 18) }]}>오늘의 동화 · {dailyStory.title}</Text>
+      <ChunkyButton {...btn} label="읽어줘" onPress={() => router.push('/child/story')} />
     </View>}
-    {!story && <Text style={styles.section}>만지고 느끼는 동화</Text>}
-    {!ready ? <View style={styles.center}><Text style={styles.title}>{failed ? '그림을 불러오지 못했어요. 다시 들어와 주세요.' : '동화 그림을 준비하고 있어요…'}</Text></View>
-      : !story ? <View style={[styles.items, { flexDirection: width > height ? 'row' : 'column' }]}>
-        {stories.map(s => <Pressable key={s.id} style={styles.choice} accessibilityRole="button" onPress={() => setSelected(s.id)}>
+    {!story && <Text style={[styles.section, { fontSize: f(22, 18), marginBottom: u(12, 8) }]}>만지고 느끼는 동화</Text>}
+    {!ready ? <View style={styles.center}><Text style={[styles.title, titleSize]}>{failed ? '그림을 불러오지 못했어요. 다시 들어와 주세요.' : '동화 그림을 준비하고 있어요…'}</Text></View>
+      : !story ? <View style={[styles.items, { gap: u(20, 12), flexDirection: width > height ? 'row' : 'column' }]}>
+        {stories.map(s => <Pressable key={s.id} style={[styles.choice, { padding: u(16, 12), borderRadius: u(32, 24) }]} accessibilityRole="button" onPress={() => setSelected(s.id)}>
           <Image source={frames[s.words[0].word_id as WordId][0]} contentFit="contain" style={{ flex: 1, width: '100%' }} />
-          <Text style={styles.title}>{s.title}</Text>
+          <Text style={[styles.title, titleSize]}>{s.title}</Text>
         </Pressable>)}
-      </View> : <View style={[styles.items, { flexDirection: width > height ? 'row' : 'column' }]}>
+      </View> : <View style={[styles.items, { gap: u(20, 12), flexDirection: width > height ? 'row' : 'column' }]}>
         {focused && foreground && story.words.map(word => <SensoryToy key={`${story.id}-${word.word_id}`} id={word.word_id as WordId} label={word.word_ko} />)}
       </View>}
   </SafeAreaView></GestureHandlerRootView>;
