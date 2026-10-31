@@ -1,11 +1,11 @@
 // 공용 UI — 와이어프레임 스타일 (파란 주색, 회색 카드, 둥근 모서리). 담당: 태희
-import { router } from 'expo-router';
 import type { ReactNode } from 'react';
 import { Pressable, ScrollView, Text, View, type StyleProp, type TextStyle, type ViewStyle } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { C, R, T } from '@/theme';
 import { useDevice } from '@/lib/layout';
+import { goBack, prevOf } from '@/lib/nav';
 
 type BtnProps = {
   label: string;
@@ -113,7 +113,7 @@ export function OnboardingScaffold({
     <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }}>
       <View style={[{ paddingHorizontal: 24, paddingTop: 8, gap: 10 }, frame]}>
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', height: 40 }}>
-          <Pressable onPress={() => router.back()} hitSlop={12} accessibilityLabel="뒤로">
+          <Pressable onPress={() => goBack(prevOf(step))} hitSlop={12} accessibilityLabel="뒤로">
             <Text style={{ fontSize: 28, color: C.text }}>‹</Text>
           </Pressable>
           <Text style={T.small}>

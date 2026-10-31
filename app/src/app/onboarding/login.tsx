@@ -1,6 +1,6 @@
 // 부모 로그인 — 담당: 태희
 // 이미 가입한 가족: 새 폰·앱 재설치·아이 태블릿에서 부모 모드로 바꿀 때 아이디·비밀번호로 같은 가족 정보를 불러옴
-import { router } from 'expo-router';
+import { router, type Href } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -11,6 +11,7 @@ import { registerThisDevice } from '@/lib/device';
 import { loadProfile, setRole } from '@/lib/store';
 import { C, R, T } from '@/theme';
 import { useDevice } from '@/lib/layout';
+import { goBack } from '@/lib/nav';
 
 const input = {
   fontSize: 17,
@@ -47,7 +48,7 @@ export default function Login() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: C.bg, paddingVertical: 24, paddingHorizontal: gutter, gap: 16 }}>
-      <Pressable onPress={() => router.back()} hitSlop={12} accessibilityLabel="뒤로">
+      <Pressable onPress={() => goBack('/' as Href)} hitSlop={12} accessibilityLabel="뒤로">
         <Text style={{ fontSize: 28, color: C.text }}>‹</Text>
       </Pressable>
       <View style={{ gap: 6 }}>
