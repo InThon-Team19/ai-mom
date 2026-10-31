@@ -14,7 +14,8 @@ STATIC_DIR = ROOT / "static"
 DATA_DIR = Path(os.getenv("DATA_DIR", ROOT / "data"))
 
 # 공개 파일 URL 앞부분. 기본은 "요청이 들어온 주소" (LAN IP·터널 어디서든 맞게). PUBLIC_BASE_URL 로 고정 가능
-FIXED_BASE_URL = os.getenv("PUBLIC_BASE_URL", "").rstrip("/")
+# Render 는 RENDER_EXTERNAL_URL(https 공개 주소)을 자동으로 줌 → 프록시 뒤에서 http 로 보이는 주소 대신 그걸 씀
+FIXED_BASE_URL = (os.getenv("PUBLIC_BASE_URL") or os.getenv("RENDER_EXTERNAL_URL") or "").rstrip("/")
 request_base_url: ContextVar[str] = ContextVar("request_base_url", default="http://localhost:8000")
 
 

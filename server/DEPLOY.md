@@ -1,5 +1,16 @@
 # 서버 클라우드 배포 (3주 시연용) — 담당: 태희
 
+## Render (권장 — 저장소의 render.yaml 사용)
+1. https://render.com 에 GitHub 로 가입·로그인
+2. New → **Blueprint** → `InThon-Team19/ai-mom` 선택 → render.yaml 을 읽어 `aimom-server` 를 만듦
+3. 값 입력 칸에 server/.env 의 키 넣기: GROQ_API_KEY, FISH_API_KEY, FISH_TTS_MODEL, ANTHROPIC_BASE_URL, ANTHROPIC_AUTH_TOKEN, ANTHROPIC_MODEL (OPENAI_API_KEY 는 선택)
+4. Apply → 빌드 5~10분 → `https://aimom-server-xxxx.onrender.com/health` 가 `{"ok": true}` 면 완료
+- 요금제 starter(월 7달러) + 디스크 1GB: 녹음 파일·DB 가 재시작에도 남음. 무료로 바꾸면 디스크를 못 붙여 재시작마다 녹음·계정이 사라짐
+- 엄마 목소리 파일 주소는 Render 공개 주소(RENDER_EXTERNAL_URL)로 자동으로 맞춰짐
+- 앱: 첫 화면 아래 서버 주소 칸에 Render 주소를 넣고 저장
+
+---
+
 노트북 없이 항상 켜져 있게 Railway 에 올린다. 녹음 파일·DB 는 볼륨(/data)에 저장돼 재배포해도 남는다.
 
 ## 1. Railway 프로젝트 만들기

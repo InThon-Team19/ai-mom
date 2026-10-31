@@ -21,4 +21,4 @@ ENV TZ=Asia/Seoul \
     ALLOW_LEGACY_API=true
 
 # 배포 서비스가 주는 PORT 사용 (없으면 8000)
-CMD ["sh", "-c", "mkdir -p /data/files && uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
+CMD ["sh", "-c", "mkdir -p /data/files && uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000} --proxy-headers --forwarded-allow-ips '*'"]

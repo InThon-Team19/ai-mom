@@ -1,0 +1,35 @@
+# Render 블루프린트 — 아이맘 서버 (server/Dockerfile 로 빌드). 담당: 태희
+# Render 대시보드 → New → Blueprint → 이 저장소 선택 → 아래 sync:false 키 값 입력 → Apply
+# 녹음 파일·DB 가 재시작에도 남도록 디스크(/data)를 붙임 → 디스크는 유료 요금제(starter)에서만 가능
+services:
+  - type: web
+    name: aimom-server
+    runtime: docker
+    rootDir: server
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    plan: starter
+    region: singapore
+    healthCheckPath: /health
+    autoDeploy: true
+    disk:
+      name: aimom-data
+      mountPath: /data
+      sizeGB: 1
+    envVars:
+      - key: GROQ_API_KEY
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: FISH_API_KEY
+        sync: false
+      - key: FISH_TTS_MODEL
+        sync: false
+      - key: ANTHROPIC_BASE_URL
+        sync: false
+      - key: ANTHROPIC_AUTH_TOKEN
+        sync: false
+      - key: ANTHROPIC_MODEL
+        sync: false
+      - key: ALLOW_LEGACY_API
+        value: "true"
