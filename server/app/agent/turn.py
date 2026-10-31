@@ -148,7 +148,8 @@ def _mentions_today(text: str, day: int) -> bool:
 
 
 CHAT_OPENERS = ("{call}, 오늘 재미있었어? {me}랑 이야기하자!", "{call}, 오늘 뭐가 제일 좋았어?", "{call}, 지금 기분이 어때?")
-CHAT_FALLBACKS = ("우와, 정말? {name} 이야기 더 해 줄래?", "히히, {me}도 궁금해. 그래서 어떻게 됐어?", "오오, {name} 말 잘 듣고 있어!")
+CHAT_FALLBACKS = ("우와, 정말? {me}는 {name} 이야기 듣는 게 제일 좋아. 조금만 더 이야기해 줄래?", "히히, {me}도 너무 궁금해. 그래서 그다음에 어떻게 됐어?", "오오, {name} 말 잘 듣고 있어. {me}한테 하나만 더 알려 줄래?")
+CHAT_MISS = "{me}도 {name} 많이 보고 싶어. 이따 {me} 오면 꼭 안아 주자. 그때 오늘 제일 재미있었던 거 이야기해 줄래?"  # AI 가 늦을 때 '엄마 보고 싶어'에 엉뚱한 답이 안 나가게
 CHAT_UNSURE = "그건 이따 {me}랑 같이 알아보자. {name}는 오늘 뭐 하고 놀았어?"
 
 
@@ -162,11 +163,16 @@ def _chat_system(day: int, p: dict, profile: dict, mood: str | None) -> str:
 말투는 진짜 엄마처럼 감정을 듬뿍 담아. 놀라면 "우와!", 웃기면 "히히", 속상하면 "아이고, 속상했겠다"처럼 아이 기분에 맞춰 반응해.
 "그랬구나"로 시작하지 말고, 앞에서 한 말과 같은 표현을 되풀이하지 마. 아이가 말한 단어를 넣어 구체적으로 대답해.
 규칙:
-- 한두 문장, 전체 35자 안팎. 쉬운 말. 아이 말을 따라 해 주고("사과 먹었구나!") 가끔 쉬운 질문 하나로 이어가.
+- 두세 문장, 전체 50~80자. 쉬운 말. 이 순서로 정성껏:
+  1) 감정 듬뿍 반응 + 아이가 말한 단어를 넣어 따라 하기 ("우와, 미끄럼틀 탔어? 신났겠다!")
+  2) {p['me']}의 마음이나 작은 생각 한마디 ("{p['me']}도 {p['name']}가 슝 내려오는 거 보고 싶다.")
+  3) 아이가 더 말하고 싶어지는 쉬운 질문 하나 ("빨리 내려왔어, 천천히 내려왔어?")
+- 단답("좋았겠다", "멋지다"만) 금지. 매번 아이 말에 딱 맞는 새 문장으로.
 - 사실을 지어내지 마. 모르는 걸 묻거나 정확한 답이 필요한 질문(왜, 어떻게, 언제, 어디)은 답하지 말고 sensitive=true 로 하고 "이따 {p['me']}랑 같이 알아보자"처럼 말해.
 - 건강·병원·약·몸이 아픈 이야기, 낯선 사람, 비밀, 집 밖으로 나가기, 가족 다툼 이야기는 깊이 묻지 말고 sensitive=true 로 하고 부드럽게 다른 이야기로.
 - 진짜 {p['me']}가 옆에 있다고 하지 마. {p['me']}를 찾으면 "{p['me']}는 일하고 있어. 이따 오면 꼭 이야기해 주자"처럼 말해.
-- 약속하지 마(사 줄게, 데려갈게 등). 틀렸다고 하지 마. 이모지·물결표·말줄임표 쓰지 마.
+- 약속하지 마("사 줄게", "데려갈게", "{p['me']}가 준비해 줄게"처럼 지금 해 줄 수 없는 일). 틀렸다고 하지 마. 이모지·물결표·말줄임표 쓰지 마.
+- 배고파·졸려·쉬 마려워·목말라 같은 몸에 필요한 건 "옆에 있는 어른한테 말해 볼까?"로 안내해.
 JSON 한 줄만 출력: {{"sensitive": true 또는 false, "text": "아바타가 말할 문장"}}"""
 
 
@@ -182,7 +188,7 @@ def make_chat(day: int, child_text: str, history: list[dict] | None, signals: di
         return {"text": f"괜찮아? 가까이 있는 어른한테 바로 말해 줘. {p['me']}도 금방 갈게.", "out_of_scope": True, "blocked": None}
     msgs = []
     for h in (history or [])[-6:]:
-        t = str(h.get("text", ""))[:80]
+        t = str(h.get("text", ""))[:120]  # 이야기하기 대답이 두세 문장이라 넉넉히
         if t:
             msgs.append({"role": "assistant" if h.get("role") == "avatar" else "user", "content": t})
     msgs.append({"role": "user", "content": child_text[:120]})
@@ -203,10 +209,11 @@ def make_chat(day: int, child_text: str, history: list[dict] | None, signals: di
     if data is None and left > 1.5:  # AI 가 가끔 빈 답을 바로 줌 → 시간 여유가 있으면 한 번 더
         data = _ask_llm_messages(system, merged, left)
     if data is None:
-        return {"text": fill(random.choice(CHAT_FALLBACKS)), "out_of_scope": False, "blocked": None}
+        miss = any(w in child_text for w in ("보고 싶", "보고싶", "어디 있", "어딨", "언제 와"))
+        return {"text": fill(CHAT_MISS if miss else random.choice(CHAT_FALLBACKS)), "out_of_scope": False, "blocked": None}
     sensitive = bool(data.get("sensitive"))
     text = safety.clean(data["text"])
-    if safety.check_output(text, max_len=60):
+    if safety.check_output(text, max_len=110):  # 이야기하기는 두세 문장(50~80자)이라 조금 길게 허용
         return {"text": fill(CHAT_UNSURE), "out_of_scope": sensitive, "blocked": text[:120] or None}
     return {"text": text, "out_of_scope": sensitive, "blocked": None}
 
