@@ -77,10 +77,10 @@ function Donut({ counts, size = 112 }: { counts: Record<SenseKey, number>; size?
             return el;
           })}
       </G>
-      <SvgText x={56} y={56} textAnchor="middle" fontSize={19} fontWeight="800" fill={C.text}>
+      <SvgText x={56} y={56} textAnchor="middle" fontSize={19} fontFamily="Cafe24-Ssurround-Air" fill={C.text}>
         {`${total}번`}
       </SvgText>
-      <SvgText x={56} y={72} textAnchor="middle" fontSize={11} fill={C.sub}>
+      <SvgText x={56} y={72} textAnchor="middle" fontSize={11} fontFamily="Cafe24-Ssurround-Air" fill={C.sub}>
         반응
       </SvgText>
     </Svg>

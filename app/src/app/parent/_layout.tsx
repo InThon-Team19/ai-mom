@@ -87,7 +87,7 @@ export default function ParentTabs() {
         tabBarActiveTintColor: C.text,
         tabBarInactiveTintColor: C.sub,
         tabBarLabelPosition: 'below-icon',
-        tabBarLabelStyle: { fontSize: 13, fontFamily: 'Pretendard-Medium', marginTop: 2 },
+        tabBarLabelStyle: { fontSize: 13, fontFamily: 'Cafe24-Ssurround-Air', marginTop: 2 },
         tabBarItemStyle: { justifyContent: 'center', alignItems: 'center' },
         tabBarStyle: { height: 64 + insets.bottom, paddingBottom: insets.bottom, paddingTop: 6, backgroundColor: C.white, borderTopWidth: 1, borderTopColor: C.border, elevation: 0, shadowOpacity: 0 },
         sceneStyle: { backgroundColor: C.bg },
