@@ -1,26 +1,22 @@
-// 모드 선택 (부모 / 아이) + 서버 주소 설정 — 화면 디자인은 민철 와이어프레임 나오면 교체
-import { Link } from 'expo-router';
+// 앱 시작: 이 기기를 부모 폰으로 쓸지, 아이 태블릿으로 쓸지 + 서버 주소 설정 — 담당: 태희
+// 와이어프레임 1-1 은 "역할 선택 없이 부모만 가입". 아이 태블릿은 1-7 의 연결 코드로 붙음 → 여기서는 기기 용도만 고름
+import { Redirect, router } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { Button } from '@/components/ui';
 import { api } from '@/lib/api';
 import { loadApiUrl, saveApiUrl } from '@/lib/config';
+import { getRole, loadProfile, setRole, type Role } from '@/lib/store';
+import { C, T } from '@/theme';
 
-const LINKS = [
-  ['/parent/onboarding', '가입 1 배경 정보'],
-  ['/parent/avatar', '가입 2 아바타'],
-  ['/parent/voice', '가입 3 목소리'],
-  ['/parent/mouth', '가입 4 입모양'],
-  ['/parent/persona', '가입 5 페르소나'],
-  ['/parent/evening', '밤: 대화 확인'],
-  ['/parent/plan-read', '밤: 계획 낭독'],
-  ['/child', '아이 모드'],
-] as const;
-
-export default function Home() {
+export default function Entry() {
+  const [ready, setReady] = useState(false);
+  const [dest, setDest] = useState<string | null>(null);
   const [server, setServer] = useState('확인 중...');
   const [url, setUrl] = useState('');
+  const [showServer, setShowServer] = useState(false);
 
   const check = useCallback(() => {
     setServer('확인 중...');
@@ -28,23 +24,37 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    loadApiUrl().then((u) => {
-      setUrl(u);
+    (async () => {
+      setUrl(await loadApiUrl());
       check();
-    });
+      const [role, p] = await Promise.all([getRole(), loadProfile()]);
+      if (role === 'parent' && p.onboarded) setDest('/parent');
+      else if (role === 'child') setDest('/child');
+      setReady(true);
+    })();
   }, [check]);
 
-  return (
-    <SafeAreaView style={{ flex: 1, padding: 24, gap: 14 }}>
-      <Text style={{ fontSize: 28, fontWeight: '800' }}>아이봄</Text>
-      {LINKS.map(([href, label]) => (
-        <Link key={href} href={href} style={{ fontSize: 18, paddingVertical: 6 }}>
-          {label}
-        </Link>
-      ))}
+  if (!ready) return null;
+  if (dest) return <Redirect href={dest as '/parent'} />;
 
-      <View style={{ gap: 6, marginTop: 'auto' }}>
-        <Text style={{ color: '#888' }}>서버: {server}</Text>
+  const choose = async (r: Role) => {
+    await setRole(r);
+    router.replace(r === 'parent' ? '/onboarding/start' : '/child');
+  };
+
+  return (
+    <SafeAreaView style={{ flex: 1, padding: 24, gap: 16, backgroundColor: C.bg }}>
+      <View style={{ flex: 1, justifyContent: 'center', gap: 12 }}>
+        <Text style={{ fontSize: 34, fontWeight: '900', color: C.primary }}>아이봄</Text>
+        <Text style={T.sub}>이 기기를 어떻게 쓸까요?</Text>
+        <Button label="부모 폰으로 쓰기" onPress={() => choose('parent')} />
+        <Button label="아이 태블릿으로 쓰기" variant="outline" onPress={() => choose('child')} />
+      </View>
+
+      <Pressable onPress={() => setShowServer((v) => !v)}>
+        <Text style={T.small}>서버: {server} {showServer ? '▲' : '▼'}</Text>
+      </Pressable>
+      {showServer && (
         <View style={{ flexDirection: 'row', gap: 8 }}>
           <TextInput
             value={url}
@@ -53,18 +63,18 @@ export default function Home() {
             autoCorrect={false}
             keyboardType="url"
             placeholder="http://노트북IP:8000"
-            style={{ flex: 1, borderWidth: 1, borderColor: '#ccc', borderRadius: 8, padding: 8 }}
+            style={{ flex: 1, borderWidth: 1, borderColor: C.border, borderRadius: 8, padding: 10 }}
           />
-          <Pressable
+          <Button
+            label="저장"
+            style={{ minHeight: 44 }}
             onPress={async () => {
               setUrl(await saveApiUrl(url));
               check();
             }}
-            style={{ paddingHorizontal: 14, justifyContent: 'center', backgroundColor: '#208AEF', borderRadius: 8 }}>
-            <Text style={{ color: 'white' }}>저장</Text>
-          </Pressable>
+          />
         </View>
-      </View>
+      )}
     </SafeAreaView>
   );
 }
