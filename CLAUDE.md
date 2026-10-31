@@ -1,7 +1,7 @@
 # CLAUDE.md
 
 아이봄 (Ai-Bom) / 마마보이스 — InThon 2026 Team 19. 마감 **11/1 12:00** (기능 동결 03:00).
-**기획서 `docs/plan.md`, 와이어프레임 `docs/wireframe.md` + `docs/wireframe/*.png`가 기준이다.** 기능·문구·흐름이 애매하면 이 둘을 먼저 본다.
+**기획서 최종본 `docs/기획서.md`(v2), 와이어프레임 `docs/wireframe.md` + `docs/wireframe/*.png`가 기준이다.** 기능·문구·흐름이 애매하면 이 둘을 먼저 본다.
 
 ## 제품 한 줄
 맞벌이 부모의 페르소나(목소리·입모양·말투)를 담은 **아바타**가 낮에 2~5세 아이와 청각·시각·촉각 놀이로 대화하고, 밤에 부모가 리포트 확인 → 피드백 → 다음날 계획 낭독(입모양+음성)으로 다음날 대화를 갱신한다 (Dual-Loop, Parent-on-the-loop).
@@ -13,6 +13,9 @@
 - **감각 자극 제한**: 진동은 짧고 약하게(`lib/sense.ts haptic()`만 사용), 효과음 작게, 깜빡임 없는 애니메이션, 진동 끄기 설정 존중.
 - **개인정보**: 부모 음성·입모양 수치·아이 반응은 비공개 `server/data/`(git 제외)에만. 공개 `/static`에는 재생용 TTS mp3만. 건강 정보·싫어하는 것·실제 부모-아이 대화는 받지/기록하지 않는다.
 - 아이 화면은 글자 최소, 아바타가 먼저 말 건다. 마무리에서 실제 부모에게 연결한다.
+- 부모 리포트는 대화 전체가 아니라 요약 + **확인 필요 건(범위 밖 질문·차단된 문장)**을 반드시 포함.
+- 커리큘럼은 하나로 고정: 1일차 사과·바나나(+전래동화), 2일차 과자. 해커톤은 2일차까지.
+- 콘텐츠(이미지·효과음·진동·대본)는 출력 담당 팀원 몫. 지금 `content/curriculum.ts`의 이모지·`assets/sounds` 합성음은 **자리 표시용** — 받으면 교체.
 
 ## 구성
 - `app/` — Expo SDK 58 + Expo Router. 부모 폰 + 아이 태블릿 한 앱(시작 화면에서 기기 용도 선택). **앱 작업 전 `app/AGENTS.md` 먼저 읽기.**
@@ -22,7 +25,7 @@
 - `server/` — FastAPI, Python 3.11/3.12, MediaPipe, OpenAI(STT), Fish Audio(TTS), Lablup Token Factory(LLM, `app/llm.py`)
   - `routers/`: voice(부모 음성·학습률·분석·코칭·STT·TTS) · vision(입모양 기준값·학습률) · activity(아이 반응·하루 요약) · profile(임시 프로필·태블릿 연결) · children/conversation/evening(민주·충항 자리)
   - `voice/` 오디오 특성 · `vision/` MediaPipe · `agent/` 에이전트 · `tts/` Fish Audio
-- `docs/` plan.md(기획) · wireframe.md(+png) · api.md · data-sources.md
+- `docs/` 기획서.md(최종 v2) · wireframe.md(+png) · api.md · data-sources.md
 
 ## 역할 (어느 파일을 누가 맡는지)
 | 이름 | 맡은 일 | 경로 |
