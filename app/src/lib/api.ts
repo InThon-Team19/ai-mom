@@ -74,6 +74,30 @@ export function reportError(where: string, e: unknown) {
   fetch(`${getApiUrl()}/debug/log`, { method: 'POST', body: msg }).catch(() => {});
 }
 
+/** 서버·기기 오류 → 부모가 읽을 쉬운 문장. 오류 원문(상태 코드·영어 메시지)은 화면에 보이지 않고 reportError 로그에만 남김.
+ *  req() 가 던지는 '401 /경로: {"detail":"..."}' 모양은 그대로 두므로 상태 코드로 판단하는 기존 코드는 영향 없음 */
+export function friendlyError(e: unknown, fallback = '잠시 문제가 생겼어요. 잠시 후 다시 해 주세요.'): string {
+  const raw = String((e as Error)?.message ?? e ?? '');
+  const status = Number(/^(\d{3}) /.exec(raw)?.[1] ?? 0);
+  // 서버가 보낸 안내 문장이 이미 쉬운 한국어면 그대로 (영어 낱말·기술 용어가 섞이면 쓰지 않음)
+  const detail = /"detail"\s*:\s*"([^"]+)"/.exec(raw)?.[1]?.trim();
+  if (detail && /[가-힣]/.test(detail) && /요[.!]?$/.test(detail) && !/[A-Za-z_]{3,}/.test(detail)) return detail;
+  if (status === 401) return '로그인이 끊겼어요. 다시 로그인해 주세요.';
+  if (status === 403) return '이 기기에서는 할 수 없는 일이에요. 부모 폰에서 해 주세요.';
+  if (status === 404) return '찾는 정보가 없어요. 앱을 다시 열고 한 번 더 해 주세요.';
+  if (status === 409) return '이미 처리된 요청이에요. 화면을 새로 고친 뒤 다시 해 주세요.';
+  if (status === 413) return '파일이 너무 커요. 조금 짧게 다시 해 주세요.';
+  if (status === 422) return '입력한 내용을 다시 확인해 주세요.';
+  if (status === 429) return '요청이 너무 많았어요. 1분쯤 뒤에 다시 해 주세요.';
+  if (status >= 500) return '서버에 잠시 문제가 생겼어요. 잠시 후 다시 해 주세요.';
+  if (/시간 초과|timeout/i.test(raw)) return '응답이 늦어요. 인터넷 연결을 확인하고 다시 해 주세요.';
+  if (/network|fetch|connect/i.test(raw)) return '서버에 연결할 수 없어요. 인터넷 연결을 확인해 주세요.';
+  // 앱이 직접 만든 한국어 안내(예: 마이크 권한)는 그대로
+  const plain = raw.replace(/^Error:\s*/, '');
+  if (!status && /[가-힣]/.test(plain) && !/[A-Za-z_]{3,}/.test(plain)) return plain;
+  return fallback;
+}
+
 /** 앱 진행 기록을 서버 터미널로 (원인 추적용, 실패해도 무시) */
 export function trace(msg: string) {
   fetch(`${getApiUrl()}/debug/log`, { method: 'POST', body: `trace ${msg}` }).catch(() => {});

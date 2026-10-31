@@ -3,7 +3,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useState } from 'react';
 
-import { api, req } from '@/lib/api';
+import { api, friendlyError, req } from '@/lib/api';
 import { setToken } from '@/lib/session';
 import { loadProfile, setProfileFromServer, type Profile } from '@/lib/store';
 
@@ -49,12 +49,14 @@ export function useAccount() {
 /** 서버 오류를 부모가 읽을 문장으로 */
 export function authMessage(e: unknown) {
   const m = String((e as Error)?.message ?? e);
-  if (m.startsWith('401')) return '아이디 또는 비밀번호가 맞지 않아요.';
-  if (m.startsWith('409')) return '이미 쓰는 아이디예요. 다른 아이디를 써 주세요.';
-  if (m.startsWith('422')) return '아이디는 공백 없이 3~60자, 비밀번호는 8자 이상으로 입력해 주세요.';
-  if (m.startsWith('400')) return m.replace(/^400 [^:]*: /, '').replace(/^\{"detail":"(.*)"\}$/, '$1');
-  if (m.startsWith('404') || m.startsWith('405')) return '로그인 서버가 아직 준비 중이에요. 잠시 후 다시 해주세요.';
-  return '서버에 연결할 수 없어요. 잠시 후 다시 해주세요.';
+  if (m.startsWith('401')) return '아이디 또는 비밀번호가 맞지 않아요. 다시 확인해 주세요.';
+  if (m.startsWith('409')) return '이미 쓰고 있는 아이디예요. 다른 아이디로 해 주세요.';
+  if (m.startsWith('422')) return '아이디는 띄어쓰기 없이 3~60자, 비밀번호는 8자 이상으로 입력해 주세요.';
+  if (m.startsWith('429')) return '시도가 너무 많았어요. 1분쯤 뒤에 다시 해 주세요.';
+  if (m.startsWith('400')) return friendlyError(e, '입력한 내용을 다시 확인해 주세요.'); // 서버 원문을 그대로 보이지 않게
+  if (m.startsWith('404') || m.startsWith('405')) return '로그인 서버가 아직 준비 중이에요. 잠시 후 다시 해 주세요.';
+  if (/^5\d\d/.test(m)) return '서버에 잠시 문제가 생겼어요. 잠시 후 다시 해 주세요.';
+  return '서버에 연결할 수 없어요. 인터넷 연결을 확인하고 잠시 후 다시 해 주세요.';
 }
 
 /** 가입 마지막(1-7)·설정: 서버에 계정과 가족 프로필을 저장한 뒤 로그인 처리 */
@@ -91,7 +93,8 @@ export async function logoutAccount() {
   await save(null);
 }
 
-export async function syncAccountProfile(profile: Profile) {
+/** profile: 이 기기의 전체 프로필 (보낼지 판단용), body: 서버에 보낼 바뀐 부분 (없으면 전체) */
+export async function syncAccountProfile(profile: Profile, body: Partial<Profile> = profile) {
   const a = await loadAccount();
   if (!a?.token) return;
   // 빈 프로필(초기화된 폰)은 올리지 않음: 서버에 저장된 아이 정보를 빈칸으로 덮어쓰지 않게
@@ -105,7 +108,7 @@ export async function syncAccountProfile(profile: Profile) {
   }
   const view = await req<Partial<Profile>>('/auth/profile', {
     method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${a.token}` },
-    body: JSON.stringify(profile),
+    body: JSON.stringify(body),
   });
   if (view?.onboarded && !a.serverOnboarded) await save({ ...a, serverOnboarded: true });
 }

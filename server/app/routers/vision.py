@@ -1,4 +1,5 @@
 # 부모 입모양 기준값·학습률, 아이 응시·입모양 — 담당: 태희
+import logging
 import json
 import math
 import shutil
@@ -14,6 +15,7 @@ from app.vision.child import analyze_frame
 from app.vision.mouth import video_track
 from app.vision.profile import merge, profile
 
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/vision", tags=["vision"])
 
 # 입모양 학습률: 얼굴이 잡힌 채 읽은 시간. 최소 기준 20초, 100% = 40초 (시연용 임시값)
@@ -78,11 +80,11 @@ class MouthTrackOut(BaseModel):
 
 def _save_track(child_id: str, kind: str, text: str, track: list[dict]) -> MouthTrackOut:
     if kind not in KINDS:
-        raise HTTPException(400, "kind 는 signup | plan")
+        raise HTTPException(400, "녹화 종류를 알 수 없어요. 앱을 다시 열고 한 번 더 해 주세요.")
     try:
         d = _mouth_dir(child_id, kind)
     except ValueError:
-        raise HTTPException(400, "child_id 형식 오류")
+        raise HTTPException(400, "아이 정보를 찾지 못했어요. 앱을 다시 열고 한 번 더 해 주세요.")
     before = mouth_gauge(child_id).progress
     prof = profile(track)
     (d / f"profile_{uuid4().hex}.json").write_text(json.dumps({**prof, "text": text}, ensure_ascii=False), encoding="utf-8")
@@ -108,7 +110,8 @@ def parent_mouth_video(child_id: str = Form(...), kind: str = Form("signup"), te
     try:
         track = video_track(src)
     except ValueError as e:
-        raise HTTPException(400, str(e))
+        logger.warning("mouth video unreadable: %s", e)
+        raise HTTPException(400, "영상에서 입모양을 읽지 못했어요. 밝은 곳에서 얼굴을 정면으로 보고 다시 찍어 주세요.")
     finally:
         src.unlink(missing_ok=True)
     return _save_track(child_id, kind, text, track)
@@ -120,7 +123,7 @@ def gauge(child_id: str):
     try:
         return mouth_gauge(child_id)
     except ValueError:
-        raise HTTPException(400, "child_id 형식 오류")
+        raise HTTPException(400, "아이 정보를 찾지 못했어요. 앱을 다시 열고 한 번 더 해 주세요.")
 
 
 @router.get("/mouth-profile/{child_id}", response_model=MouthProfile)
@@ -129,7 +132,7 @@ def mouth_profile(child_id: str):
     try:
         return merge(mouth_profiles(child_id, "signup") + mouth_profiles(child_id, "plan"))
     except ValueError:
-        raise HTTPException(400, "child_id 형식 오류")
+        raise HTTPException(400, "아이 정보를 찾지 못했어요. 앱을 다시 열고 한 번 더 해 주세요.")
 
 
 @router.get("/mouth-scale/{child_id}", response_model=MouthProfile)
@@ -166,4 +169,5 @@ def child_frame(file: UploadFile = File(...)):
     try:
         return analyze_frame(file.file.read())
     except ValueError as e:
-        raise HTTPException(400, str(e))
+        logger.warning("child frame unreadable: %s", e)
+        raise HTTPException(400, "사진을 읽지 못했어요. 잠시 후 다시 해 주세요.")

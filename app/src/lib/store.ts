@@ -73,8 +73,15 @@ export async function updateProfile(patch: Partial<Profile>) {
   try {
     await AsyncStorage.setItem(KEY, JSON.stringify(p));
   } catch {}
-  api.putProfile(p.childId, p).catch(() => {});
-  import('./account').then(({ syncAccountProfile }) => syncAccountProfile(p)).catch(() => {});
+  // 서버에는 바뀐 부분만 보냄 (서버가 항목별로 합침). 예전엔 이 기기의 프로필 전체를 보내서,
+  // 이 기기에 없는 값(예: 같은 폰을 연결 코드로 아이 태블릿으로 썼다가 돌아오면 비어 있는 피드백·다른 부모 폰이 넘긴 일차)을 서버에서 지웠음
+  const { devices: _d, linkCode: _l, ...body } = patch;
+  void _d;
+  void _l;
+  if (Object.keys(body).length) {
+    api.putProfile(p.childId, body).catch(() => {});
+    import('./account').then(({ syncAccountProfile }) => syncAccountProfile(p, body)).catch(() => {});
+  }
   return p;
 }
 
@@ -84,7 +91,10 @@ export async function linkTablet(code: string) {
   if (r.token) await setToken(r.token); // 아이 태블릿 기기 토큰 → 이후 모든 요청에 사용
   const { token: _t, ...p } = r;
   void _t;
-  current = { ...newProfile(), ...p, onboarded: true };
+  // 기기용 프로필에는 부모 피드백이 없음 → 같은 폰(같은 아이)이면 이 기기에 있던 피드백을 지우지 않고 둠
+  const prev = await loadProfile();
+  const keep = prev.childId === p.childId ? { feedback: prev.feedback } : {};
+  current = { ...newProfile(), ...keep, ...p, onboarded: true };
   listeners.forEach((l) => l(current!));
   try {
     await AsyncStorage.setItem(KEY, JSON.stringify(current));

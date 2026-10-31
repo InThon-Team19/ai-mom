@@ -1,4 +1,5 @@
 # 부모 목소리 샘플·학습률·특성 분석·코칭, STT — 담당: 태희 / TTS 부분: 민주 (Fish Audio 초안 태희)
+import logging
 import base64
 import binascii
 import hashlib
@@ -22,6 +23,7 @@ from app.voice.analysis import summarize, traits_and_tips
 from app.voice.audio import quality, read_wav, speech_features, to_wav
 from app.voice.stt import transcribe
 
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/voice", tags=["voice"])
 
 # 학습률 게이지 (기획 2-1-1 학습률 표시). Fish Audio 권장: 깨끗한 음성 10~30초 → 최소 기준 30초, 100% = 60초
@@ -100,17 +102,17 @@ class ParentSampleOut(BaseModel):
 
 def _save_parent_sample(child_id: str, text: str, kind: str, src: Path) -> ParentSampleOut:
     if kind not in KINDS:
-        raise HTTPException(400, "kind 는 signup | plan")
+        raise HTTPException(400, "녹음 종류를 알 수 없어요. 앱을 다시 열고 한 번 더 해 주세요.")
     try:
         out = _voice_dir(child_id, kind)
     except ValueError:
-        raise HTTPException(400, "child_id 형식 오류")
+        raise HTTPException(400, "아이 정보를 찾지 못했어요. 앱을 다시 열고 한 번 더 해 주세요.")
     before = voice_gauge(child_id).progress
     wav = out / f"sample_{uuid4().hex}.wav"
     try:
         to_wav(src, wav)
     except Exception:
-        raise HTTPException(400, "오디오를 변환할 수 없음")
+        raise HTTPException(400, "녹음을 읽지 못했어요. 한 번 더 녹음해 주세요.")
     finally:
         src.unlink(missing_ok=True)
 
@@ -129,9 +131,9 @@ def _b64_to_tmp(audio_b64: str, ext: str) -> Path:
     try:
         data = base64.b64decode(audio_b64, validate=False)
     except (binascii.Error, ValueError):
-        raise HTTPException(400, "base64 오디오 형식 오류")
+        raise HTTPException(400, "녹음 파일이 깨졌어요. 한 번 더 녹음해 주세요.")
     if not data:
-        raise HTTPException(400, "빈 오디오")
+        raise HTTPException(400, "녹음된 소리가 없어요. 한 번 더 녹음해 주세요.")
     src = tmp_path(ext)
     src.write_bytes(data)
     return src
@@ -167,7 +169,7 @@ def gauge(child_id: str):
     try:
         return voice_gauge(child_id)
     except ValueError:
-        raise HTTPException(400, "child_id 형식 오류")
+        raise HTTPException(400, "아이 정보를 찾지 못했어요. 앱을 다시 열고 한 번 더 해 주세요.")
 
 
 # ---------- AI 특성 분석·의사소통 피드백 (가입 2-1-1 ⑤⑥) ----------
@@ -182,9 +184,9 @@ def analysis(child_id: str):
     try:
         ss = [s for s in samples(child_id, ("signup",)) if s["quality"]["loud"]]
     except ValueError:
-        raise HTTPException(400, "child_id 형식 오류")
+        raise HTTPException(400, "아이 정보를 찾지 못했어요. 앱을 다시 열고 한 번 더 해 주세요.")
     if not ss:
-        raise HTTPException(400, "목소리를 먼저 녹음해 주세요")
+        raise HTTPException(400, "아직 목소리 녹음이 없어요. 먼저 목소리를 녹음해 주세요.")
     s = summarize([x["features"] for x in ss])
     traits, tips = traits_and_tips(s)
     return AnalysisOut(summary=s, traits=traits, tips=tips)
@@ -204,9 +206,9 @@ def coaching(child_id: str):
         base = [s["features"] for s in samples(child_id, ("signup",)) if s["quality"]["loud"]]
         plan = [s["features"] for s in samples(child_id, ("plan",)) if s["quality"]["loud"]][-10:]
     except ValueError:
-        raise HTTPException(400, "child_id 형식 오류")
+        raise HTTPException(400, "아이 정보를 찾지 못했어요. 앱을 다시 열고 한 번 더 해 주세요.")
     if not plan:
-        raise HTTPException(400, "오늘 계획을 먼저 읽어 주세요")
+        raise HTTPException(400, "아직 낭독 녹음이 없어요. 내일 계획을 먼저 읽어 주세요.")
     base_m = merge_mouth(mouth_profiles(child_id, "signup"))
     plan_m = merge_mouth(mouth_profiles(child_id, "plan")[-10:])
     return CoachingOut(messages=make_coaching(summarize(base) if base else {}, summarize(plan), base_m, plan_m))
@@ -276,15 +278,17 @@ def _stt_from_path(src: Path, expected: str) -> SttOut:
             to_wav(src, wav)
             pcm, sr = read_wav(wav)
         except Exception:
-            raise HTTPException(400, "오디오를 처리할 수 없음")
+            raise HTTPException(400, "녹음을 읽지 못했어요. 한 번 더 녹음해 주세요.")
         text = ""
         if speech_features(pcm, sr)["speech_s"] > 0.2:  # 무음이면 STT 호출 생략
             try:
                 text = transcribe(wav)  # 힌트 없이: 목표 단어를 힌트로 주면 말 없는 소리도 그 단어로 되읊어 '맞게 말함'으로 잘못 기록됨 (시험: 삐 소리 -> '사과')
             except RuntimeError as e:  # 키 없음
-                raise HTTPException(503, str(e))
+                logger.warning("stt unavailable: %s", e)
+                raise HTTPException(503, "지금은 말소리를 알아들을 수 없어요. 잠시 후 다시 해 주세요.")
             except Exception as e:
-                raise HTTPException(502, f"STT 실패: {e}")
+                logger.warning("stt failed: %r", e)
+                raise HTTPException(502, "말소리를 알아듣지 못했어요. 잠시 후 다시 해 주세요.")
         feats = speech_features(pcm, sr, text)
     finally:
         src.unlink(missing_ok=True)
@@ -336,20 +340,22 @@ def register(child_id: str = Form(...)):
     try:
         ss = [s for s in samples(child_id) if s["quality"]["ok"]][-20:]
     except ValueError:
-        raise HTTPException(400, "child_id 형식 오류")
+        raise HTTPException(400, "아이 정보를 찾지 못했어요. 앱을 다시 열고 한 번 더 해 주세요.")
     if not ss:
-        raise HTTPException(400, "목소리 샘플을 먼저 올려 주세요 (/voice/parent-sample)")
+        raise HTTPException(400, "아직 쓸 수 있는 목소리 녹음이 없어요. 조용한 곳에서 목소리를 먼저 녹음해 주세요.")
     try:
         res = fish.register_voice(f"aibom-{child_id}", [s["wav"] for s in ss], [s["text"] for s in ss])
     except RuntimeError as e:
-        raise HTTPException(503, str(e))
+        logger.warning("voice register unavailable: %s", e)
+        raise HTTPException(503, "지금은 목소리를 등록할 수 없어요. 잠시 후 다시 해 주세요.")
     except httpx.HTTPStatusError as e:
         if e.response.status_code in (402, 403):
             # 무료 등급은 목소리 모델을 만들 수 없음(한도 0) → 오류가 아니라 TTS 가 즉석 복제(녹음 참고)로 엄마 목소리를 냄
             return VoiceRegisterOut(model_id="", state="inline", sample_count=len(ss))
-        raise HTTPException(502, f"Fish Audio 오류: {e.response.text[:200]}")
+        logger.warning("voice register failed: %s %s", e.response.status_code, e.response.text[:200])
+        raise HTTPException(502, "목소리를 등록하지 못했어요. 잠시 후 다시 해 주세요.")
     except httpx.RequestError:
-        raise HTTPException(502, "Fish Audio에 연결할 수 없어요. 잠시 후 다시 시도해 주세요")
+        raise HTTPException(502, "목소리 서버에 연결하지 못했어요. 잠시 후 다시 해 주세요.")
     _voice_id_file(child_id).write_text(res["_id"], encoding="utf-8")
     return VoiceRegisterOut(model_id=res["_id"], state=res.get("state", ""), sample_count=len(ss))
 
@@ -426,14 +432,14 @@ def tts(body: TtsIn):
     try:
         id_file = _voice_id_file(body.child_id)
     except ValueError:
-        raise HTTPException(400, "child_id 형식 오류")
+        raise HTTPException(400, "아이 정보를 찾지 못했어요. 앱을 다시 열고 한 번 더 해 주세요.")
     body.text = _speakable(body.text)
     if not body.text:
-        raise HTTPException(400, "읽을 글자가 없어요")
+        raise HTTPException(400, "읽을 문장이 없어요. 문장을 확인해 주세요.")
     model_id = id_file.read_text(encoding="utf-8").strip() if id_file.exists() else ""
     refs = [] if model_id else _reference_samples(body.child_id)
     if not model_id and not refs:
-        raise HTTPException(400, "부모 목소리 녹음이 아직 없어요 (가입 1-5 목소리 등록)")
+        raise HTTPException(400, "아직 부모님 목소리 녹음이 없어요. 가입 화면에서 목소리를 먼저 녹음해 주세요.")
     voice_key = model_id or "inline:" + ",".join(r["wav"].name for r in refs)
     key = hashlib.sha1(f"{voice_key}:{body.speed}:{body.text}".encode()).hexdigest()[:16]
     out = public_dir(body.child_id, "tts") / f"{key}.mp3"
@@ -444,13 +450,15 @@ def tts(body: TtsIn):
             else:
                 fish.synthesize_inline(body.text, [(r["wav"].read_bytes(), r["text"]) for r in refs], out, speed=body.speed)
         except RuntimeError as e:
-            raise HTTPException(503, str(e))
+            logger.warning("tts unavailable: %s", e)
+            raise HTTPException(503, "지금은 부모님 목소리로 말할 수 없어요. 잠시 후 다시 해 주세요.")
         except httpx.HTTPStatusError as e:
             out.unlink(missing_ok=True)
-            raise HTTPException(502, f"Fish Audio 오류: {e.response.text[:200]}")
+            logger.warning("tts failed: %s %s", e.response.status_code, e.response.text[:200])
+            raise HTTPException(502, "부모님 목소리를 만들지 못했어요. 잠시 후 다시 해 주세요.")
         except httpx.RequestError:
             out.unlink(missing_ok=True)
-            raise HTTPException(502, "Fish Audio에 연결할 수 없어요. 잠시 후 다시 시도해 주세요")
+            raise HTTPException(502, "목소리 서버에 연결하지 못했어요. 잠시 후 다시 해 주세요.")
     return TtsOut(url=public_url(out), env=_mouth_envelope(body.child_id, key, out), env_ms=ENV_MS)
 
 
@@ -491,14 +499,14 @@ def child_clip(body: ChildClipIn):
     try:
         d = _clip_dir(body.child_id)
     except ValueError:
-        raise HTTPException(400, "child_id 형식 오류")
+        raise HTTPException(400, "아이 정보를 찾지 못했어요. 앱을 다시 열고 한 번 더 해 주세요.")
     src = _b64_to_tmp(body.audio_b64, body.ext)
     clip_id = f"{int(_time.time() * 1000)}"
     wav = d / f"{clip_id}.wav"
     try:
         to_wav(src, wav)
     except Exception:
-        raise HTTPException(400, "오디오를 처리할 수 없음")
+        raise HTTPException(400, "녹음을 읽지 못했어요. 한 번 더 녹음해 주세요.")
     finally:
         src.unlink(missing_ok=True)
     pcm, sr = read_wav(wav)
@@ -531,7 +539,7 @@ def child_clips(child_id: str, day: str | None = None) -> list[dict]:
     try:
         d = _clip_dir(child_id)
     except ValueError:
-        raise HTTPException(400, "child_id 형식 오류")
+        raise HTTPException(400, "아이 정보를 찾지 못했어요. 앱을 다시 열고 한 번 더 해 주세요.")
     out = []
     for f in sorted(d.glob("*.json"), reverse=True)[:200]:
         m = json.loads(f.read_text(encoding="utf-8"))
@@ -545,11 +553,11 @@ def child_clips(child_id: str, day: str | None = None) -> list[dict]:
 def child_clip_audio(child_id: str, clip_id: str):
     """클립 재생 (로그인 토큰 필요)."""
     if not clip_id.isdigit():
-        raise HTTPException(400, "clip_id 형식 오류")
+        raise HTTPException(400, "녹음을 찾지 못했어요. 목록을 새로 고친 뒤 다시 눌러 주세요.")
     try:
         f = _clip_dir(child_id) / f"{clip_id}.wav"
     except ValueError:
-        raise HTTPException(400, "child_id 형식 오류")
+        raise HTTPException(400, "아이 정보를 찾지 못했어요. 앱을 다시 열고 한 번 더 해 주세요.")
     if not f.exists():
-        raise HTTPException(404, "클립이 없어요")
+        raise HTTPException(404, "이 녹음은 이제 없어요. 목록을 새로 고쳐 주세요.")
     return FileResponse(f, media_type="audio/wav")

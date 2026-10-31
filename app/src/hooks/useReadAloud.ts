@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import type { FaceFrame } from '@/components/FaceTracker';
 import { useVoiceRecorder } from '@/hooks/useVoiceRecorder';
-import { api, reportError, trace } from '@/lib/api';
+import { api, friendlyError, reportError, trace } from '@/lib/api';
 import type { Gauge, TrackPoint } from '@/lib/types';
 
 export type SentenceStatus = 'done' | 'now' | 'todo' | 'retry';
@@ -83,8 +83,8 @@ export function useReadAloud({
       if (m) setMouth(m.gauge);
       setGain({ voice: v?.gained ?? 0, mouth: m?.gained ?? 0 });
       if (!v) {
-        const err = vr.status === 'rejected' ? String(vr.reason).slice(0, 80) : '';
-        setMessage(`목소리 전송 실패: ${err}`);
+        if (vr.status === 'rejected') reportError('readAloud upload', vr.reason); // 원문은 로그에만
+        setMessage(friendlyError(vr.status === 'rejected' ? vr.reason : null, '목소리를 보내지 못했어요. 인터넷 연결을 확인하고 다시 눌러 읽어 주세요.'));
         setDone((d) => ({ ...d, [index]: 'retry' }));
         return;
       }
@@ -94,7 +94,7 @@ export function useReadAloud({
       if (ok) setIndex((i) => Math.min(i + 1, sentences.length - 1));
     } catch (e) {
       reportError('readAloud', e);
-      setMessage(`전송 실패: ${String(e).slice(0, 80)}`);
+      setMessage(friendlyError(e, '녹음을 보내지 못했어요. 다시 눌러 읽어 주세요.'));
     } finally {
       pending.current = false;
       setBusy(false);

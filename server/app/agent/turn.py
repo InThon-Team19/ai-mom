@@ -60,7 +60,10 @@ def _feedback_text(profile: dict) -> str:
         return "없음"
     f = fb[0]
     bits = list(f.get("issues") or []) + ([f["note"]] if f.get("note") else [])
-    return ", ".join(bits)[:120] or "없음"
+    review = [w for w in (f.get("review") or []) if isinstance(w, str) and w]
+    if review:
+        bits.append("복습하고 싶은 것: " + ", ".join(review))
+    return ", ".join(bits)[:160] or "없음"
 
 
 def _fallback(moment: str, item: str, p: dict, out_of_scope: bool, mood: str | None) -> str:

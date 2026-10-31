@@ -50,7 +50,9 @@ class TurnOut(BaseModel):
 def turn(body: TurnIn, db: DB):
     from app.family import profile_view
     child = db.get(Child, body.child_id)
-    profile = profile_view(db, child) if child else {}
+    # parent=True: 부모 피드백(feedback[])을 프롬프트에 넣기 위해. 기기용 보기(parent=False)는 feedback 을 빼서
+    # 태블릿 대화에 어젯밤 피드백이 반영되지 않았음. 이 값은 프롬프트에만 쓰고 응답으로 돌려주지 않음
+    profile = profile_view(db, child, parent=True) if child else {}
     return TurnOut(**make_turn(body.day, body.item, body.moment, body.child_text,
                                body.signals.model_dump() if body.signals else None, profile,
                                [h.model_dump() for h in body.history] if body.history else None))

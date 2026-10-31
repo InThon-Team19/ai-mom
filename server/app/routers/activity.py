@@ -1,5 +1,6 @@
 # 아이 반응 기록 (기획 2-2 ② 아이의 투입: 청각·촉각·시각) + 하루 요약 — 담당: 태희
 # 리포트(2-2)의 "세 감각 활동 균형"·집중도·따라 말한 단어의 원자료. 대화 문장 생성은 에이전트(충항) 몫
+import logging
 import json
 import time
 from collections import Counter
@@ -9,6 +10,7 @@ from pydantic import BaseModel
 
 from app.storage import child_dir
 
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/activity", tags=["activity"])
 
 # type → 감각. 앱은 이 type 이름으로 보냄
@@ -52,10 +54,11 @@ def add_events(child_id: str, body: EventsIn):
     try:
         f = _day_file(child_id, _today())
     except ValueError:
-        raise HTTPException(400, "child_id 형식 오류")
+        raise HTTPException(400, "아이 정보를 찾지 못했어요. 앱을 다시 열고 한 번 더 해 주세요.")
     bad = [e.type for e in body.events if e.type not in SENSE]
     if bad:
-        raise HTTPException(400, f"모르는 type: {bad}")
+        logger.warning("unknown activity types: %s", bad)
+        raise HTTPException(400, "활동 기록을 저장하지 못했어요. 앱을 최신 버전으로 바꾼 뒤 다시 해 주세요.")
     now = time.time()
     with f.open("a", encoding="utf-8") as fp:
         for e in body.events:
@@ -133,6 +136,6 @@ def summary(child_id: str, day: str | None = None):
     try:
         f = _day_file(child_id, day)
     except ValueError:
-        raise HTTPException(400, "child_id 형식 오류")
+        raise HTTPException(400, "아이 정보를 찾지 못했어요. 앱을 다시 열고 한 번 더 해 주세요.")
     events = [json.loads(line) for line in f.read_text(encoding="utf-8").splitlines() if line] if f.exists() else []
     return summarize(events, day)
