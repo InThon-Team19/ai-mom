@@ -11,3 +11,4 @@
 | 얼굴 인식 모델 | 입모양·응시 | CDN / `server/models/` | MediaPipe Face Landmarker (Google) | Apache 2.0 |
 | 글꼴 | 큰 글자·굵은 글자 | `app/assets/fonts/Hakgyoansim-Dunggeunmiso-B.otf` | 학교안심 둥근미소 Bold | 무료 글꼴 (배포처 라이선스 따름) |
 | 글꼴 | 본문·작은 글자 | `app/assets/fonts/Cafe24SsurroundAir-v1.1.ttf` | 카페24 써라운드 에어 (fonts.cafe24.com) | 카페24 무료 글꼴 라이선스 |
+| 글꼴 | 랜딩 페이지 제목·본문 | `landing/index.html` | 주아(Google Fonts) · Pretendard 1.3.9 일부 글자 | SIL Open Font License 1.1 |
