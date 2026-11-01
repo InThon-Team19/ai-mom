@@ -22,7 +22,8 @@ export function useDevice() {
     /** 화면 좌우 여백: 폰 24, 태블릿은 내용이 가운데 640 폭 안에 오도록 넓게 */
     gutter: isTablet ? Math.max(24, Math.round((width - 640) / 2)) : 24,
     /** 스크롤 내용·카드를 감쌀 때: 태블릿에서 가운데 정렬 + 최대 폭 */
-    frame: { width: '100%' as const, maxWidth: maxContent, alignSelf: 'center' as const },
+    // 폰은 최대 폭 제한 없음 (예전엔 화면 폭을 넣어서, 웹 서버 렌더링 때 폭 0 이 박혀 글자가 한 글자씩 쌓였음)
+    frame: { width: '100%' as const, maxWidth: isTablet ? 640 : undefined, alignSelf: 'center' as const },
     camera: { width: camW, height: camH, alignSelf: 'center' as const },
   };
 }
