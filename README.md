@@ -8,6 +8,8 @@
 |---|---|
 | **웹 데모** | **https://ai-mom.expo.app** — 설치 없이 브라우저(크롬 권장)에서 바로 체험. 마이크·카메라 허용 필요 |
 | 설치 파일 | 안드로이드 APK (제출 양식의 다운로드 링크) — 폰·태블릿 모두 가능 (진동 등 기기 기능까지 체험) |
+| 설치 안내 | [docs/APK-설치-안내.md](docs/APK-설치-안내.md) |
+| 소개 페이지 | https://ai-mom.expo.app/landing.html |
 | 서버 | https://aimom-server.onrender.com (24시간 운영, 상태 확인: `/health` → `{"ok": true}`) |
 | 계정 | 앱에서 바로 새로 가입 (아이디·비밀번호만, 이메일 인증 없음) |
 
