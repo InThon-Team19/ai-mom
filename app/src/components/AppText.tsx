@@ -26,8 +26,8 @@ function pick(style: TextProps['style'], inherited: { size: number; weight: numb
   return { family: flat.fontFamily ?? familyOf(size, weight), inherit: { size, weight } };
 }
 
-// 웹: 한국어가 글자 중간에서 줄이 바뀌지 않게 단어 단위로 (앱은 원래 단어 단위)
-const WEB_WRAP = (Platform.OS === 'web' ? { wordBreak: 'keep-all', overflowWrap: 'anywhere' } : {}) as TextStyle;
+// 웹: 한국어가 글자 중간에서 줄이 바뀌지 않게 단어 단위로 (앱은 원래 단어 단위). overflowWrap 'anywhere' 는 쓰지 말 것 — 글자 칸이 한 글자 폭으로 줄어 세로로 쌓임
+const WEB_WRAP = (Platform.OS === 'web' ? { wordBreak: 'keep-all', overflowWrap: 'break-word' } : {}) as TextStyle;
 
 export function Text({ style, ...rest }: ComponentProps<typeof RNText>) {
   const inherited = useContext(Inherited);
